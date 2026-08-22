@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
-import { checkPlanCapacity } from "../planner/mockPlanner";
+import { plannerAppService } from "../application/plannerAppService";
 import {
   createEmptyGoal,
   formatWeeklyGoalDuration,
   goalPriorityOptions,
   weeklyGoalDurationOptions
 } from "../planner/defaults";
-import type { GoalInput, RawAnswers } from "../planner/contracts";
+import type { GoalInput, RawAnswers } from "../domain/planning";
 
 interface OnboardingModalProps {
   answers: RawAnswers;
@@ -16,7 +16,7 @@ interface OnboardingModalProps {
 
 export function OnboardingModal({ answers, onClose, onSubmit }: OnboardingModalProps) {
   const [localAnswers, setLocalAnswers] = useState<RawAnswers>(answers);
-  const capacityCheck = useMemo(() => checkPlanCapacity(localAnswers), [localAnswers]);
+  const capacityCheck = useMemo(() => plannerAppService.checkCapacity(localAnswers), [localAnswers]);
 
   function updateGoal(index: number, partial: Partial<GoalInput>) {
     setLocalAnswers((current) => ({

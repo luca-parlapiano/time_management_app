@@ -1,9 +1,14 @@
-import type { PlannerResult, RawAnswers } from "../planner/contracts";
+import { useEffect, useState } from "react";
+import type { PlannerResult, RawAnswers } from "../domain/planning";
+import type { SimulationRun } from "../simulation/contracts";
 import { formatTimeRange } from "../utils/time";
 
 interface SimulationPanelProps {
   answers: RawAnswers;
   result: PlannerResult;
+  simulation: SimulationRun | null;
+  onSimulationChange: (simulation: SimulationRun | null) => void;
+  onAdvanceSimulation: (weekCount: number) => void;
 }
 
 function formatMinutes(totalMinutes: number) {
@@ -12,7 +17,28 @@ function formatMinutes(totalMinutes: number) {
   return `${hours}h ${minutes}m`;
 }
 
-export function SimulationPanel({ answers, result }: SimulationPanelProps) {
+export function SimulationPanel({
+  answers,
+  result,
+  simulation,
+  onAdvanceSimulation,
+  onSimulationChange,
+}: SimulationPanelProps) {
+  const [weekCount, setWeekCount] = useState(0);
+
+  useEffect(() => {
+    setWeekCount(0);
+    onSimulationChange(null);
+  }, [answers, result]);
+
+  function advanceSimulation(numberOfWeeks: number) {
+    setWeekCount((currentWeekCount) => {
+      const nextWeekCount = currentWeekCount + numberOfWeeks;
+      onAdvanceSimulation(nextWeekCount);
+      return nextWeekCount;
+    });
+  }
+
   return (
     <section className="simulation-section">
       <div className="simulation-card">
@@ -90,6 +116,64 @@ export function SimulationPanel({ answers, result }: SimulationPanelProps) {
             </article>
           ))}
         </div>
+      </div>
+
+      <div className="simulation-card simulation-card-wide capacity-simulation-card">
+        <div className="simulation-heading">
+          <div>
+            <p className="eyebrow">Capacity Simulation</p>
+            <h3>Settimane reali simulate</h3>
+          </div>
+          <div className="simulation-actions">
+            <button className="ghost-button" onClick={() => advanceSimulation(1)}>
+              Avanza di 1 settimana
+            </button>
+            <button className="primary-button" onClick={() => advanceSimulation(4)}>
+              Avanza di 4 settimane
+            </button>
+          </div>
+        </div>
+
+        {simulation ? (
+          <>
+            <div className="capacity-metrics">
+              <div className="capacity-metric">
+                <span>Capacita' sostenibile</span>
+                <strong>{formatMinutes(simulation.profile.sustainableWeeklyMinutes)}</strong>
+              </div>
+              <div className="capacity-metric">
+                <span>Affidabilita' stimata</span>
+                <strong>{Math.round(simulation.profile.completionConfidence * 100)}%</strong>
+              </div>
+              <div className="capacity-metric">
+                <span>Fascia piu' affidabile</span>
+                <strong>{simulation.profile.reliableWindow}</strong>
+              </div>
+              <div className="capacity-metric">
+                <span>Buffer efficaci</span>
+                <strong>{Math.round(simulation.profile.bufferEffectiveness * 100)}%</strong>
+              </div>
+            </div>
+            <div className="week-results">
+              {simulation.weeks.map((week) => (
+                <article className="week-result" key={week.weekNumber}>
+                  <div>
+                    <span>Settimana {week.weekNumber}</span>
+                    <strong>{Math.round(week.completionRate * 100)}% completato</strong>
+                  </div>
+                  <p>
+                    {formatMinutes(week.completedFocusMinutes)} su {formatMinutes(week.plannedFocusMinutes)}. {week.completedBlocks} completati, {week.movedBlocks} recuperati, {week.skippedBlocks} saltati.
+                  </p>
+                </article>
+              ))}
+            </div>
+            <p className="simulation-recommendation">{simulation.recommendation}</p>
+          </>
+        ) : (
+          <p className="simulation-empty-copy">
+            Avanza nel tempo per generare eventi ripetibili di completamento, recupero e salto. Il simulatore stima quanto il piano sia sostenibile prima di raccogliere dati reali.
+          </p>
+        )}
       </div>
     </section>
   );

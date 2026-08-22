@@ -13,7 +13,7 @@ import type {
   GoalInput,
   RawAnswers,
   Weekday,
-} from "../planner/contracts";
+} from "../domain/planning";
 import { formatTimeRange } from "../utils/time";
 
 interface NewUserWizardModalProps {

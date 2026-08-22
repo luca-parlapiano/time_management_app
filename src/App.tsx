@@ -4,11 +4,13 @@ import {
   type NewUserWizardSubmission,
 } from "./components/NewUserWizardModal";
 import { OnboardingModal } from "./components/OnboardingModal";
+import { ProgressDashboard } from "./components/ProgressDashboard";
 import { SimulationPanel } from "./components/SimulationPanel";
 import { WeeklyCalendar } from "./components/WeeklyCalendar";
+import { plannerAppService } from "./application/plannerAppService";
+import type { ActivityEvent, ActivityOutcome, PlannerResult, RawAnswers } from "./domain/planning";
 import { defaultAnswers } from "./planner/defaults";
-import { buildPrototypePlan } from "./planner/mockPlanner";
-import type { PlannerResult, RawAnswers } from "./planner/contracts";
+import type { SimulationRun } from "./simulation/contracts";
 import { formatTimeRange } from "./utils/time";
 
 interface ActivePlanSummary {
@@ -23,6 +25,8 @@ function App() {
   const [answers, setAnswers] = useState<RawAnswers | null>(null);
   const [plannerResult, setPlannerResult] = useState<PlannerResult | null>(null);
   const [activePlan, setActivePlan] = useState<ActivePlanSummary | null>(null);
+  const [blockEvents, setBlockEvents] = useState<Record<string, ActivityEvent>>({});
+  const [simulationRun, setSimulationRun] = useState<SimulationRun | null>(null);
   const hasActivePlan = Boolean(activePlan && answers && plannerResult);
 
   const goalNames = (answers?.goals ?? [])
@@ -30,17 +34,29 @@ function App() {
     .map((goal) => `${goal.name} (${Math.round(goal.desiredWeeklyMinutes / 60)}h)`)
     .join(", ");
 
-  function applyAnswers(nextAnswers: RawAnswers, nextPlan?: ActivePlanSummary) {
+  async function applyAnswers(nextAnswers: RawAnswers, nextPlan?: ActivePlanSummary) {
     setAnswers(nextAnswers);
-    setPlannerResult(buildPrototypePlan(nextAnswers));
+    setPlannerResult(await plannerAppService.generatePlan(nextAnswers));
+    setBlockEvents({});
+    setSimulationRun(null);
     if (nextPlan) {
       setActivePlan(nextPlan);
     }
   }
 
-  function applyWizardSubmission(submission: NewUserWizardSubmission) {
-    applyAnswers(submission.answers, submission.selectedPlan);
+  async function applyWizardSubmission(submission: NewUserWizardSubmission) {
+    await applyAnswers(submission.answers, submission.selectedPlan);
     setIsNewUserWizardOpen(false);
+  }
+
+  async function recordBlockEvent(blockId: string, outcome: ActivityOutcome) {
+    const event = await plannerAppService.recordActivityOutcome(blockId, outcome);
+    setBlockEvents((currentEvents) => ({ ...currentEvents, [blockId]: event }));
+  }
+
+  async function advanceSimulation(weekCount: number) {
+    if (!answers || !plannerResult) return;
+    setSimulationRun(await plannerAppService.simulatePlan(answers, plannerResult, weekCount));
   }
 
   return (
@@ -139,9 +155,27 @@ function App() {
           </div>
         </div>
 
-        <WeeklyCalendar plan={plannerResult?.plan} />
+        <WeeklyCalendar
+          plan={plannerResult?.plan}
+          blockEvents={blockEvents}
+          onRecordBlockEvent={recordBlockEvent}
+        />
+        {plannerResult ? (
+          <ProgressDashboard
+            events={blockEvents}
+            onClear={() => setBlockEvents({})}
+            plan={plannerResult.plan}
+            simulatedEvents={simulationRun?.weeks.flatMap((week) => week.events) ?? []}
+          />
+        ) : null}
         {answers && plannerResult ? (
-          <SimulationPanel answers={answers} result={plannerResult} />
+          <SimulationPanel
+            answers={answers}
+            onAdvanceSimulation={advanceSimulation}
+            onSimulationChange={setSimulationRun}
+            result={plannerResult}
+            simulation={simulationRun}
+          />
         ) : null}
       </main>
 
@@ -149,8 +183,8 @@ function App() {
         <OnboardingModal
           answers={answers ?? defaultAnswers}
           onClose={() => setIsModalOpen(false)}
-          onSubmit={(nextAnswers) => {
-            applyAnswers(nextAnswers, {
+          onSubmit={async (nextAnswers) => {
+            await applyAnswers(nextAnswers, {
               id: "custom-profile",
               title: "Profilo personalizzato",
               description: "Profilo aggiornato manualmente dalla dashboard.",

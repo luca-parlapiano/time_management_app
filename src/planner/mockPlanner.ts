@@ -8,7 +8,7 @@ import type {
   UserProfile,
   Weekday,
   WeeklyPlan
-} from "./contracts";
+} from "../domain/planning";
 
 const weekdays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 

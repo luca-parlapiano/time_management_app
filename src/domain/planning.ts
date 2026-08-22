@@ -1,11 +1,4 @@
-export type Weekday =
-  | "mon"
-  | "tue"
-  | "wed"
-  | "thu"
-  | "fri"
-  | "sat"
-  | "sun";
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 export type EnergyLevel = "low" | "medium" | "high";
 
@@ -33,28 +26,21 @@ export interface RawAnswers {
   sleep: string;
   focusMinutes: number;
   flexibilityMode: FlexibilityMode;
-  energyProfile: {
-    morning: EnergyLevel;
-    afternoon: EnergyLevel;
-    evening: EnergyLevel;
-  };
+  energyProfile: Record<"morning" | "afternoon" | "evening", EnergyLevel>;
 }
 
 export interface UserProfile {
   goals: GoalInput[];
   planningHorizon: "weekly";
   fixedCommitments: FixedCommitment[];
-  sleepWindow: {
-    wake: string;
-    sleep: string;
-  };
+  sleepWindow: { wake: string; sleep: string };
   availableTimeByDay: Record<Weekday, number>;
   energyProfile: RawAnswers["energyProfile"];
   slotSizeMinutes: number;
   flexibilityMode: FlexibilityMode;
 }
 
-export interface PlanBlock {
+export interface CalendarActivity {
   id: string;
   day: Weekday;
   start: string;
@@ -65,8 +51,13 @@ export interface PlanBlock {
   rationale: string;
 }
 
+export interface Calendar {
+  activities: CalendarActivity[];
+  timezone: string;
+}
+
 export interface WeeklyPlan {
-  blocks: PlanBlock[];
+  blocks: CalendarActivity[];
   summary: string[];
 }
 
@@ -100,8 +91,16 @@ export interface PlannerDecision {
 
 export interface PlannerResult {
   profile: UserProfile;
-  plan: WeeklyPlan;
+  plan: WeeklyCalendar;
   capacityCheck: PlanCapacityCheck;
   derivedFeatures: DerivedFeatures;
   decisions: PlannerDecision[];
+}
+
+export type ActivityOutcome = "completed" | "skipped" | "not-needed";
+
+export interface ActivityEvent {
+  activityId: string;
+  outcome: ActivityOutcome;
+  recordedAt: string;
 }

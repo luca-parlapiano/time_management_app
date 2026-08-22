@@ -1,5 +1,5 @@
 import { defaultAnswers } from "./defaults";
-import type { RawAnswers } from "./contracts";
+import type { RawAnswers } from "../domain/planning";
 
 export interface SimulationScenario {
   id: string;
