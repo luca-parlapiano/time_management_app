@@ -1,0 +1,20 @@
+# Initial settings for a RTX 3070 8 GB experiment. Tune only after the preflight benchmark.
+model_name: Qwen/Qwen3-4B
+task: planning_intent_extraction
+max_sequence_length: 512
+load_in_4bit: true
+quantization_type: nf4
+micro_batch_size: 1
+gradient_accumulation_steps: 16
+gradient_checkpointing: true
+learning_rate: 0.0002
+epochs: 3
+lora:
+  rank: 8
+  alpha: 16
+  dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj

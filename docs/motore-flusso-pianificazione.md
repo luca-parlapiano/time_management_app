@@ -317,9 +317,9 @@ Queste cose vanno apprese dai dati d'uso.
 Per l'MVP farei cosi`:
 
 1. onboarding con 6-7 domande base
-2. normalizzazione forte lato backend
+2. normalizzazione forte nel motore locale
 3. planner deterministico che produce una settimana valida
-4. modello AI che migliora spiegazione e ordine dei blocchi
+4. spiegazioni e ordine dei blocchi prodotti da regole locali
 5. review utente con 3 azioni semplici:
    - alleggerisci
    - bilancia

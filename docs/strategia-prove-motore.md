@@ -53,7 +53,8 @@ Implementare il motore in moduli piccoli:
 
 ### Fase 5
 
-Solo dopo collegare il layer AI.
+Solo dopo validare se un layer AI locale o opzionale apporta valore, senza renderlo
+necessario al funzionamento del planner.
 
 ## Tipi Di Test Da Fare
 
@@ -64,8 +65,8 @@ Verificano che input e output rispettino gli schemi JSON.
 Servono per:
 
 - evitare dati incoerenti
-- rendere stabile il backend
-- rendere sostituibile il planner AI
+- rendere stabile il contratto locale tra UI e motore
+- rendere verificabile il planner deterministico
 
 ### 2. Unit Tests
 

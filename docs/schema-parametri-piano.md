@@ -2,7 +2,7 @@
 
 ## Obiettivo
 
-Definire il numero minimo di dati che l'utente deve inserire per ottenere un piano del tempo personalizzato, utile e sostenibile in un'app stile Habitify ma centrata sulla pianificazione a griglia e sul supporto di un modello AI remoto.
+Definire il numero minimo di dati che l'utente deve inserire per ottenere un piano del tempo personalizzato, utile e sostenibile in un'app stile Habitify ma centrata sulla pianificazione a griglia e su un motore locale deterministico.
 
 ## Decisione Di Prodotto
 
@@ -36,7 +36,7 @@ Questi parametri non devono essere obbligatori al primo minuto. Conviene mostrar
 | ID | Parametro | Tipo | Obbligatorio | Esempio | Impatto sul piano |
 | --- | --- | --- | --- | --- | --- |
 | P11 | Abitudini gia` consolidate | lista + frequenza | No | camminata 20 min ogni mattina | Aumenta continuita` e riduce attrito |
-| P12 | Principali difficolta` | multi-select | No | procrastinazione, sovraccarico | Guida i suggerimenti del motore AI |
+| P12 | Principali difficolta` | multi-select | No | procrastinazione, sovraccarico | Guida i suggerimenti del motore |
 | P13 | Stile di lavoro preferito | enum | No | task lunghi, task brevi, alternanza | Influenza la forma dei blocchi |
 | P14 | Modalita` di feedback | enum + frequenza | No | review serale, reminder smart | Definisce il loop di adattamento |
 
@@ -75,12 +75,12 @@ In questo modo un onboarding da 10-14 risposte puo` generare 25-40 feature utili
 
 ## Come Il Motore Dovrebbe Usare Questi Parametri
 
-Il sistema non dovrebbe affidarsi solo a un modello generativo. La soluzione piu` robusta per il primo rilascio e` ibrida:
+Il sistema non dovrebbe affidarsi a un modello generativo. La soluzione piu` robusta per il primo rilascio e' interamente locale:
 
 1. un motore deterministico costruisce la griglia temporale
 2. un layer di regole applica vincoli, priorita` e buffer
-3. il modello AI remoto propone distribuzione, micro-aggiustamenti e spiegazioni
-4. un ciclo di feedback corregge il piano in base all'esecuzione reale
+3. regole esplicite propongono distribuzione, micro-aggiustamenti e spiegazioni
+4. un ciclo di feedback locale corregge il piano in base all'esecuzione reale
 
 ### Output Atteso Del Motore
 
@@ -118,17 +118,12 @@ Per questo prodotto il problema principale non e` "predire" genericamente il com
 
 Per il primo MVP:
 
-- niente training custom complesso all'inizio
-- usare un modello remoto come planner/reasoner
-- serializzare il profilo utente in uno schema stabile
-- far generare al modello una proposta strutturata in JSON
-- validare il JSON con regole locali prima di mostrarlo
+- niente training custom o modello remoto;
+- serializzare il profilo utente in uno schema stabile locale;
+- generare piano e spiegazioni con regole verificabili;
+- salvare gli esiti sul dispositivo per migliorare il piano manualmente.
 
-In pratica il "cervello" del piano dovrebbe essere:
-
-- 60-70% logica applicativa
-- 20-30% personalizzazione AI
-- 10% apprendimento dai dati storici dell'utente
+In pratica il "cervello" del piano e' logica applicativa locale e spiegabile.
 
 ## Schema JSON Minimo Del Profilo Utente
 
@@ -177,4 +172,4 @@ In pratica il "cervello" del piano dovrebbe essere:
 
 ## Conclusione
 
-La soglia giusta per partire e` far inserire all'utente 10 parametri core e raccogliere gli altri in modo progressivo. Questo permette di avere un onboarding leggero, un piano gia` utile al primo tentativo e una base tecnica solida per progettare lo stack Expo + backend + AI remoto.
+La soglia giusta per partire e` far inserire all'utente 10 parametri core e raccogliere gli altri in modo progressivo. Questo permette di avere un onboarding leggero, un piano gia` utile al primo tentativo e una base tecnica solida per il client desktop locale e il suo motore deterministico.

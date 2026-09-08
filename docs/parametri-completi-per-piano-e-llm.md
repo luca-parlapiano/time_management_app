@@ -502,9 +502,9 @@ La sequenza consigliata e' questa:
 
 1. definire schema input e output stabile
 2. costruire planner deterministico robusto
-3. usare un LLM remoto con prompt strutturati
-4. salvare accettazioni, modifiche e fallimenti
-5. solo dopo valutare fine-tuning o ranking model
+3. validare il planner locale con persone reali
+4. salvare accettazioni, modifiche e fallimenti sul dispositivo
+5. solo dopo valutare un'AI opzionale e il relativo modello di costo
 
 ## File Del Codice Da Tenere Allineati A Questo Documento
 
@@ -523,8 +523,8 @@ Se devi capire come creare o addestrare un LLM per questo progetto, la domanda g
 
 Ma:
 
-- "quale schema stabile do al modello?"
-- "quali decisioni lascio al motore locale?"
-- "quali segnali salvo per imparare davvero?"
+- "quale schema stabile usa il motore locale?"
+- "quali decisioni restano spiegabili e verificabili?"
+- "quali segnali locali aiutano a migliorare davvero?"
 
 Questo file serve proprio come base di quella architettura dati.

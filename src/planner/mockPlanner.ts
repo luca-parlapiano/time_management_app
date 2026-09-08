@@ -12,6 +12,14 @@ import type {
 
 const weekdays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
+function getFixedCommitments(raw: RawAnswers) {
+  if (raw.fixedCommitments && raw.fixedCommitments.length > 0) {
+    return raw.fixedCommitments;
+  }
+
+  return [{ title: "Lavoro", days: raw.workDays, start: raw.workStart, end: raw.workEnd }];
+}
+
 // Converte un orario "HH:MM" in minuti totali per poter fare calcoli numerici.
 function toMinutes(time: string) {
   const [hours, minutes] = time.split(":").map(Number);
@@ -100,16 +108,25 @@ function getWorkloadLevel(
 }
 
 // Crea una disponibilita' base settimanale semplificata per il prototipo.
-function buildDefaultAvailableTime(workDays: Weekday[]) {
+function buildDefaultAvailableTime(raw: RawAnswers) {
+  const fixedCommitments = [...getFixedCommitments(raw), ...(raw.protectedTime ?? [])];
+  const sleepMinutes = getDurationMinutes(raw.sleep, raw.wake);
+
   return weekdays.reduce<Record<Weekday, number>>((acc, day) => {
-    acc[day] = workDays.includes(day) ? 120 : 240;
+    const commitmentMinutes = fixedCommitments
+      .filter((commitment) => commitment.days.includes(day))
+      .reduce(
+        (total, commitment) => total + getDurationMinutes(commitment.start, commitment.end),
+        0,
+      );
+    acc[day] = Math.max(0, 24 * 60 - sleepMinutes - commitmentMinutes);
     return acc;
   }, {} as Record<Weekday, number>);
 }
 
 export function checkPlanCapacity(raw: RawAnswers): PlanCapacityCheck {
   const sleepMinutes = getDurationMinutes(raw.sleep, raw.wake);
-  const workMinutes = getDurationMinutes(raw.workStart, raw.workEnd);
+  const commitments = [...getFixedCommitments(raw), ...(raw.protectedTime ?? [])];
   const totalGoalMinutes = raw.goals.reduce((total, goal) => {
     if (goal.name.trim().length === 0) {
       return total;
@@ -119,8 +136,13 @@ export function checkPlanCapacity(raw: RawAnswers): PlanCapacityCheck {
   }, 0);
 
   const dailyIssues = weekdays.flatMap((day) => {
-    const workLoad = raw.workDays.includes(day) ? workMinutes : 0;
-    const totalDailyMinutes = sleepMinutes + workLoad;
+    const commitmentLoad = commitments
+      .filter((commitment) => commitment.days.includes(day))
+      .reduce(
+        (total, commitment) => total + getDurationMinutes(commitment.start, commitment.end),
+        0,
+      );
+    const totalDailyMinutes = sleepMinutes + commitmentLoad;
 
     if (totalDailyMinutes <= 24 * 60) {
       return [];
@@ -129,14 +151,21 @@ export function checkPlanCapacity(raw: RawAnswers): PlanCapacityCheck {
     const overflowMinutes = totalDailyMinutes - 24 * 60;
     const label = day.toUpperCase();
     return [
-      `${label}: lavoro e sonno superano il limite giornaliero di ${Math.ceil(
+      `${label}: impegni, tempo protetto e sonno superano il limite giornaliero di ${Math.ceil(
         overflowMinutes / 60
       )}h.`
     ];
   });
 
-  const weeklyCapacityMinutes =
-    weekdays.length * 24 * 60 - sleepMinutes * weekdays.length - workMinutes * raw.workDays.length;
+  const weeklyCapacityMinutes = weekdays.reduce((total, day) => {
+    const commitmentLoad = commitments
+      .filter((commitment) => commitment.days.includes(day))
+      .reduce(
+        (minutes, commitment) => minutes + getDurationMinutes(commitment.start, commitment.end),
+        0,
+      );
+    return total + Math.max(0, 24 * 60 - sleepMinutes - commitmentLoad);
+  }, 0);
   const remainingWeeklyMinutes = weeklyCapacityMinutes - totalGoalMinutes;
   const weeklyIssue =
     remainingWeeklyMinutes < 0
@@ -159,29 +188,27 @@ export function checkPlanCapacity(raw: RawAnswers): PlanCapacityCheck {
 export function normalizeAnswers(raw: RawAnswers): UserProfile {
   return {
     goals: raw.goals,
-    planningHorizon: "weekly",
-    fixedCommitments: [
-      {
-        title: "Lavoro",
-        days: raw.workDays,
-        start: raw.workStart,
-        end: raw.workEnd
-      }
-    ],
+    planningHorizon: raw.planningHorizon ?? "weekly",
+    fixedCommitments: getFixedCommitments(raw),
+    protectedTime: raw.protectedTime ?? [],
     sleepWindow: {
       wake: raw.wake,
       sleep: raw.sleep
     },
-    availableTimeByDay: buildDefaultAvailableTime(raw.workDays),
+    availableTimeByDay: buildDefaultAvailableTime(raw),
     energyProfile: raw.energyProfile,
     slotSizeMinutes: 30,
-    flexibilityMode: raw.flexibilityMode
+    flexibilityMode: raw.flexibilityMode,
+    workStyle: raw.workStyle ?? "deep_work",
+    planIntensity: raw.planIntensity ?? "balanced",
+    mainDifficulties: raw.mainDifficulties ?? [],
+    selectedPreviewId: raw.selectedPreviewId,
   };
 }
 
 // Duplica ogni impegno fisso sui giorni indicati, cosi' il calendario parte gia' bloccato.
 function blocksForCommitments(profile: UserProfile): WeeklyPlan["blocks"] {
-  return profile.fixedCommitments.flatMap((commitment) =>
+  return [...profile.fixedCommitments, ...profile.protectedTime].flatMap((commitment) =>
     commitment.days.map((day) => ({
       id: `${day}-${commitment.title.toLowerCase()}`,
       day,
@@ -190,7 +217,7 @@ function blocksForCommitments(profile: UserProfile): WeeklyPlan["blocks"] {
       title: commitment.title,
       kind: "commitment" as const,
       color: "#c9d5e0",
-      rationale: "Impegno fisso bloccato prima della pianificazione."
+      rationale: "Vincolo bloccato prima della pianificazione."
     }))
   );
 }
@@ -198,17 +225,17 @@ function blocksForCommitments(profile: UserProfile): WeeklyPlan["blocks"] {
 function getFocusStartMinutes(
   profile: UserProfile,
   day: Weekday,
-  workDays: Weekday[],
   preferredFocusWindow: DerivedFeatures["preferredFocusWindow"],
   duration: number
 ) {
-  const isWorkDay = workDays.includes(day);
+  const dayCommitments = [...profile.fixedCommitments, ...profile.protectedTime].filter(
+    (commitment) => commitment.days.includes(day),
+  );
+  const isWorkDay = dayCommitments.length > 0;
   const wakeMinutes = toMinutes(profile.sleepWindow.wake);
   const sleepMinutes = toMinutes(profile.sleepWindow.sleep);
   const daySleepCutoff = sleepMinutes <= wakeMinutes ? 24 * 60 : sleepMinutes;
-  const workCommitment = profile.fixedCommitments.find((commitment) =>
-    commitment.days.includes(day)
-  );
+  const workCommitment = dayCommitments[0];
   const workStartMinutes = workCommitment ? toMinutes(workCommitment.start) : undefined;
   const workEndMinutes = workCommitment ? toMinutes(workCommitment.end) : undefined;
   const fallbackWorkEnd = workEndMinutes ?? 18 * 60;
@@ -256,7 +283,14 @@ function getFocusStartMinutes(
     return slots;
   });
 
-  return candidateSlots;
+  return candidateSlots.filter((slot) => {
+    const slotEnd = slot.start + duration;
+    return dayCommitments.every((commitment) => {
+      const commitmentStart = toMinutes(commitment.start);
+      const commitmentEnd = toMinutes(commitment.end);
+      return slotEnd <= commitmentStart || slot.start >= commitmentEnd;
+    });
+  });
 }
 
 function createGoalDecisions(
@@ -305,16 +339,15 @@ function createGoalBlocks(profile: UserProfile, focusMinutes: number) {
       const candidateSlots = getFocusStartMinutes(
         profile,
         day,
-        profile.fixedCommitments[0]?.days ?? [],
         preferredFocusWindow,
         duration
       );
-      const selectedSlot = candidateSlots[slotIndex] ?? {
-        start:
-          candidateSlots[candidateSlots.length - 1]?.start + (duration + 30) ||
-          (profile.fixedCommitments[0]?.days.includes(day) ? 18 * 60 + 30 : 19 * 60),
-        label: preferredFocusWindow
-      };
+      const selectedSlot = candidateSlots[slotIndex];
+
+      if (!selectedSlot) {
+        dayCursor += 1;
+        return null;
+      }
       const startMinutes = selectedSlot.start;
 
       blocksByDay[day] += 1;
@@ -330,7 +363,7 @@ function createGoalBlocks(profile: UserProfile, focusMinutes: number) {
         color: pickFocusColor(goal.priority),
         rationale: `Blocco assegnato a ${goal.name} nella fascia ${selectedSlot.label} per coprire circa ${goal.desiredWeeklyMinutes} minuti a settimana.`
       };
-    });
+    }).filter((block): block is NonNullable<typeof block> => block !== null);
   });
 }
 

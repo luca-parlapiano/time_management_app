@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   NewUserWizardModal,
   type NewUserWizardSubmission,
@@ -11,6 +11,7 @@ import { plannerAppService } from "./application/plannerAppService";
 import type { ActivityEvent, ActivityOutcome, PlannerResult, RawAnswers } from "./domain/planning";
 import { defaultAnswers } from "./planner/defaults";
 import type { SimulationRun } from "./simulation/contracts";
+import { loadLocalPlannerState, saveLocalPlannerState } from "./infrastructure/localPlannerStorage";
 import { formatTimeRange } from "./utils/time";
 
 interface ActivePlanSummary {
@@ -20,14 +21,27 @@ interface ActivePlanSummary {
 }
 
 function App() {
+  const [storedState] = useState(loadLocalPlannerState);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewUserWizardOpen, setIsNewUserWizardOpen] = useState(false);
-  const [answers, setAnswers] = useState<RawAnswers | null>(null);
-  const [plannerResult, setPlannerResult] = useState<PlannerResult | null>(null);
-  const [activePlan, setActivePlan] = useState<ActivePlanSummary | null>(null);
-  const [blockEvents, setBlockEvents] = useState<Record<string, ActivityEvent>>({});
+  const [answers, setAnswers] = useState<RawAnswers | null>(storedState?.answers ?? null);
+  const [plannerResult, setPlannerResult] = useState<PlannerResult | null>(
+    storedState?.plannerResult ?? null,
+  );
+  const [activePlan, setActivePlan] = useState<ActivePlanSummary | null>(
+    storedState?.activePlan ?? null,
+  );
+  const [blockEvents, setBlockEvents] = useState<Record<string, ActivityEvent>>(
+    storedState?.blockEvents ?? {},
+  );
   const [simulationRun, setSimulationRun] = useState<SimulationRun | null>(null);
   const hasActivePlan = Boolean(activePlan && answers && plannerResult);
+
+  useEffect(() => {
+    if (!answers || !plannerResult || !activePlan) return;
+
+    saveLocalPlannerState({ answers, plannerResult, activePlan, blockEvents });
+  }, [activePlan, answers, blockEvents, plannerResult]);
 
   const goalNames = (answers?.goals ?? [])
     .filter((goal) => goal.name.trim().length > 0)
@@ -68,6 +82,10 @@ function App() {
           Ora il prototipo non mostra solo il calendario: mette a confronto profili
           utente, feature derivate e scelte del motore per capire cosa influenza davvero
           la pianificazione.
+        </p>
+        <p className="hero-copy">
+          Il piano resta salvato solo su questo dispositivo: nessun account, cloud o sync
+          nella prima release.
         </p>
 
         <div className="hero-actions">

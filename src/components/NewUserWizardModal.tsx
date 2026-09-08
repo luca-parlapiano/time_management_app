@@ -11,6 +11,7 @@ import {
 import type {
   FlexibilityMode,
   GoalInput,
+  FixedCommitment,
   RawAnswers,
   Weekday,
 } from "../domain/planning";
@@ -366,6 +367,12 @@ function buildWizardSubmission(
   } as const;
   const wake = wakeByEnergy[dominantEnergyWindow] ?? defaultAnswers.wake;
   const sleep = toTime(toMinutes(wake) - draft.sleepHoursTarget * 60);
+  const toCommitment = (schedule: FixedScheduleDraft): FixedCommitment => ({
+    title: schedule.title.trim(),
+    start: schedule.start,
+    end: schedule.end,
+    days: schedule.days,
+  });
   const baseAnswers: RawAnswers = {
     goals: activeGoals.length > 0 ? activeGoals : defaultAnswers.goals,
     workStart: mainWorkSchedule?.start ?? defaultAnswers.workStart,
@@ -376,6 +383,15 @@ function buildWizardSubmission(
     focusMinutes: draft.focusBlockMinutes,
     flexibilityMode: draft.flexibilityMode,
     energyProfile: draft.energyProfile,
+    planningHorizon: draft.planDuration,
+    fixedCommitments: activeFixedSchedules.map(toCommitment),
+    protectedTime: draft.protectedSchedules
+      .filter((schedule) => schedule.title.trim().length > 0 && schedule.days.length > 0)
+      .map(toCommitment),
+    workStyle: draft.workStyle,
+    planIntensity: draft.planIntensity,
+    mainDifficulties: draft.mainDifficulties,
+    selectedPreviewId: selectedPreview.id,
   };
 
   const previewAdjustedAnswers: RawAnswers =

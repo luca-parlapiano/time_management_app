@@ -7,8 +7,7 @@ import type {
 } from "../domain/planning";
 import type { SimulationRun } from "../simulation/contracts";
 
-// Questo e' il confine tra interfaccia e dati: oggi usa il motore locale,
-// domani potra' usare chiamate HTTP e un database senza cambiare i componenti.
+// L'MVP usa esclusivamente il motore locale: nessuna chiamata di rete o cloud.
 export interface PlannerGateway {
   checkCapacity(answers: RawAnswers): PlanCapacityCheck;
   generatePlan(answers: RawAnswers): Promise<PlannerResult>;

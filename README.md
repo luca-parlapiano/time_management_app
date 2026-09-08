@@ -1,6 +1,7 @@
 # Time Planner Prototype
 
-Prototipo desktop locale basato su Electron, React, Vite e TypeScript.
+Prototipo desktop locale basato su Electron, React, Vite e TypeScript. La prima release
+non usa account, backend, cloud, sincronizzazione o smartwatch: il piano resta sul dispositivo.
 
 ## Struttura
 
@@ -50,6 +51,7 @@ L'app si apre con:
 - modale con domande base e profilo energia
 - pannello di osservabilita` con feature derivate e decision trace
 - generazione piano locale in TypeScript
+- persistenza locale del profilo, piano attivo e stato dei blocchi tra i riavvii
 
 ## File chiave da leggere per capire Electron
 

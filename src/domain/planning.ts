@@ -7,6 +7,15 @@ export type EnergyLevel = "low" | "medium" | "high";
 // Quanto il piano puo' spostare le attivita' quando cambiano le condizioni.
 export type FlexibilityMode = "rigid" | "mixed" | "flexible";
 
+export type PlanningHorizon = "weekly" | "monthly" | "quarterly" | "semiannual" | "annual";
+export type WorkStyle = "deep_work" | "alternating" | "short_sprints";
+export type PlanIntensity = "light" | "balanced" | "push";
+export type PlanningDifficulty =
+  | "procrastination"
+  | "overload"
+  | "context_switching"
+  | "unexpected_events";
+
 // Un obiettivo che l'utente vuole coltivare nella settimana.
 export interface GoalInput {
   // Nome mostrato nel calendario, ad esempio "Studio AI".
@@ -36,18 +45,31 @@ export interface RawAnswers {
   focusMinutes: number;
   flexibilityMode: FlexibilityMode;
   energyProfile: Record<"morning" | "afternoon" | "evening", EnergyLevel>;
+  // I campi opzionali mantengono compatibili il pannello profilo esistente e i dati legacy.
+  planningHorizon?: PlanningHorizon;
+  fixedCommitments?: FixedCommitment[];
+  protectedTime?: FixedCommitment[];
+  workStyle?: WorkStyle;
+  planIntensity?: PlanIntensity;
+  mainDifficulties?: PlanningDifficulty[];
+  selectedPreviewId?: string;
 }
 
 // Profilo normalizzato dal motore dopo aver interpretato le risposte dell'utente.
 export interface UserProfile {
   goals: GoalInput[];
-  planningHorizon: "weekly";
+  planningHorizon: PlanningHorizon;
   fixedCommitments: FixedCommitment[];
+  protectedTime: FixedCommitment[];
   sleepWindow: { wake: string; sleep: string };
   availableTimeByDay: Record<Weekday, number>;
   energyProfile: RawAnswers["energyProfile"];
   slotSizeMinutes: number;
   flexibilityMode: FlexibilityMode;
+  workStyle: WorkStyle;
+  planIntensity: PlanIntensity;
+  mainDifficulties: PlanningDifficulty[];
+  selectedPreviewId?: string;
 }
 
 // Una singola attivita' collocata in un giorno e in un intervallo orario.
