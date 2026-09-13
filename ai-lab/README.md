@@ -1,128 +1,146 @@
-# AI Lab: Planner Locale
+# AI Lab
 
-Questo spazio isola ricerca, dataset, valutazione e addestramento AI dal client Electron.
-Non contiene dati personali degli utenti e non modifica il planner di produzione.
+Questa cartella contiene solo gli strumenti per addestrare e valutare l'interprete locale
+del linguaggio naturale. Il calendario finale viene costruito dal planner deterministico
+dell'app, non dal modello.
 
-## Decisione Iniziale
+## I due contratti da non confondere
 
-Addestrare un adapter QLoRA, non un LLM da zero.
+### 1. Output del modello: `PlanningIntent`
 
-- Modello candidato: `Qwen/Qwen3-4B`.
-- Licenza del modello candidato: Apache-2.0.
-- Compito iniziale: testo libero in italiano -> `PlanningIntent` JSON valido.
-- Macchina di training: PC con RTX 3070, presumibilmente 8 GB VRAM.
-- Mac: preparazione dati, valutazione e revisione; non training principale.
+Lo schema canonico e `schemas/planning-intent.schema.json`.
 
-Qwen3-4B dichiara 4B parametri e supporto multilingue. Con 8 GB VRAM il training deve
-usare QLoRA a 4 bit, micro-batch `1`, sequenze corte e gradient accumulation. Non e'
-garantito finche' non viene eseguito il preflight della macchina.
+| Categoria | Campi prodotti dal modello |
+| --- | --- |
+| `goals` | `name`, `priority?`, `desiredWeeklyMinutes?`, `deadlineExpression?`, `source` |
+| `tasks` | `name`, `durationMinutes?`, `whenExpression?`, `deadlineExpression?`, `source` |
+| `habits` | `name`, `frequency?`, `durationMinutes?`, `preferredWindow?`, `source` |
+| `constraints` | `description`, `source` |
+| `preferences` | `description`, `source` |
+| `questions` | domande necessarie per completare i dati mancanti |
 
-## Cosa Addestriamo
+`source` vale `explicit` o `inferred`. I campi con `?` sono facoltativi. `priority` e
+`desiredWeeklyMinutes` vengono estratti soltanto quando l'utente li dichiara. Il modello
+conserva date e orari come testo e non crea direttamente blocchi di calendario.
 
-L'adapter deve imparare a:
+### 2. Input effettivo del planner dell'app: `RawAnswers`
 
-- riconoscere obiettivi, abitudini, vincoli e preferenze dal linguaggio dell'utente;
-- distinguere dati dichiarati da inferenze o informazioni mancanti;
-- formulare domande brevi per i dati indispensabili;
-- restituire solo JSON aderente allo schema `planning-intent.v1`.
+La fonte ufficiale e `src/domain/planning.ts`. Il planner richiede:
 
-Non deve assegnare autonomamente slot, modificare impegni, fare diagnosi o decidere le
-priorita' dell'utente. Il motore deterministico resta responsabile di capacita', conflitti,
-buffer e proposta calendarizzata.
+| Campo | Contenuto |
+| --- | --- |
+| `goals` | nome, priorita 1-5, minuti desiderati ogni settimana |
+| `workStart`, `workEnd`, `workDays` | orario e giorni di lavoro |
+| `wake`, `sleep` | finestra giornaliera disponibile |
+| `focusMinutes` | durata preferita di un blocco focus |
+| `flexibilityMode` | `rigid`, `mixed` o `flexible` |
+| `energyProfile` | energia di mattina, pomeriggio e sera |
+| campi opzionali | orizzonte, impegni fissi, tempo protetto, stile, intensita e difficolta |
 
-## Struttura Prevista
+Il LoRA attuale non produce ancora un `RawAnswers` completo. Il flusso corretto e:
+
+```text
+testo utente
+  -> PlanningIntent prodotto dal modello
+  -> validazione e controllo grounding
+  -> anteprima e domande di conferma nell'app
+  -> RawAnswers completo
+  -> planner deterministico
+  -> calendario proposto
+```
+
+Prima di integrare il modello bisogna quindi costruire nell'app il passaggio confermato da
+`PlanningIntent` a `RawAnswers`. In particolare priorita e minuti settimanali non devono
+essere inventati dal modello.
+
+La base di questo passaggio e ora implementata in:
+
+- `src/domain/planningIntent.ts`: tipi e validazione runtime dell'output non fidato;
+- `src/application/planningIntentReview.ts`: domande mancanti, dati non ancora mappati e
+  applicazione degli obiettivi soltanto dopo la conferma di priorita e minuti settimanali.
+
+La revisione identifica inoltre durata e momento mancanti per i task, frequenza e durata
+mancanti per le habit, espone `getNextPlanningQuestion` e permette la conferma finale solo
+quando non restano domande obbligatorie.
+
+Task, habit, constraint, preference e scadenze restano intenzionalmente in `unmapped` fino
+a quando il dominio del planner non avra strutture operative equivalenti.
+
+## Struttura corrente
 
 ```text
 ai-lab/
   data/
-    train.seed.v0.1.jsonl
-    validation.seed.v0.1.jsonl
-    test.seed.v0.1.jsonl
-    private/                # ignorato da Git: mai committare dati personali
+    train.jsonl             # 160 esempi di training desktop
+    validation.jsonl        # 41 esempi per la loss
+    test.jsonl              # 15 esempi v5 congelati e mai usati
+  prompts/
+    planning-intent.txt     # unico prompt di training e inferenza
   schemas/
-    planning-intent.v1.schema.json
-  configs/
-    qwen3-4b-qlora.example.yaml
+    planning-intent.schema.json
   scripts/
     validate-dataset.mjs
-  README.md
+    planning-intent-validation.mjs
+    planning-intent-grounding.mjs
+    evaluate-model-output.mjs
+    run-model.py
+    train-adapter.py
+  requirements.txt
 ```
 
-Ogni riga JSONL contiene `id`, `input` e `output`. L'`output` deve rispettare lo schema
-`planning-intent.v1`. Il seed `v0.1` contiene esempi sintetici e revisionabili: serve a
-validare formato e valutazione, non e' ancora un corpus sufficiente per il fine-tuning.
+`archive/` contiene localmente i file storici precedenti al consolidamento ed e ignorata da
+Git. `adapters/`, `results/` e `.venv/` sono anch'esse cartelle locali ignorate da Git.
 
-Il file di test deve restare separato dal training e contenere casi mai mostrati al modello.
-All'inizio gli esempi saranno scritti e revisionati da noi, inclusi casi ambigui, overload,
-vincoli incompatibili e linguaggio informale italiano. Dati reali possono essere usati solo
-con consenso esplicito e dopo anonimizzazione.
+## Modello e training correnti
 
-Validare il dataset con:
+- Base: `Qwen/Qwen3-4B`, gia presente nella cache locale Hugging Face.
+- Metodo: QLoRA NF4 a 4 bit, BF16, double quantization.
+- LoRA: rank 8, alpha 16, dropout 0,05.
+- Moduli: `q_proj`, `k_proj`, `v_proj`, `o_proj`.
+- Batch GPU: 1; gradient accumulation: 16.
+- Lunghezza massima: 1024 token; epoche: 3.
+- Adapter desktop candidato: `adapters/qwen3-4b-planning-intent-v3.1-160`.
+
+Sul holdout v5 l'adapter v3.1 ha prodotto il 100% di JSON validi, l'86,7% di output
+accettati da schema e grounding, l'80% di accuratezza sui dettagli dei goal e nessun campo
+temporale imprevisto. Gli output devono comunque passare dalla validazione e dalla
+conferma dell'utente prima di modificare `RawAnswers`.
+
+Gli adapter e i risultati precedenti sono conservati localmente in `archive/`. In
+`adapters/` e `results/` restano soltanto il candidato desktop, il suo risultato sul
+test v5 e l'input per le prove manuali.
+
+## Comandi Git Bash
 
 ```bash
+cd /c/Users/lucap/Desktop/Sviluppo/time_management_app
+source ai-lab/.venv/Scripts/activate
 node ai-lab/scripts/validate-dataset.mjs
+python ai-lab/scripts/train-adapter.py --check-only
 ```
 
-## Preflight Sul PC
-
-Prima di installare o scaricare un modello, verificare:
+Test manuale con l'adapter corrente:
 
 ```bash
-nvidia-smi
-python --version
+python ai-lab/scripts/run-model.py \
+  --input ai-lab/results/manual-input.jsonl \
+  --output ai-lab/results/manual-output.jsonl \
+  --adapter ai-lab/adapters/qwen3-4b-planning-intent-v3.1-160
 ```
 
-Obiettivo minimo: driver NVIDIA funzionante, Python 3.11 e GPU rilevata con circa 8 GB di
-VRAM. Su Windows e' preferibile lavorare in WSL2 o Linux per ridurre le incompatibilita'
-CUDA; PyTorch va installato usando il comando generato dal suo configuratore ufficiale per
-la combinazione sistema operativo, CUDA e Python effettivamente presenti.
 
-## Primo Esperimento
+Valutazione del candidato desktop:
 
-Non parte dal fine-tuning. Prima eseguiamo il modello base su 50 casi di valutazione e
-misuriamo:
+```bash
+python ai-lab/scripts/run-model.py \
+  --input ai-lab/data/test.jsonl \
+  --output ai-lab/results/qwen3-4b-planning-intent-v3.1-160.jsonl \
+  --adapter ai-lab/adapters/qwen3-4b-planning-intent-v3.1-160
 
-- JSON sintatticamente valido;
-- conformita' allo schema;
-- corretta estrazione di obiettivi, vincoli e domande mancanti;
-- assenza di dati inventati;
-- tempo di risposta e memoria usata.
+node ai-lab/scripts/evaluate-model-output.mjs \
+  ai-lab/results/qwen3-4b-planning-intent-v3.1-160.jsonl \
+  ai-lab/data/test.jsonl
+```
 
-Se il prompting non basta, il primo QLoRA usa:
-
-- contesto massimo: 512 token;
-- micro-batch: 1;
-- gradient accumulation: 16;
-- gradient checkpointing: attivo;
-- quantizzazione base: 4 bit NF4;
-- LoRA rank: 8, da aumentare solo dopo il primo benchmark;
-- target iniziale: proiezioni attention, senza adattare tutto il modello.
-
-Questi sono parametri di partenza, non valori finali. Vanno modificati solo dopo aver
-misurato VRAM, tempo per step e qualita' sul test set separato.
-
-## Criteri Di Successo
-
-Il modello non entra nell'app solo perche' genera testo gradevole. Deve soddisfare tutti i
-criteri seguenti sul test set:
-
-- nessun output invalido arriva al planner: validazione schema obbligatoria;
-- nessun vincolo viene trasformato in slot senza passare dal motore locale;
-- miglioramento misurabile rispetto al prompt base nell'estrazione strutturata;
-- nessuna regressione importante su italiano colloquiale e casi incompleti;
-- prestazioni accettabili sull'hardware desktop dichiarato.
-
-## Passaggio Successivo
-
-Quando il preflight e la baseline saranno disponibili, scegliamo tra:
-
-1. mantenere prompting + validazione, se gia' sufficiente;
-2. addestrare QLoRA su dataset curato;
-3. ridurre a un modello piu' piccolo se la 3070 non regge tempi e memoria richiesti.
-
-## Fonti
-
-- [Qwen3-4B: modello, lingue e licenza](https://huggingface.co/Qwen/Qwen3-4B)
-- [Hugging Face PEFT: QLoRA e quantizzazione](https://huggingface.co/docs/peft/developer_guides/quantization)
-- [Hugging Face PEFT: LoRA](https://huggingface.co/docs/peft/main/conceptual_guides/lora)
-- [PyTorch: installazione locale](https://pytorch.org/get-started/locally/)
+I runner usano soltanto i file locali. Il download e consentito esclusivamente passando
+`--allow-download`.

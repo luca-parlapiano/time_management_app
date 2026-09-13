@@ -1,35 +1,61 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { validatePlanningIntent } from "./planning-intent-validation.mjs";
+import { auditPlanningIntentGrounding } from "./planning-intent-grounding.mjs";
 
-const dataDir = new URL("../data/", import.meta.url);
-const requiredKeys = ["goals", "habits", "constraints", "preferences", "questions"];
-const validSources = new Set(["explicit", "inferred"]);
+const files = {
+  train: fileURLToPath(new URL("../data/train.jsonl", import.meta.url)),
+  validation: fileURLToPath(new URL("../data/validation.jsonl", import.meta.url)),
+  test: fileURLToPath(new URL("../data/test.jsonl", import.meta.url)),
+};
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+function readJsonl(path) {
+  return readFileSync(path, "utf8").split(/\r?\n/).filter((line) => line.trim()).map(JSON.parse);
 }
 
-function validateSourcedItems(items, file, line) {
-  assert(Array.isArray(items), `${file}:${line} must be an array`);
-  for (const item of items) {
-    assert(item && typeof item === "object", `${file}:${line} contains an invalid item`);
-    assert(validSources.has(item.source), `${file}:${line} has an invalid source`);
+function normalizeInput(input) {
+  return input.toLocaleLowerCase("it-IT").normalize("NFKC").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+const seenIds = new Map();
+const seenInputs = new Map();
+let failed = false;
+
+for (const [split, path] of Object.entries(files)) {
+  const records = readJsonl(path);
+  for (const [index, record] of records.entries()) {
+    const location = `${split}:${index + 1}`;
+    if (typeof record.id !== "string" || !record.id) {
+      console.error(`${location}: missing id`);
+      failed = true;
+    }
+    if (typeof record.input !== "string" || !record.input) {
+      console.error(`${location}: missing input`);
+      failed = true;
+      continue;
+    }
+    for (const error of validatePlanningIntent(record.output)) {
+      console.error(`${location} (${record.id}) ${error}`);
+      failed = true;
+    }
+    for (const error of auditPlanningIntentGrounding(record.input, record.output)) {
+      console.error(`${location} (${record.id}) ${error}`);
+      failed = true;
+    }
+    if (seenIds.has(record.id)) {
+      console.error(`${location}: duplicate id also found in ${seenIds.get(record.id)}`);
+      failed = true;
+    }
+    seenIds.set(record.id, location);
+    const normalized = normalizeInput(record.input);
+    if (seenInputs.has(normalized)) {
+      console.error(`${location}: duplicate input also found in ${seenInputs.get(normalized)}`);
+      failed = true;
+    }
+    seenInputs.set(normalized, location);
   }
+  console.log(`${split}: ${records.length} valid records`);
 }
 
-for (const file of readdirSync(dataDir).filter((name) => name.endsWith(".jsonl"))) {
-  const lines = readFileSync(join(dataDir.pathname, file), "utf8").trim().split("\n");
-  for (const [index, line] of lines.entries()) {
-    const record = JSON.parse(line);
-    assert(typeof record.id === "string" && record.id.length > 0, `${file}:${index + 1} lacks an id`);
-    assert(typeof record.input === "string" && record.input.length > 0, `${file}:${index + 1} lacks input`);
-    assert(record.output && typeof record.output === "object", `${file}:${index + 1} lacks output`);
-    for (const key of requiredKeys) assert(key in record.output, `${file}:${index + 1} lacks ${key}`);
-    validateSourcedItems(record.output.goals, file, index + 1);
-    validateSourcedItems(record.output.habits, file, index + 1);
-    validateSourcedItems(record.output.constraints, file, index + 1);
-    validateSourcedItems(record.output.preferences, file, index + 1);
-    assert(Array.isArray(record.output.questions), `${file}:${index + 1} questions must be an array`);
-  }
-  console.log(`${file}: ${lines.length} examples valid`);
-}
+if (failed) process.exitCode = 1;
+else console.log("dataset validation, grounding and split isolation passed");

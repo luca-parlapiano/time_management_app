@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "planning-intent.v2",
+  "title": "Planning Intent v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["goals", "tasks", "habits", "constraints", "preferences", "questions"],
+  "properties": {
+    "goals": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/goal" }
+    },
+    "tasks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/task" }
+    },
+    "habits": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/habit" }
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/describedItem" }
+    },
+    "preferences": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/describedItem" }
+    },
+    "questions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 240 }
+    }
+  },
+  "$defs": {
+    "source": { "type": "string", "enum": ["explicit", "inferred"] },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "desiredWeeklyMinutes": { "type": "integer", "minimum": 1, "maximum": 10080 },
+        "deadlineExpression": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "durationMinutes": { "type": "integer", "minimum": 1, "maximum": 720 },
+        "whenExpression": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "deadlineExpression": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "habit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "source"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "frequency": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "durationMinutes": { "type": "integer", "minimum": 1, "maximum": 720 },
+        "preferredWindow": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "describedItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "source"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    }
+  }
+}
