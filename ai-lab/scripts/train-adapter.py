@@ -10,7 +10,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_MODEL = "Qwen/Qwen3-4B"
+PROJECT_ROOT = ROOT.parent
+DEFAULT_MODEL = str(PROJECT_ROOT / "resources" / "ai" / "models" / "qwen3-4b")
 DEFAULT_TRAIN = ROOT / "data" / "train.jsonl"
 DEFAULT_VALIDATION = ROOT / "data" / "validation.jsonl"
 DEFAULT_PROMPT = ROOT / "prompts" / "planning-intent.txt"

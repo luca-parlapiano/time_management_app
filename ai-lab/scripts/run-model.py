@@ -16,7 +16,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_MODEL = "Qwen/Qwen3-4B"
+PROJECT_ROOT = ROOT.parent
+DEFAULT_MODEL = str(PROJECT_ROOT / "resources" / "ai" / "models" / "qwen3-4b")
+DEFAULT_ADAPTER = PROJECT_ROOT / "resources" / "ai" / "adapters" / "planning-intent-v3.1-160"
 DEFAULT_PROMPT = ROOT / "prompts" / "planning-intent.txt"
 DEFAULT_INPUT = ROOT / "data" / "test.jsonl"
 DEFAULT_OUTPUT = ROOT / "results" / "model-output.jsonl"
@@ -52,7 +54,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--adapter", type=Path)
+    parser.add_argument("--adapter", type=Path, default=DEFAULT_ADAPTER)
+    parser.add_argument("--no-adapter", action="store_true")
     parser.add_argument("--allow-download", action="store_true")
     parser.add_argument("--max-new-tokens", type=int, default=512)
     args = parser.parse_args()
@@ -82,7 +85,7 @@ def main() -> None:
         device_map="auto",
         local_files_only=not args.allow_download,
     )
-    if args.adapter:
+    if args.adapter and not args.no_adapter:
         from peft import PeftModel
 
         model = PeftModel.from_pretrained(model, args.adapter)

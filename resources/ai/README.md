@@ -1,6 +1,16 @@
 # Runtime AI resources
 
-models/ contiene il modello base o il modello unito pronto per la distribuzione.
-adapters/ contiene gli adapter LoRA distribuibili.
+## Modello base
 
-I file binari restano locali e non vengono salvati in Git. La versione usata dall app verra registrata qui prima del packaging.
+Il modello Hugging Face Qwen3-4B usato dall'app si trova in:
+
+    models/qwen3-4b/
+
+## Adapter attivo
+
+Il LoRA PlanningIntent selezionato per il desktop si trova in:
+
+    adapters/planning-intent-v3.1-160/
+
+I pesi sono locali e ignorati da Git. Le directory e questo documento restano versionati.
+Gli adapter storici e gli artefatti di training rimangono in ai-lab/archive.

@@ -93,20 +93,20 @@ Git. `adapters/`, `results/` e `.venv/` sono anch'esse cartelle locali ignorate 
 
 ## Modello e training correnti
 
-- Base: `Qwen/Qwen3-4B`, gia presente nella cache locale Hugging Face.
+- Base: `resources/ai/models/qwen3-4b`, spostata dalla cache Hugging Face.
 - Metodo: QLoRA NF4 a 4 bit, BF16, double quantization.
 - LoRA: rank 8, alpha 16, dropout 0,05.
 - Moduli: `q_proj`, `k_proj`, `v_proj`, `o_proj`.
 - Batch GPU: 1; gradient accumulation: 16.
 - Lunghezza massima: 1024 token; epoche: 3.
-- Adapter desktop candidato: `adapters/qwen3-4b-planning-intent-v3.1-160`.
+- Adapter desktop candidato: `resources/ai/adapters/planning-intent-v3.1-160`.
 
 Sul holdout v5 l'adapter v3.1 ha prodotto il 100% di JSON validi, l'86,7% di output
 accettati da schema e grounding, l'80% di accuratezza sui dettagli dei goal e nessun campo
 temporale imprevisto. Gli output devono comunque passare dalla validazione e dalla
 conferma dell'utente prima di modificare `RawAnswers`.
 
-Gli adapter e i risultati precedenti sono conservati localmente in `archive/`. In
+Gli adapter e i risultati precedenti sono conservati localmente in `ai-lab/archive/`. In
 `adapters/` e `results/` restano soltanto il candidato desktop, il suo risultato sul
 test v5 e l'input per le prove manuali.
 
@@ -125,7 +125,7 @@ Test manuale con l'adapter corrente:
 python ai-lab/scripts/run-model.py \
   --input ai-lab/results/manual-input.jsonl \
   --output ai-lab/results/manual-output.jsonl \
-  --adapter ai-lab/adapters/qwen3-4b-planning-intent-v3.1-160
+  --adapter resources/ai/adapters/planning-intent-v3.1-160
 ```
 
 
@@ -135,12 +135,13 @@ Valutazione del candidato desktop:
 python ai-lab/scripts/run-model.py \
   --input ai-lab/data/test.jsonl \
   --output ai-lab/results/qwen3-4b-planning-intent-v3.1-160.jsonl \
-  --adapter ai-lab/adapters/qwen3-4b-planning-intent-v3.1-160
+  --adapter resources/ai/adapters/planning-intent-v3.1-160
 
 node ai-lab/scripts/evaluate-model-output.mjs \
   ai-lab/results/qwen3-4b-planning-intent-v3.1-160.jsonl \
   ai-lab/data/test.jsonl
 ```
 
-I runner usano soltanto i file locali. Il download e consentito esclusivamente passando
-`--allow-download`.
+I runner usano per impostazione predefinita il modello e l'adapter dentro `resources/ai`.
+Il download e consentito esclusivamente indicando un modello remoto e passando
+`--allow-download`. Usa `--no-adapter` soltanto per eseguire una baseline del modello base.
