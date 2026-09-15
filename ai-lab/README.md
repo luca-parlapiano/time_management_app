@@ -1,147 +1,54 @@
 # AI Lab
 
-Questa cartella contiene solo gli strumenti per addestrare e valutare l'interprete locale
-del linguaggio naturale. Il calendario finale viene costruito dal planner deterministico
-dell'app, non dal modello.
+Questa cartella contiene solo dataset e strumenti offline per addestrare e valutare
+l'interprete `PlanningIntent`. Non contiene il runtime dell'app: Electron usa direttamente
+`llama-server`, senza Python, PyTorch, Transformers o PEFT in produzione.
 
-## I due contratti da non confondere
+## Contratto
 
-### 1. Output del modello: `PlanningIntent`
+Il prompt e lo schema usati dall'app sono le copie canoniche in:
 
-Lo schema canonico e `schemas/planning-intent.schema.json`.
+- `resources/ai/planning-intent.txt`
+- `resources/ai/planning-intent.schema.json`
 
-| Categoria | Campi prodotti dal modello |
-| --- | --- |
-| `goals` | `name`, `priority?`, `desiredWeeklyMinutes?`, `deadlineExpression?`, `source` |
-| `tasks` | `name`, `durationMinutes?`, `whenExpression?`, `deadlineExpression?`, `source` |
-| `habits` | `name`, `frequency?`, `durationMinutes?`, `preferredWindow?`, `source` |
-| `constraints` | `description`, `source` |
-| `preferences` | `description`, `source` |
-| `questions` | domande necessarie per completare i dati mancanti |
+Il modello estrae goal, task, habit, vincoli e preferenze. Il calendario viene sempre
+generato dal planner deterministico TypeScript dopo la validazione dell'output.
 
-`source` vale `explicit` o `inferred`. I campi con `?` sono facoltativi. `priority` e
-`desiredWeeklyMinutes` vengono estratti soltanto quando l'utente li dichiara. Il modello
-conserva date e orari come testo e non crea direttamente blocchi di calendario.
-
-### 2. Input effettivo del planner dell'app: `RawAnswers`
-
-La fonte ufficiale e `src/domain/planning.ts`. Il planner richiede:
-
-| Campo | Contenuto |
-| --- | --- |
-| `goals` | nome, priorita 1-5, minuti desiderati ogni settimana |
-| `workStart`, `workEnd`, `workDays` | orario e giorni di lavoro |
-| `wake`, `sleep` | finestra giornaliera disponibile |
-| `focusMinutes` | durata preferita di un blocco focus |
-| `flexibilityMode` | `rigid`, `mixed` o `flexible` |
-| `energyProfile` | energia di mattina, pomeriggio e sera |
-| campi opzionali | orizzonte, impegni fissi, tempo protetto, stile, intensita e difficolta |
-
-Il LoRA attuale non produce ancora un `RawAnswers` completo. Il flusso corretto e:
-
-```text
-testo utente
-  -> PlanningIntent prodotto dal modello
-  -> validazione e controllo grounding
-  -> anteprima e domande di conferma nell'app
-  -> RawAnswers completo
-  -> planner deterministico
-  -> calendario proposto
-```
-
-Prima di integrare il modello bisogna quindi costruire nell'app il passaggio confermato da
-`PlanningIntent` a `RawAnswers`. In particolare priorita e minuti settimanali non devono
-essere inventati dal modello.
-
-La base di questo passaggio e ora implementata in:
-
-- `src/domain/planningIntent.ts`: tipi e validazione runtime dell'output non fidato;
-- `src/application/planningIntentReview.ts`: domande mancanti, dati non ancora mappati e
-  applicazione degli obiettivi soltanto dopo la conferma di priorita e minuti settimanali.
-
-La revisione identifica inoltre durata e momento mancanti per i task, frequenza e durata
-mancanti per le habit, espone `getNextPlanningQuestion` e permette la conferma finale solo
-quando non restano domande obbligatorie.
-
-Task, habit, constraint, preference e scadenze restano intenzionalmente in `unmapped` fino
-a quando il dominio del planner non avra strutture operative equivalenti.
-
-## Struttura corrente
+## Struttura
 
 ```text
 ai-lab/
-  data/
-    train.jsonl             # 160 esempi di training desktop
-    validation.jsonl        # 41 esempi per la loss
-    test.jsonl              # 15 esempi v5 congelati e mai usati
-  prompts/
-    planning-intent.txt     # unico prompt di training e inferenza
-  schemas/
-    planning-intent.schema.json
+  data/                   # train, validation e test JSONL
   scripts/
     validate-dataset.mjs
     planning-intent-validation.mjs
     planning-intent-grounding.mjs
     evaluate-model-output.mjs
-    run-model.py
-    train-adapter.py
-  requirements.txt
+    run-model.py          # valutazione offline su GPU CUDA
+    train-adapter.py      # training QLoRA offline su GPU CUDA
+  requirements.txt       # dipendenze solo per training e valutazione
 ```
 
-`archive/` contiene localmente i file storici precedenti al consolidamento ed e ignorata da
-Git. `adapters/`, `results/` e `.venv/` sono anch'esse cartelle locali ignorate da Git.
+## Modello corrente
 
-## Modello e training correnti
+- base di training: `Qwen/Qwen3-4B`;
+- runtime desktop: GGUF `Q4_K_M` tramite `llama.cpp`;
+- LoRA: rank 8, alpha 16, dropout 0,05;
+- moduli: `q_proj`, `k_proj`, `v_proj`, `o_proj`.
 
-- Base: `resources/ai/models/qwen3-4b`, spostata dalla cache Hugging Face.
-- Metodo: QLoRA NF4 a 4 bit, BF16, double quantization.
-- LoRA: rank 8, alpha 16, dropout 0,05.
-- Moduli: `q_proj`, `k_proj`, `v_proj`, `o_proj`.
-- Batch GPU: 1; gradient accumulation: 16.
-- Lunghezza massima: 1024 token; epoche: 3.
-- Adapter desktop candidato: `resources/ai/adapters/planning-intent-v3.1-160`.
+L'adapter deve essere convertito dal formato PEFT/Safetensors al formato GGUF con gli
+strumenti di `llama.cpp` e salvato come
+`resources/ai/adapters/planning-intent-qwen3-4b.gguf`.
 
-Sul holdout v5 l'adapter v3.1 ha prodotto il 100% di JSON validi, l'86,7% di output
-accettati da schema e grounding, l'80% di accuratezza sui dettagli dei goal e nessun campo
-temporale imprevisto. Gli output devono comunque passare dalla validazione e dalla
-conferma dell'utente prima di modificare `RawAnswers`.
-
-Gli adapter e i risultati precedenti sono conservati localmente in `ai-lab/archive/`. In
-`adapters/` e `results/` restano soltanto il candidato desktop, il suo risultato sul
-test v5 e l'input per le prove manuali.
-
-## Comandi Git Bash
+## Comandi
 
 ```bash
-cd /c/Users/lucap/Desktop/Sviluppo/time_management_app
-source ai-lab/.venv/Scripts/activate
 node ai-lab/scripts/validate-dataset.mjs
 python ai-lab/scripts/train-adapter.py --check-only
+python ai-lab/scripts/train-adapter.py --allow-download
+python ai-lab/scripts/run-model.py --allow-download \
+  --adapter ai-lab/adapters/qwen3-4b-planning-intent
 ```
 
-Test manuale con l'adapter corrente:
-
-```bash
-python ai-lab/scripts/run-model.py \
-  --input ai-lab/results/manual-input.jsonl \
-  --output ai-lab/results/manual-output.jsonl \
-  --adapter resources/ai/adapters/planning-intent-v3.1-160
-```
-
-
-Valutazione del candidato desktop:
-
-```bash
-python ai-lab/scripts/run-model.py \
-  --input ai-lab/data/test.jsonl \
-  --output ai-lab/results/qwen3-4b-planning-intent-v3.1-160.jsonl \
-  --adapter resources/ai/adapters/planning-intent-v3.1-160
-
-node ai-lab/scripts/evaluate-model-output.mjs \
-  ai-lab/results/qwen3-4b-planning-intent-v3.1-160.jsonl \
-  ai-lab/data/test.jsonl
-```
-
-I runner usano per impostazione predefinita il modello e l'adapter dentro `resources/ai`.
-Il download e consentito esclusivamente indicando un modello remoto e passando
-`--allow-download`. Usa `--no-adapter` soltanto per eseguire una baseline del modello base.
+PyTorch rimane confinato a questi comandi offline e non viene installato o caricato
+dall'app Electron.

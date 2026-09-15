@@ -17,9 +17,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = ROOT.parent
-DEFAULT_MODEL = str(PROJECT_ROOT / "resources" / "ai" / "models" / "qwen3-4b")
-DEFAULT_ADAPTER = PROJECT_ROOT / "resources" / "ai" / "adapters" / "planning-intent-v3.1-160"
-DEFAULT_PROMPT = ROOT / "prompts" / "planning-intent.txt"
+DEFAULT_MODEL = "Qwen/Qwen3-4B"
+DEFAULT_ADAPTER = ROOT / "adapters" / "qwen3-4b-planning-intent"
+DEFAULT_PROMPT = PROJECT_ROOT / "resources" / "ai" / "planning-intent.txt"
 DEFAULT_INPUT = ROOT / "data" / "test.jsonl"
 DEFAULT_OUTPUT = ROOT / "results" / "model-output.jsonl"
 

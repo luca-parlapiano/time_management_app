@@ -4,6 +4,7 @@ import {
   type NewUserWizardSubmission,
 } from "./components/NewUserWizardModal";
 import { OnboardingModal } from "./components/OnboardingModal";
+import { PlannerChat } from "./components/PlannerChat";
 import { ProgressDashboard } from "./components/ProgressDashboard";
 import { SimulationPanel } from "./components/SimulationPanel";
 import { WeeklyCalendar } from "./components/WeeklyCalendar";
@@ -49,13 +50,15 @@ function App() {
     .join(", ");
 
   async function applyAnswers(nextAnswers: RawAnswers, nextPlan?: ActivePlanSummary) {
+    const nextResult = await plannerAppService.generatePlan(nextAnswers);
     setAnswers(nextAnswers);
-    setPlannerResult(await plannerAppService.generatePlan(nextAnswers));
+    setPlannerResult(nextResult);
     setBlockEvents({});
     setSimulationRun(null);
     if (nextPlan) {
       setActivePlan(nextPlan);
     }
+    return nextResult;
   }
 
   async function applyWizardSubmission(submission: NewUserWizardSubmission) {
@@ -195,6 +198,7 @@ function App() {
             simulation={simulationRun}
           />
         ) : null}
+        <PlannerChat answers={answers} onApplyAnswers={applyAnswers} result={plannerResult} />
       </main>
 
       {isModalOpen ? (

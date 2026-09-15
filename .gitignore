@@ -13,3 +13,5 @@ resources/ai/models/*
 !resources/ai/models/.gitkeep
 resources/ai/adapters/*
 !resources/ai/adapters/.gitkeep
+resources/ai/bin/*
+!resources/ai/bin/.gitkeep

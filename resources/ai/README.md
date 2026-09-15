@@ -1,16 +1,21 @@
 # Runtime AI resources
 
-## Modello base
+## Runtime
 
-Il modello Hugging Face Qwen3-4B usato dall'app si trova in:
+L'app usa `llama-server` di `llama.cpp` e Qwen3-4B `Q4_K_M`. Se il modello non e
+presente localmente, `llama.cpp` lo scarica dal repository ufficiale
+`Qwen/Qwen3-4B-GGUF`. Per forzare un file locale, copialo in:
 
-    models/qwen3-4b/
+    models/qwen3-4b-q4_k_m.gguf
 
-## Adapter attivo
+Per scaricarlo direttamente in questa directory prima dell'avvio dell'app:
 
-Il LoRA PlanningIntent selezionato per il desktop si trova in:
+    npm run ai:download-model
 
-    adapters/planning-intent-v3.1-160/
+## Adapter opzionale
 
-I pesi sono locali e ignorati da Git. Le directory e questo documento restano versionati.
-Gli adapter storici e gli artefatti di training rimangono in ai-lab/archive.
+Un adapter addestrato sullo stesso Qwen3-4B deve essere convertito in GGUF e salvato in:
+
+    adapters/planning-intent-qwen3-4b.gguf
+
+I pesi, gli adapter e gli eseguibili nativi sono locali e ignorati da Git.

@@ -1,9 +1,23 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { LlamaPlanningRuntime } from "./llamaPlanningRuntime.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const projectRoot = path.join(__dirname, "..");
+const resourceRoot = app.isPackaged ? process.resourcesPath : path.join(projectRoot, "resources");
+const planningIntentRuntime = new LlamaPlanningRuntime(resourceRoot);
+
+ipcMain.handle("planner-ai:interpret", async (_event, text: unknown) => {
+  if (typeof text !== "string" || !text.trim()) {
+    throw new Error("Inserisci un messaggio per il planner");
+  }
+  if (text.length > 4_000) {
+    throw new Error("Il messaggio supera il limite di 4000 caratteri");
+  }
+  return planningIntentRuntime.request(text.trim());
+});
 
 function createMainWindow() {
   const mainWindow = new BrowserWindow({
@@ -65,3 +79,5 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
+
+app.on("before-quit", () => planningIntentRuntime.stop());

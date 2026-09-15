@@ -1,133 +1,68 @@
 # Architettura E Distribuzione Dell'AI
 
-## Decisione
+## Decisione corrente
 
-Il modello AI non viene incluso nel pacchetto di installazione Electron. L'app deve poter
-essere installata, avviata e usata senza scaricare pesi aggiuntivi. L'AI e' una funzione
-opzionale con piu' provider intercambiabili.
+La chat desktop usa Qwen3-4B `Q4_K_M` attraverso `llama-server`. Il processo Electron
+avvia il server una sola volta, attende `/health`, applica il template chat del GGUF e
+richiede JSON vincolato dallo schema `PlanningIntent`.
 
 ```text
 UI React
-  -> PlanningIntentService
-  -> PlanningIntentProvider
-       |- ManualProvider
-       |- OllamaProvider
-       |- LocalModelProvider
-       `- CloudProvider
+  -> IPC Electron
+  -> LlamaPlanningRuntime
+  -> llama-server
+  -> Qwen3-4B Q4_K_M (+ LoRA GGUF opzionale)
   -> validazione PlanningIntent
-  -> domande e revisione dell'utente
-  -> motore deterministico di pianificazione
+  -> planner deterministico TypeScript
 ```
 
-Il planner non dipende da uno specifico modello. Tutti i provider devono restituire lo
-stesso contratto `PlanningIntent`; la validazione, le domande mancanti e la conferma
-dell'utente rimangono comuni.
+Il runtime dell'app non dipende da Python, PyTorch, Transformers o PEFT. Queste librerie
+rimangono eventualmente utilizzabili solo nell'AI Lab offline per addestrare un adapter.
 
-## Modalita' Disponibili
+## Modello
 
-| Modalita' | Download aggiuntivo | Uso previsto |
-| --- | ---: | --- |
-| Manuale | Nessuno | Inserimento e modifica tramite interfaccia |
-| Ollama | Scelto dall'utente | Riusa un modello gia' installato nel computer |
-| Modello locale gestito | Circa 2,5 GB | Funzionamento offline con il modello distribuito dall'app |
-| Cloud | Nessuno | Alternativa per dispositivi senza risorse locali, se introdotta |
+Il modello predefinito e `Qwen/Qwen3-4B-GGUF:Q4_K_M`, circa 2,5 GB. `llama.cpp` lo
+scarica nella propria cache alla prima esecuzione. Un GGUF gia scaricato puo essere posto
+in `resources/ai/models/qwen3-4b-q4_k_m.gguf` oppure indicato con `PLANNER_AI_MODEL`.
 
-La modalita' manuale resta sempre disponibile. L'assenza o un errore dell'AI non deve
-impedire l'accesso ai dati e alle funzioni principali.
+Il processo resta attivo per tutta la sessione Electron, quindi il caricamento viene
+pagato una sola volta. Il context e limitato a 2048 token e l'output a 384 token per
+contenere memoria e latenza.
 
-## Modello Locale Gestito
+## Accelerazione multipiattaforma
 
-Il candidato desktop e' Qwen3-4B con l'adapter `planning-intent-v3.1-160` incorporato e
-convertito in un unico file GGUF quantizzato `Q4_K_M`. Il file previsto e':
+L'app passa `--n-gpu-layers 99` e lascia a `llama.cpp` la selezione del backend disponibile:
 
-```text
-qwen3-4b-planning-intent-q4_k_m.gguf
-```
+- Metal sui Mac Apple Silicon;
+- CUDA o Vulkan nelle build Windows che li includono;
+- CPU quando non e disponibile un backend GPU.
 
-La dimensione stimata e' circa 2,5 GB. Il GGUF non viene inserito in `extraResources`, in
-un archivio dell'installer o nel repository Git. Comprimerlo ulteriormente produrrebbe un
-vantaggio limitato.
+Si puo includere un eseguibile specifico per piattaforma in
+`resources/ai/bin/<platform>-<arch>/` oppure indicarlo con `PLANNER_LLAMA_SERVER`.
+In sviluppo sono supportate anche le installazioni di sistema (`brew install llama.cpp`
+su macOS e `winget install llama.cpp` su Windows).
 
-## Esperienza Di Attivazione
+## LoRA
 
-Quando l'utente usa per la prima volta una funzione AI, l'app propone queste opzioni:
+`llama.cpp` carica un adapter tramite `--lora`. L'app lo abilita quando trova
+`resources/ai/adapters/planning-intent-qwen3-4b.gguf` o il percorso specificato in
+`PLANNER_AI_LORA`.
 
-1. collegare Ollama, se presente;
-2. scaricare il modello locale;
-3. usare il provider cloud, se configurato in una release futura;
-4. continuare con l'inserimento manuale.
+Un LoRA e legato all'architettura del modello base. L'adapter addestrato su Qwen3-4B deve
+essere convertito in GGUF prima di essere caricato da `llama.cpp`. Lo stesso GGUF
+dell'adapter e portabile tra macOS, Windows e Linux;
+cambia soltanto l'eseguibile nativo di `llama.cpp`.
 
-Prima del download vengono mostrati dimensione, spazio richiesto e possibilita' di
-rimuovere il modello. Il download deve supportare avanzamento, annullamento e ripresa.
-
-## Posizione Dei File Installati
-
-I file scaricati non vengono salvati nella directory di installazione dell'app, perche' un
-aggiornamento potrebbe sostituirla. Su Windows la destinazione e':
-
-```text
-%LOCALAPPDATA%/TimeManagementApp/ai/models/
-```
-
-Durante il download si usa un file temporaneo, per esempio con estensione `.part`. Il file
-assume il nome definitivo solo dopo il completamento e la verifica dell'hash SHA-256.
-
-## Risorse Incluse Nell'App
-
-Il pacchetto Electron contiene soltanto file piccoli e versionati:
+## Risorse versionate
 
 ```text
 resources/ai/
-  manifest.json
-  planning-intent.prompt.txt
-  schema.json
+  planning-intent.txt
+  planning-intent.schema.json
+  models/.gitkeep
+  adapters/.gitkeep
+  bin/.gitkeep
 ```
 
-Il runtime locale potra' essere incluso tra le risorse native dell'app oppure gestito come
-componente separato. I pesi del modello restano sempre esterni all'installer.
-
-Esempio indicativo di `manifest.json`:
-
-```json
-{
-  "id": "qwen3-4b-planning-intent",
-  "version": "1.0.0",
-  "fileName": "qwen3-4b-planning-intent-q4_k_m.gguf",
-  "sizeBytes": 0,
-  "downloadUrl": "https://huggingface.co/ACCOUNT/REPOSITORY/resolve/main/qwen3-4b-planning-intent-q4_k_m.gguf",
-  "sha256": "DA_COMPILARE_DOPO_LA_CONVERSIONE"
-}
-```
-
-Dimensione e hash saranno compilati usando il file GGUF definitivo, senza valori stimati.
-
-## Responsabilita' Del Download Manager
-
-- verificare lo spazio libero prima di iniziare;
-- scaricare in background mostrando percentuale e byte trasferiti;
-- supportare la ripresa tramite richieste HTTP compatibili con range;
-- verificare dimensione e SHA-256;
-- non usare mai un file parziale o non valido;
-- consentire aggiornamento, riparazione e rimozione del modello;
-- mantenere separate la versione dell'app e quella del modello.
-
-## Distribuzione
-
-Per la prima distribuzione il GGUF puo' essere pubblicato in un repository pubblico su
-Hugging Face. L'app lo scarica dall'URL dichiarato nel manifest senza incorporare credenziali.
-Un repository privato richiederebbe autenticazione e non deve essere usato inserendo token
-segreti nel client.
-
-Se il volume di download cresce, lo stesso file potra' essere spostato su uno storage con
-CDN senza cambiare il contratto del provider: sara' sufficiente pubblicare un nuovo manifest
-o aggiornare il relativo URL.
-
-## Sequenza Di Implementazione
-
-1. Definire l'interfaccia `PlanningIntentProvider` e mantenere il flusso manuale.
-2. Integrare `OllamaProvider` per completare e verificare il flusso desktop.
-3. Unire Qwen3-4B e LoRA, creare il GGUF `Q4_K_M` e verificarne i risultati.
-4. Pubblicare GGUF, hash e metadati su Hugging Face.
-5. Implementare download manager e `LocalModelProvider`.
-6. Valutare `CloudProvider` solo quando esiste una necessita' di prodotto concreta.
-
+Modelli, adapter ed eseguibili nativi sono ignorati da Git per evitare di appesantire il
+repository.

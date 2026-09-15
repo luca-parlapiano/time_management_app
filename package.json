@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
+    "ai:download-model": "node scripts/download-ai-model.mjs",
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron:tsc\" \"npm:dev:electron:run\"",
     "dev:renderer": "vite",
     "dev:electron:tsc": "tsc -p tsconfig.electron.json --watch",

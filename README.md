@@ -52,6 +52,7 @@ L'app si apre con:
 - pannello di osservabilita` con feature derivate e decision trace
 - generazione piano locale in TypeScript
 - persistenza locale del profilo, piano attivo e stato dei blocchi tra i riavvii
+- chat locale con Qwen3-4B Q4 tramite `llama.cpp`, senza runtime Python
 
 ## File chiave da leggere per capire Electron
 
@@ -59,3 +60,34 @@ L'app si apre con:
 - `electron/main.ts`
 - `src/App.tsx`
 - `src/planner/mockPlanner.ts`
+
+## AI locale
+
+Installa `llama.cpp` una volta:
+
+```bash
+# macOS
+brew install llama.cpp
+
+# Windows
+winget install llama.cpp
+```
+
+Scarica il modello da Hugging Face direttamente nella directory dell'app:
+
+```bash
+npm run ai:download-model
+```
+
+Il comando salva Qwen3-4B `Q4_K_M` (circa 2,5 GB) in
+`resources/ai/models/qwen3-4b-q4_k_m.gguf`. Se il download viene interrotto, il lancio
+successivo riparte dal file `.part`. In assenza del file locale, l'app puo ancora usare
+la cache gestita da `llama.cpp`.
+
+Le configurazioni opzionali sono:
+
+- `PLANNER_LLAMA_SERVER`: percorso dell'eseguibile `llama-server`;
+- `PLANNER_LLAMA_URL`: URL di un server gia avviato;
+- `PLANNER_LLAMA_API_KEY`: chiave del server esterno, se configurata;
+- `PLANNER_AI_MODEL`: percorso di un GGUF diverso;
+- `PLANNER_AI_LORA`: percorso di un adapter LoRA GGUF compatibile con il modello.
