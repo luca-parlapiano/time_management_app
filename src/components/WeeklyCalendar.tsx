@@ -1,104 +1,33 @@
-import { useMemo, useState } from "react";
-import { weekdayLabels } from "../planner/defaults";
-import type { ActivityEvent, ActivityOutcome, Weekday, WeeklyPlan } from "../domain/planning";
-import { formatTimeRange } from "../utils/time";
-
-function groupBlocksByDay(plan: WeeklyPlan) {
-  return weekdayLabels.reduce<Record<Weekday, WeeklyPlan["blocks"]>>((acc, day) => {
-    acc[day.key] = plan.blocks
-      .filter((block) => block.day === day.key)
-      .sort((left, right) => left.start.localeCompare(right.start));
-    return acc;
-  }, {} as Record<Weekday, WeeklyPlan["blocks"]>);
-}
+import { addDays, displayDate, durationMinutes, kindLabels, occurrences, statusLabels, today, type CalendarState, type Occurrence } from "../domain/calendar";
 
 interface WeeklyCalendarProps {
-  plan?: WeeklyPlan;
-  blockEvents?: Record<string, ActivityEvent>;
-  onRecordBlockEvent?: (blockId: string, outcome: ActivityOutcome) => void;
+  state: CalendarState;
+  week: string;
+  disabled?: boolean;
+  onAdd: (date: string) => void;
+  onEdit: (item: Occurrence) => void;
 }
-
-const outcomeLabels: Record<ActivityOutcome, string> = {
-  completed: "Completato",
-  skipped: "Saltato",
-  "not-needed": "Non necessario",
-};
-
-export function WeeklyCalendar({ plan, blockEvents = {}, onRecordBlockEvent }: WeeklyCalendarProps) {
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const blocksByDay = useMemo(() => {
-    if (!plan) {
-      return weekdayLabels.reduce<Record<Weekday, WeeklyPlan["blocks"]>>((acc, day) => {
-        acc[day.key] = [];
-        return acc;
-      }, {} as Record<Weekday, WeeklyPlan["blocks"]>);
-    }
-
-    return groupBlocksByDay(plan);
-  }, [plan]);
-
-  return (
-    <section className="calendar-grid">
-      {weekdayLabels.map((day) => (
-        <article key={day.key} className="day-column">
-          <header className="day-header">
-            <span>{day.label}</span>
-          </header>
-          <div className="day-blocks">
-            {blocksByDay[day.key].map((block) => {
-              const event = blockEvents[block.id];
-              const canRecordOutcome = block.kind === "focus" && onRecordBlockEvent;
-              const menuIsOpen = openMenuId === block.id;
-
-              const recordOutcome = (outcome: ActivityOutcome) => {
-                onRecordBlockEvent?.(block.id, outcome);
-                setOpenMenuId(null);
-              };
-
-              return (
-                <div
-                  key={block.id}
-                  className="plan-block"
-                  style={{ borderColor: block.color, backgroundColor: `${block.color}20` }}
-                >
-                  <div className="plan-block-top">
-                    <div>
-                      <strong>{block.title}</strong>
-                      <span>{formatTimeRange(block.start, block.end)}</span>
-                    </div>
-                    {canRecordOutcome ? (
-                      <button
-                        aria-expanded={menuIsOpen}
-                        aria-label={`Apri azioni per ${block.title}`}
-                        className="plan-block-menu-button"
-                        onClick={() => setOpenMenuId(menuIsOpen ? null : block.id)}
-                        type="button"
-                      >
-                        Azioni
-                      </button>
-                    ) : null}
-                  </div>
-                  <p>{block.rationale}</p>
-                  {event ? <span className={`block-outcome outcome-${event.outcome}`}>{outcomeLabels[event.outcome]}</span> : null}
-                  {canRecordOutcome && menuIsOpen ? (
-                    <div className="plan-block-actions">
-                      <button type="button" onClick={() => recordOutcome("completed")}>
-                        Segna come completato
-                      </button>
-                      <button type="button" onClick={() => recordOutcome("skipped")}>
-                        Ho saltato questo blocco
-                      </button>
-                      <button type="button" onClick={() => recordOutcome("not-needed")}>
-                        Questo elemento non mi serve
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </article>
-      ))}
-    </section>
-  );
+export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit }: WeeklyCalendarProps) {
+  const visible = occurrences(state.items, week, addDays(week, 6));
+  return <section className="calendar-grid continuous-calendar" aria-label="Calendario settimanale">
+    {Array.from({ length: 7 }, (_, i) => addDays(week, i)).map(date => {
+      const entries = visible.filter(item => item.date <= date && (item.endDate > date || (item.endDate === date && item.end > "00:00")));
+      return <article key={date} className={`day-column ${date === today() ? "day-today" : ""}`}>
+        <header className="day-header"><time dateTime={date}>{displayDate(date, { weekday: "short", month: "short" })}</time>{date === today() && <small>Oggi</small>}</header>
+        <div className="day-blocks">
+          <button disabled={disabled} type="button" className="day-add ghost-button" aria-label={`Aggiungi attività il ${date}`} onClick={() => onAdd(date)}>+ Aggiungi</button>
+          {entries.length === 0 && <p className="day-empty">Nessun elemento</p>}
+          {entries.map(item => <button disabled={disabled} type="button" key={item.id} className={`plan-block calendar-item plan-block-${item.kind === "fixed" ? "commitment" : item.kind === "protected" ? "recovery" : "focus"}`} onClick={() => onEdit(item)} aria-label={`Modifica ${item.title}, ${date}`}>
+            <strong>{item.kind !== "flexible" && <span aria-label="Vincolo bloccato">🔒 </span>}{item.title}</strong>
+            <span>{item.date < date ? "Dal giorno precedente" : item.start} – {item.endDate > date ? `${item.end} domani` : item.end}</span>
+            <small>{durationMinutes(item)} min · {kindLabels[item.kind]}</small>
+            {item.recurring && <small>↻ Settimanale{item.exception ? " · eccezione" : ""}</small>}
+            {item.status && <span className={`block-outcome outcome-${item.status}`}>{statusLabels[item.status]}</span>}
+            {item.goalId && <small>Obiettivo: {state.goals.find(goal => goal.id === item.goalId)?.name}</small>}
+            {item.notes && <p>{item.notes}</p>}
+          </button>)}
+        </div>
+      </article>;
+    })}
+  </section>;
 }

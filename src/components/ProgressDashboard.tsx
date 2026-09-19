@@ -89,7 +89,7 @@ export function ProgressDashboard({ plan, events, simulatedEvents, onClear }: Pr
     setMode(simulatedEvents.length > 0 ? "simulated" : "real");
   }, [simulatedEvents.length]);
 
-  const realEvents: DashboardEvent[] = Object.values(events);
+  const realEvents: DashboardEvent[] = Object.values(events).map(event => ({ blockId: event.activityId, outcome: event.outcome }));
   const previewEvents: DashboardEvent[] = simulatedEvents.map((event) => ({
     blockId: event.blockId,
     outcome: event.outcome === "skipped" ? "skipped" : "completed",

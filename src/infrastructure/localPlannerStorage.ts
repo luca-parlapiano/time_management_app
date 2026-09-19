@@ -38,3 +38,7 @@ export function loadLocalPlannerState(): LocalPlannerState | null {
 export function saveLocalPlannerState(state: LocalPlannerState) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
+
+export function clearLocalPlannerState() {
+  window.localStorage.removeItem(STORAGE_KEY);
+}

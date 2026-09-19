@@ -81,7 +81,7 @@ function getPreferredFocusWindow(profile: UserProfile): DerivedFeatures["preferr
     high: 3
   };
 
-  return ranking.sort((left, right) => {
+  return [...ranking].sort((left, right) => {
     return scoreByEnergy[right.value] - scoreByEnergy[left.value];
   })[0].key;
 }

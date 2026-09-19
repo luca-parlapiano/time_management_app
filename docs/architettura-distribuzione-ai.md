@@ -1,6 +1,10 @@
 # Architettura E Distribuzione Dell'AI
 
-## Decisione corrente
+> Aggiornamento calendario continuo: la chat è disabilitata nella home. Il runtime
+> descritto qui resta disponibile nel repository, senza accesso al nuovo archivio.
+> Vedi [calendario continuo](calendario-continuo.md).
+
+## Architettura del prototipo precedente
 
 La chat desktop usa Qwen3-4B `Q4_K_M` attraverso `llama-server`. Il processo Electron
 avvia il server una sola volta, attende `/health`, applica il template chat del GGUF e

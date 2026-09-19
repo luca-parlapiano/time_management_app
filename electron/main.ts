@@ -25,7 +25,7 @@ function createMainWindow() {
     height: 940,
     minWidth: 1100,
     minHeight: 760,
-    title: "Time Planner Prototype",
+    title: "Time Planner — Calendario",
     backgroundColor: "#f3efe6",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),

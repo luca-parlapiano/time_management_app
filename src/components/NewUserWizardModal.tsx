@@ -494,9 +494,9 @@ export function NewUserWizardModal({
       high: 3,
     };
     const rankedWindows = [
-      { key: "mattina", value: draft.energyProfile.morning },
-      { key: "pomeriggio", value: draft.energyProfile.afternoon },
-      { key: "sera", value: draft.energyProfile.evening },
+      { key: "mattina" as const, value: draft.energyProfile.morning },
+      { key: "pomeriggio" as const, value: draft.energyProfile.afternoon },
+      { key: "sera" as const, value: draft.energyProfile.evening },
     ].sort(
       (left, right) => scoreByEnergy[right.value] - scoreByEnergy[left.value],
     );

@@ -1,0 +1,180 @@
+/* Shared semantic tokens keep every surface and chart in the selected palette. */
+:root,
+[data-palette="natural"] {
+  color-scheme: light;
+  --page: #f3efe6;
+  --ink-rgb: 31, 43, 36;
+  --text: #1f2b24;
+  --text-secondary: #425148;
+  --text-muted: #526459;
+  --label: #7c6047;
+  --label-rgb: 124, 96, 71;
+  --card-rgb: 255, 255, 255;
+  --surface-rgb: 255, 253, 247;
+  --panel-rgb: 255, 248, 238;
+  --modal: #fff8f0;
+  --on-primary-rgb: 255, 250, 241;
+  --accent-rgb: 184, 92, 60;
+  --accent-secondary: #b67d32;
+  --support-rgb: 139, 160, 88;
+  --info-rgb: 86, 132, 150;
+  --info-text: #264c59;
+  --commitment-rgb: 125, 147, 167;
+  --success-bg: #dcebdc;
+  --success-text: #345c3b;
+  --warning-bg: #f7dfd8;
+  --warning-text: #8a4234;
+  --neutral-bg: #e6e5dc;
+  --neutral-text: #5c5b54;
+  --shadow-rgb: 25, 27, 26;
+  --backdrop-rgb: 18, 21, 19;
+}
+
+[data-palette="studio"] {
+  color-scheme: light;
+  --page: #f5f7fa;
+  --ink-rgb: 32, 41, 56;
+  --text: #202938;
+  --text-secondary: #3e4e65;
+  --text-muted: #53637a;
+  --label: #465e88;
+  --label-rgb: 70, 94, 136;
+  --card-rgb: 255, 255, 255;
+  --surface-rgb: 250, 252, 255;
+  --panel-rgb: 237, 242, 250;
+  --modal: #f7f9fd;
+  --on-primary-rgb: 250, 252, 255;
+  --accent-rgb: 54, 94, 220;
+  --accent-secondary: #7668b8;
+  --support-rgb: 66, 144, 124;
+  --info-rgb: 63, 138, 167;
+  --info-text: #24566b;
+  --commitment-rgb: 132, 147, 173;
+  --success-bg: #dcefe7;
+  --success-text: #285b45;
+  --warning-bg: #f8e5dc;
+  --warning-text: #88432d;
+  --neutral-bg: #e5eaf1;
+  --neutral-text: #4b586b;
+  --shadow-rgb: 20, 29, 46;
+  --backdrop-rgb: 15, 22, 36;
+}
+
+[data-palette="night"] {
+  color-scheme: dark;
+  --page: #171c24;
+  --ink-rgb: 232, 237, 245;
+  --text: #e8edf5;
+  --text-secondary: #c5cedb;
+  --text-muted: #b3bfce;
+  --label: #c2b5e8;
+  --label-rgb: 194, 181, 232;
+  --card-rgb: 36, 44, 56;
+  --surface-rgb: 39, 47, 60;
+  --panel-rgb: 29, 36, 47;
+  --modal: #202836;
+  --on-primary-rgb: 27, 33, 44;
+  --accent-rgb: 182, 164, 238;
+  --accent-secondary: #8fb9eb;
+  --support-rgb: 139, 193, 170;
+  --info-rgb: 128, 180, 211;
+  --info-text: #b6d9ee;
+  --commitment-rgb: 145, 158, 179;
+  --success-bg: #293f37;
+  --success-text: #b3e0c3;
+  --warning-bg: #49332e;
+  --warning-text: #f3bdab;
+  --neutral-bg: #354050;
+  --neutral-text: #ced7e4;
+  --shadow-rgb: 0, 0, 0;
+  --backdrop-rgb: 0, 0, 0;
+}
+
+.palette-picker {
+  min-width: 0;
+  margin: 0 0 28px;
+  padding: 0;
+  border: 0;
+}
+
+.palette-picker legend {
+  padding: 0;
+  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.palette-options {
+  display: grid;
+  gap: 8px;
+}
+
+.palette-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  min-height: 58px;
+  border: 1px solid rgba(var(--ink-rgb), 0.16);
+  border-radius: 14px;
+  background: rgba(var(--card-rgb), 0.64);
+  cursor: pointer;
+}
+
+.palette-option:has(input:checked) {
+  border-color: rgb(var(--accent-rgb));
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.palette-option input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.palette-option-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.palette-option-copy strong {
+  font-size: 14px;
+}
+
+.palette-option-copy small,
+.palette-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.palette-note {
+  margin: 10px 0 0;
+}
+
+.palette-swatches {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.palette-swatches span {
+  width: 12px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--page);
+  border: 1px solid rgba(var(--ink-rgb), 0.2);
+}
+
+.palette-swatches span:nth-child(2) { background: var(--text); }
+.palette-swatches span:nth-child(3) { background: rgb(var(--accent-rgb)); }
+
+.plan-block {
+  --block-rgb: var(--commitment-rgb);
+  border-color: rgb(var(--block-rgb));
+  background: rgba(var(--block-rgb), 0.12);
+}
+
+.plan-block-focus { --block-rgb: var(--accent-rgb); }
+.plan-block-buffer { --block-rgb: var(--info-rgb); }
+.plan-block-recovery { --block-rgb: var(--support-rgb); }
