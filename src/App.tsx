@@ -273,7 +273,7 @@ function App() {
             <p className="eyebrow">
               {activeTab === "settings"
                 ? "Personalizza la tua app"
-                : "Vista settimanale"}
+                : activeTab === "statistics" ? "Vista annuale" : "Vista settimanale"}
             </p>
             <h2>
               {activeTab === "calendar"
@@ -282,14 +282,14 @@ function App() {
                   ? "Statistiche"
                   : "Impostazioni"}
             </h2>
-            {activeTab !== "settings" && (
+            {activeTab === "calendar" && (
               <p aria-live="polite">
                 {displayDate(week, { year: "numeric" })} –{" "}
                 {displayDate(addDays(week, 6), { year: "numeric" })}
               </p>
             )}
           </div>
-          {activeTab !== "settings" && (
+          {activeTab === "calendar" && (
             <nav className="week-navigation" aria-label="Navigazione settimane">
               <button
                 className="secondary-button"
@@ -373,7 +373,7 @@ function App() {
               Statistiche non disponibili finché l’archivio non è leggibile.
             </p>
           ) : (
-            <CalendarStatistics state={state} week={week} />
+            <CalendarStatistics state={state} />
           )}
         </section>
         <section

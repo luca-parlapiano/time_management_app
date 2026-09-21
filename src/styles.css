@@ -2005,3 +2005,67 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
   .drawer-layout .week-navigation button { padding: 7px; font-size: 11px; }
   .continuous-calendar.hourly-calendar { grid-template-columns: 40px repeat(7, minmax(90px, 1fr)); }
 }
+
+#panel-statistics:not([hidden]) { flex: 1; }
+.annual-statistics { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 8px; }
+.annual-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.annual-navigation { display: flex; align-items: center; gap: 8px; }
+.annual-navigation strong { font-size: 20px; }
+.annual-navigation button { padding: 6px 10px; font-size: 12px; }
+.annual-toolbar p, .annual-hint { margin: 0; font-size: 12px; color: var(--text-secondary); }
+.annual-months { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(145px, 1fr)); gap: 10px; }
+.annual-month { display: flex; flex-direction: column; min-width: 0; padding: 8px; border: 1px solid rgba(var(--ink-rgb), 0.12); border-radius: 14px; background: rgba(var(--card-rgb), 0.6); }
+.annual-month h3 { margin: 0 0 4px; font-size: 13px; text-transform: capitalize; }
+.annual-weekdays, .annual-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.annual-weekdays { margin-bottom: 3px; text-align: center; font-size: 9px; color: var(--text-secondary); }
+.annual-days { flex: 1; grid-template-rows: repeat(6, minmax(0, 1fr)); }
+.annual-day { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; min-width: 0; padding: 0; border: 1px solid rgba(var(--ink-rgb), 0.07); border-radius: 4px; background: rgba(var(--surface-rgb), 0.7); font-size: 10px; cursor: pointer; }
+.annual-day-events { background: rgba(var(--accent-rgb), 0.13); font-weight: 700; }
+.annual-day:hover { background: rgba(var(--accent-rgb), 0.25); }
+.annual-day[aria-current="date"] { outline: 2px solid rgb(var(--accent-rgb)); outline-offset: -2px; }
+.annual-event-dots { display: flex; align-items: center; justify-content: center; gap: 2px; height: 5px; }
+.annual-event-dots i { width: 4px; height: 4px; border-radius: 50%; }
+.annual-event-dots small { font-size: 8px; line-height: 5px; }
+.annual-event-list { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.annual-event-list li { display: flex; align-items: center; gap: 12px; padding: 10px; border-left: 3px solid var(--event-color); border-radius: 8px; background: rgba(var(--card-rgb), 0.6); }
+.annual-event-list p { margin: 4px 0; font-size: 12px; color: var(--text-secondary); }
+@media (max-width: 1000px) {
+  .annual-months { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(145px, 1fr)); }
+}
+@media (max-width: 600px) {
+  .annual-months { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(6, 160px); }
+}
+.annual-month { min-height: 0; }
+.annual-days { min-height: 0; }
+.annual-day { line-height: 1; }
+.annual-toolbar, .annual-hint, .annual-month h3, .annual-weekdays { flex-shrink: 0; }
+
+.annual-matrix-wrapper { flex: 1; min-height: 0; overflow: auto; }
+.annual-matrix { width: 100%; height: 100%; min-height: 420px; table-layout: fixed; border-collapse: separate; border-spacing: 2px; font-size: 10px; }
+.annual-matrix th, .annual-matrix td { padding: 0; text-align: center; line-height: 1; }
+.annual-matrix thead th { position: sticky; top: 0; z-index: 2; height: 24px; background: rgb(var(--surface-rgb)); text-transform: capitalize; border-radius: 5px; font-size: 11px; }
+.annual-matrix abbr { text-decoration: none; }
+.annual-matrix .annual-day-heading { position: sticky; right: 0; width: 44px; background: rgb(var(--surface-rgb)); color: var(--text-secondary); }
+.annual-matrix thead .annual-day-heading { z-index: 3; }
+.annual-matrix .annual-day { width: 100%; height: 100%; min-height: 10px; flex-direction: row; gap: 4px; border-radius: 3px; }
+.annual-matrix .annual-event-dots { height: auto; }
+.annual-matrix .annual-event-dots i { width: 5px; height: 5px; }
+.annual-event-count { font-size: 9px; font-variant-numeric: tabular-nums; }
+.annual-invalid { border-radius: 3px; background: repeating-linear-gradient(135deg, rgba(var(--ink-rgb), 0.07), rgba(var(--ink-rgb), 0.07) 2px, transparent 2px, transparent 5px); }
+@media (max-width: 600px) {
+  .annual-matrix { min-width: 460px; }
+}
+
+.annual-matrix.annual-planner { min-width: 760px; min-height: 400px; border-spacing: 1px; background: rgba(var(--ink-rgb), 0.12); border: 1px solid rgba(var(--ink-rgb), 0.12); border-radius: 8px; }
+.annual-planner thead th { border-radius: 0; height: 24px; font-size: 9px; }
+.annual-planner .annual-month-heading { position: sticky; left: 0; z-index: 1; width: 76px; padding: 0 5px; text-align: left; text-transform: capitalize; font-size: 10px; background: rgb(var(--surface-rgb)); color: var(--text); }
+.annual-planner thead .annual-month-heading { z-index: 3; }
+.annual-planner .annual-day { position: relative; flex-direction: column; justify-content: flex-start; gap: 3px; border: 0; border-radius: 0; padding-top: 4px; background: rgb(var(--surface-rgb)); }
+.annual-planner .planner-weekend { background: rgba(var(--ink-rgb), 0.1); }
+.annual-planner .planner-weekend .annual-day { background: color-mix(in srgb, rgb(var(--surface-rgb)) 90%, var(--text)); }
+.annual-planner .annual-day-events { box-shadow: inset 0 -3px 0 rgba(var(--accent-rgb), 0.45); }
+.annual-planner .annual-day:hover { background: color-mix(in srgb, rgb(var(--surface-rgb)) 80%, rgb(var(--accent-rgb))); }
+.annual-planner .planner-outside { background: rgba(var(--accent-rgb), 0.18); }
+.annual-planner .annual-event-dots { gap: 1px; flex-wrap: wrap; }
+.annual-planner .annual-event-dots i { width: 4px; height: 4px; }
+.planner-day-number { font-size: 9px; font-variant-numeric: tabular-nums; }
