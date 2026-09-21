@@ -233,6 +233,7 @@ h1 {
 
 .day-header {
   padding: 18px 16px 10px;
+  text-align: center;
   font-weight: 700;
   border-bottom: 1px solid rgba(var(--ink-rgb), 0.08);
 }
@@ -1913,6 +1914,29 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .editor-save-footer .modal-actions { margin-top: 0; }
 .editor-save-error { margin: 0 0 10px; padding: 10px 12px; font-size: 13px; }
 
+.continuous-calendar.hourly-calendar { grid-template-columns: 64px repeat(7, minmax(150px, 1fr)); max-height: 78vh; overflow: auto; align-items: start; isolation: isolate; }
+.hourly-calendar .day-column { overflow: visible; min-height: 0; }
+.hourly-calendar .day-header { position: sticky; top: 0; z-index: 3; height: 124px; padding: 14px 10px 10px; border-radius: 28px 28px 0 0; background: rgb(var(--surface-rgb)); }
+.hourly-calendar .day-add { margin-top: 10px; }
+.hourly-calendar .day-timeline { position: relative; display: block; height: var(--timeline-height); padding: 0; background: repeating-linear-gradient(to bottom, rgba(var(--ink-rgb), 0.12) 0, rgba(var(--ink-rgb), 0.12) 1px, transparent 1px, transparent var(--hour-height)); }
+.hourly-calendar .day-empty { position: absolute; top: 16px; left: 0; right: 0; margin: 0; }
+.hourly-calendar .timeline-item { position: absolute; left: 5px; width: calc(100% - 10px); min-height: 0; overflow: hidden; }
+.hourly-calendar .timeline-item-compact { padding: 0 6px; border-radius: 6px; background: color-mix(in srgb, var(--event-color) 25%, #fff); border-left: 3px solid var(--event-color); }
+.timeline-item-compact .folder-shape, .timeline-item-compact .event-indicators { display: none; }
+.timeline-item-compact .event-main { flex-direction: row; gap: 6px; text-align: left; }
+.timeline-item-compact .event-icon { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 6px; }
+.timeline-item-compact .event-icon svg { width: 16px; height: 16px; }
+.timeline-item-compact .event-main strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calendar-time-column { position: sticky; left: 0; z-index: 4; border: 1px solid rgba(var(--ink-rgb), 0.12); border-radius: 20px 20px 0 0; background: rgb(var(--surface-rgb)); }
+.calendar-time-column .day-header { display: flex; align-items: center; justify-content: center; padding: 0; font-size: 13px; }
+.time-timeline { position: relative; height: var(--timeline-height); }
+.calendar-hour { position: absolute; left: 0; right: 0; text-align: center; transform: translateY(-50%); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.calendar-hour:first-child { transform: none; }
+.calendar-hour:last-child { transform: translateY(-100%); }
+@media (max-width: 720px) {
+  .continuous-calendar.hourly-calendar { grid-template-columns: 56px repeat(7, minmax(190px, 65vw)); }
+}
+
 /* The compact drawer keeps all controls on the same vertical axis. */
 .app-shell.drawer-layout { grid-template-columns: 360px minmax(0, 1fr); transition: grid-template-columns 180ms ease; }
 .drawer-layout .hero-panel { min-width: 0; border-right: 1px solid rgba(var(--ink-rgb), 0.12); border-bottom: 0; }
@@ -1934,4 +1958,50 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell.drawer-layout { transition: none; }
+}
+
+/* Fit the weekly overview to the available window height. */
+.app-shell.drawer-layout { height: 100dvh; min-height: 0; overflow: hidden; }
+.drawer-layout .hero-panel { overflow-y: auto; }
+.drawer-layout .calendar-panel { display: flex; flex-direction: column; min-height: 0; padding: 16px 20px; overflow: hidden; }
+.drawer-layout .workspace-tabs { flex-shrink: 0; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; }
+.drawer-layout .workspace-tab { min-height: 44px; min-width: 0; padding: 10px 16px; border-radius: 12px; }
+.drawer-layout .calendar-header { flex-shrink: 0; gap: 12px; margin-bottom: 12px; }
+.drawer-layout .calendar-header h2 { margin-bottom: 4px; font-size: 24px; }
+.drawer-layout .calendar-header p { margin-bottom: 4px; font-size: 13px; }
+.drawer-layout .week-navigation button { padding: 9px 12px; font-size: 13px; }
+.drawer-layout [role="tabpanel"] { min-height: 0; overflow: auto; }
+.drawer-layout #panel-calendar:not([hidden]) { display: flex; flex-direction: column; flex: 1; gap: 8px; }
+.calendar-planning-note { flex-shrink: 0; font-size: 12px; color: var(--text-secondary); }
+.calendar-planning-note summary { cursor: pointer; }
+.calendar-planning-note p { margin: 8px 0 0; max-width: 800px; }
+.continuous-calendar.hourly-calendar { flex: 1; min-height: 280px; max-height: none; grid-template-columns: 48px repeat(7, minmax(0, 1fr)); gap: 6px; padding: 3px; align-items: stretch; }
+.hourly-calendar .day-column, .hourly-calendar .calendar-time-column { height: 100%; min-width: 0; border-radius: 14px; }
+.hourly-calendar .day-header { height: 66px; padding: 8px 4px; border-radius: 14px 14px 0 0; font-size: 12px; }
+.hourly-calendar .day-header small { margin-top: 3px; font-size: 10px; }
+.hourly-calendar .day-add { position: absolute; bottom: 4px; right: 4px; width: 24px; height: 24px; margin: 0; padding: 0; font-size: 18px; }
+.hourly-calendar .day-timeline, .hourly-calendar .time-timeline { height: calc(100% - 66px); }
+.hourly-calendar .day-timeline { background: linear-gradient(to bottom, rgba(var(--ink-rgb), 0.12) 1px, transparent 1px); background-size: 100% calc(100% / var(--hour-count)); }
+.hourly-calendar .day-empty { font-size: 10px; padding: 0 3px; }
+.hourly-calendar .calendar-hour { font-size: 10px; }
+.hourly-calendar .timeline-item { justify-content: flex-start; align-items: stretch; gap: 3px; left: 3px; width: calc(100% - 6px); padding: 4px; border-radius: 6px; border-left: 3px solid var(--event-color); background: color-mix(in srgb, var(--event-color) 25%, #fff); }
+.hourly-calendar .timeline-item .event-main { flex-direction: row; gap: 4px; text-align: left; }
+.hourly-calendar .timeline-item .event-main strong { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hourly-calendar .timeline-item .event-icon { flex: 0 0 18px; width: 18px; height: 18px; border-radius: 4px; }
+.hourly-calendar .timeline-item .event-icon svg { width: 14px; height: 14px; }
+.hourly-calendar .timeline-item .event-indicators { justify-content: flex-start; font-size: 10px; }
+.hourly-calendar .timeline-item-compact { padding: 0 3px; justify-content: center; }
+@media (max-width: 1100px) and (min-width: 721px) {
+  .app-shell.drawer-layout:not(.sidebar-collapsed) { grid-template-columns: 240px minmax(0, 1fr); }
+  .drawer-layout .hero-panel { padding: 20px 15px; }
+  .drawer-layout .hero-panel h1 { font-size: 30px; }
+}
+@media (max-width: 720px) {
+  .drawer-layout .calendar-panel { padding: 10px; }
+  .drawer-layout .workspace-tabs { flex-wrap: nowrap; gap: 4px; }
+  .drawer-layout .workspace-tab { flex: 1; flex-direction: column; padding: 6px 3px; gap: 4px; font-size: 10px; }
+  .drawer-layout .calendar-header { gap: 6px; }
+  .drawer-layout .week-navigation { gap: 4px; }
+  .drawer-layout .week-navigation button { padding: 7px; font-size: 11px; }
+  .continuous-calendar.hourly-calendar { grid-template-columns: 40px repeat(7, minmax(90px, 1fr)); }
 }

@@ -348,18 +348,18 @@ function App() {
             onAdd={(date) => setEditor({ date })}
             onEdit={setEventMenu}
           />
-          <section
-            className="summary-card"
+          <details
+            className="calendar-planning-note"
             aria-label="Pianificazione"
           >
-            <h2>Pianificazione e AI</h2>
+            <summary>Pianificazione e AI</summary>
             <p className="summary-empty-copy">
               La chat del prototipo è temporaneamente disabilitata: rigenerava
               l’intero piano. Puoi organizzare gli elementi direttamente nel
               calendario; i futuri suggerimenti dovranno rispettare date,
               vincoli ed esiti.
             </p>
-          </section>
+          </details>
         </section>
         <section
           id="panel-statistics"
