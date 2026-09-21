@@ -1,112 +1,539 @@
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState, type CSSProperties } from "react";
+import { EventIcon } from "./components/EventIcon";
+import { CalendarStatistics } from "./components/CalendarStatistics";
+import { CalendarEventMenu } from "./components/CalendarEventMenu";
 import { WeeklyCalendar } from "./components/WeeklyCalendar";
 import { CalendarItemEditor } from "./components/CalendarItemEditor";
 import { CalendarDialog } from "./components/CalendarDialog";
 import { CalendarPreferences } from "./components/CalendarPreferences";
 import { PalettePicker } from "./components/PalettePicker";
 import { loadPalette, PALETTE_STORAGE_KEY, type Palette } from "./theme";
-import { addDays, clearCalendar, deleteItem, displayDate, putItem, today, weekStart, type CalendarState, type Occurrence } from "./domain/calendar";
-import { loadCalendar, saveCalendar } from "./infrastructure/localCalendarStorage";
+import {
+  setOccurrenceOutcome,
+  putWeeklyActivity,
+  addDays,
+  clearCalendar,
+  deleteItem,
+  displayDate,
+  eventAppearance,
+  eventColors,
+  putItem,
+  today,
+  weekStart,
+  type CalendarState,
+  type Occurrence,
+} from "./domain/calendar";
+import {
+  loadCalendar,
+  saveCalendar,
+} from "./infrastructure/localCalendarStorage";
 
 function readableArchive(data: string) {
-  try { return JSON.stringify(JSON.parse(data), null, 2); } catch { return data; }
+  try {
+    return JSON.stringify(JSON.parse(data), null, 2);
+  } catch {
+    return data;
+  }
 }
 function download(name: string, data: string) {
-  const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+  const url = URL.createObjectURL(
+    new Blob([data], { type: "application/json" }),
+  );
   const anchor = document.createElement("a");
-  anchor.href = url; anchor.download = name; anchor.click();
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function App() {
   const [loaded] = useState(() => {
-    try { return loadCalendar(window.localStorage); }
-    catch { return { state: { version: 2, items: [], goals: [], profile: null } as CalendarState, raw: null, legacy: null, error: "Archivio locale non accessibile. Riapri l’app per riprovare." }; }
+    try {
+      return loadCalendar(window.localStorage);
+    } catch {
+      return {
+        state: {
+          version: 2,
+          items: [],
+          goals: [],
+          profile: null,
+        } as CalendarState,
+        raw: null,
+        legacy: null,
+        error: "Archivio locale non accessibile. Riapri l’app per riprovare.",
+      };
+    }
   });
   const [state, setState] = useState(loaded.state);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => window.matchMedia("(min-width: 721px)").matches);
+  const [activeTab, setActiveTab] = useState<
+    "calendar" | "statistics" | "settings"
+  >("calendar");
   const [week, setWeek] = useState(() => weekStart(today()));
-  const [editor, setEditor] = useState<{ date: string; occurrence?: Occurrence } | null>(null);
-  const [preferences, setPreferences] = useState<"profile" | "goals" | null>(null);
+  const [eventMenu, setEventMenu] = useState<Occurrence | null>(null);
+  const [editor, setEditor] = useState<{
+    date: string;
+    occurrence?: Occurrence;
+  } | null>(null);
+  const [preferences, setPreferences] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [clearUnlocked, setClearUnlocked] = useState(false);
   const [error, setError] = useState("");
   const [palette, setPalette] = useState(loadPalette);
   const [paletteSaveError, setPaletteSaveError] = useState(false);
-  useLayoutEffect(() => { document.documentElement.dataset.palette = palette; }, [palette]);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.palette = palette;
+  }, [palette]);
   function changePalette(next: Palette) {
     setPalette(next);
-    try { window.localStorage.setItem(PALETTE_STORAGE_KEY, next); setPaletteSaveError(false); }
-    catch { setPaletteSaveError(true); }
+    try {
+      window.localStorage.setItem(PALETTE_STORAGE_KEY, next);
+      setPaletteSaveError(false);
+    } catch {
+      setPaletteSaveError(true);
+    }
   }
   function commit(next: CalendarState) {
     if (loaded.error) throw new Error(loaded.error);
-    try { saveCalendar(window.localStorage, next); }
-    catch { throw new Error("Salvataggio non riuscito. Nessuna modifica applicata: controlla lo spazio disponibile e riprova."); }
-    setState(next); setError("");
+    try {
+      saveCalendar(window.localStorage, next);
+    } catch {
+      throw new Error(
+        "Salvataggio non riuscito. Nessuna modifica applicata: controlla lo spazio disponibile e riprova.",
+      );
+    }
+    setState(next);
+    setError("");
   }
-  const hasConstraints = state.items.some(item => item.kind !== "flexible");
+  const hasConstraints = state.items.some((item) => item.kind !== "flexible");
   const disabled = Boolean(loaded.error);
-  return <div className="app-shell">
-    <aside className="hero-panel">
-      <PalettePicker value={palette} onChange={changePalette} saveError={paletteSaveError} />
-      <p className="eyebrow">Il tuo tempo, in locale</p>
-      <h1>Spazio alle tue giornate.</h1>
-      <p className="hero-copy">Attività, impegni e tempo per te. Un calendario continuo, pronto da usare.</p>
-      <div className="hero-actions">
-        <button disabled={disabled} className="primary-button" onClick={() => setEditor({ date: week === weekStart(today()) ? today() : week })}>Aggiungi attività</button>
-        <button disabled={disabled} className="secondary-button" onClick={() => setPreferences("goals")}>Obiettivi</button>
-        <button disabled={disabled} className="secondary-button" onClick={() => setPreferences("profile")}>Profilo facoltativo</button>
-      </div>
-      <div className="summary-card">
-        <h2>Il tuo calendario</h2>
-        <p>🔒 Impegni fissi e tempo protetto richiedono uno sblocco esplicito per le modifiche.</p>
-        <p>Le attività flessibili possono essere spostate cambiando data e orari.</p>
-        <p className="summary-empty-copy">Dati salvati solo su questo dispositivo. Nessun account o sincronizzazione.</p>
-      </div>
-      {state.goals.length > 0 && <div className="summary-card"><h2>Obiettivi</h2><ul className="summary-list">{state.goals.map(goal => <li key={goal.id}>{goal.name}</li>)}</ul></div>}
-      <div className="summary-card">
-        <h2>Dati locali</h2>
-        <div className="hero-actions">
-          <button className="secondary-button" disabled={disabled} onClick={() => download("calendario.json", JSON.stringify(state, null, 2))}>Esporta calendario</button>
-          <button disabled={disabled || state.items.length === 0} className="ghost-button" onClick={() => { setClearUnlocked(false); setError(""); setClearing(true); }}>Svuota calendario</button>
+  const activityIds = new Set<string>();
+  const activityNames = new Set<string>();
+  const activities = state.items.filter(item => {
+    const id = item.activityId ?? item.id;
+    const name = item.title.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("it");
+    const duplicate = activityIds.has(id) || activityNames.has(name);
+    activityIds.add(id);
+    activityNames.add(name);
+    return !duplicate;
+  });
+  return (
+    <div className={`app-shell drawer-layout${sidebarExpanded ? "" : " sidebar-collapsed"}`}>
+      <aside id="sidebar-drawer" className="hero-panel" aria-label="Barra laterale">
+        <button type="button" className="secondary-button sidebar-toggle" aria-expanded={sidebarExpanded} aria-controls="sidebar-drawer" aria-label={sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"} title={sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"} onClick={() => setSidebarExpanded(value => !value)}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16" /><path d={sidebarExpanded ? "m16 9-3 3 3 3" : "m13 9 3 3-3 3"} /></svg>
+        </button>
+        <div className="sidebar-intro" hidden={!sidebarExpanded}>
+        <p className="eyebrow">Il tuo tempo, in locale</p>
+        <h1>Spazio alle tue giornate.</h1>
+        <p className="hero-copy">
+          Attività, impegni e tempo per te. Un calendario continuo, pronto da
+          usare.
+        </p>
         </div>
-      </div>
-      {loaded.legacy !== null && <div className="summary-card">
-        <h2>Recupero del prototipo</h2>
-        <p>Il vecchio archivio è conservato integralmente: profilo, piano e risultati. I blocchi settimanali non avevano date e non sono stati inseriti nel calendario.</p>
-        <p>Esporta il JSON per recuperare i dati originali. Puoi consultarli qui e ricreare gli elementi scegliendo le date corrette.</p>
-        <button className="secondary-button" onClick={() => download("recupero-prototipo.json", loaded.legacy!)}>Esporta dati precedenti</button>
-        <details className="legacy-details"><summary>Consulta archivio precedente</summary><pre>{readableArchive(loaded.legacy)}</pre></details>
-      </div>}
-    </aside>
-    <main className="calendar-panel">
-      <header className="calendar-header">
-        <div><p className="eyebrow">Vista settimanale</p><h2>Calendario</h2><p aria-live="polite">{displayDate(week, { year: "numeric" })} – {displayDate(addDays(week, 6), { year: "numeric" })}</p></div>
-        <nav className="week-navigation" aria-label="Navigazione settimane">
-          <button className="secondary-button" aria-label="Settimana precedente" onClick={() => setWeek(addDays(week, -7))}>← Precedente</button>
-          <button className="secondary-button" onClick={() => setWeek(weekStart(today()))}>Oggi</button>
-          <button className="secondary-button" aria-label="Settimana successiva" onClick={() => setWeek(addDays(week, 7))}>Successiva →</button>
-        </nav>
-      </header>
-      {loaded.error && <div role="alert" className="capacity-warning"><p>{loaded.error}</p>{loaded.raw !== null && <button className="secondary-button" onClick={() => download("recupero-calendario.json", loaded.raw!)}>Esporta archivio da recuperare</button>}</div>}
-      <WeeklyCalendar state={state} week={week} disabled={disabled} onAdd={date => setEditor({ date })} onEdit={occurrence => setEditor({ date: occurrence.date, occurrence })} />
-      <section className="summary-card" aria-label="Pianificazione facoltativa"><h2>Pianificazione e AI</h2><p className="summary-empty-copy">La chat del prototipo è temporaneamente disabilitata: rigenerava l’intero piano. Puoi organizzare gli elementi direttamente nel calendario; i futuri suggerimenti dovranno rispettare date, vincoli ed esiti.</p></section>
-    </main>
-    {editor && <CalendarItemEditor date={editor.date} occurrence={editor.occurrence} item={state.items.find(item => item.id === editor.occurrence?.sourceId)} goals={state.goals} onClose={() => setEditor(null)}
-      onSave={(item, unlocked, target) => {
-        commit(putItem(state, item, { actor: "user", unlocked }, target)); setEditor(null);
-      }} onDelete={(target, unlocked) => {
-        commit(deleteItem(state, target, { actor: "user", unlocked })); setEditor(null);
-      }} />}
-    {preferences && <CalendarPreferences mode={preferences} state={state} onSave={commit} onClose={() => setPreferences(null)} />}
-    {clearing && <CalendarDialog title="Svuota calendario" onClose={() => setClearing(false)}>
-      <p>Verranno eliminati <strong>tutti gli elementi di tutte le settimane</strong>, inclusi impegni fissi, tempo protetto, serie ricorrenti, eccezioni, note e stati di completamento o salto.</p>
-      <p>Restano il profilo facoltativo, gli obiettivi, la palette e l’archivio del vecchio prototipo. Questa operazione non è annullabile; puoi prima esportare il calendario.</p>
-      {hasConstraints && <label className="clear-unlock"><input type="checkbox" checked={clearUnlocked} onChange={e => setClearUnlocked(e.target.checked)} />Sblocco esplicitamente tutti i vincoli per eliminarli.</label>}
-      {error && <p role="alert" className="capacity-warning">{error}</p>}
-      <div className="modal-actions"><button className="secondary-button" onClick={() => setClearing(false)}>Annulla</button><button disabled={hasConstraints && !clearUnlocked} className="primary-button" onClick={() => {
-        try { commit(clearCalendar(state)); setClearing(false); } catch (cause) { setError((cause as Error).message); }
-      }}>Conferma: svuota tutte le settimane</button></div>
-    </CalendarDialog>}
-  </div>;
+        <div className="hero-icon-actions" role="group" aria-label="Azioni calendario">
+          <button
+            type="button"
+            aria-label="Aggiungi attività"
+            title="Aggiungi attività"
+            disabled={disabled}
+            className="primary-button hero-icon-button"
+            onClick={() =>
+              setEditor({ date: week === weekStart(today()) ? today() : week })
+            }
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+          <button
+            type="button"
+            aria-label="Profilo"
+            title="Profilo"
+            disabled={disabled}
+            className="secondary-button hero-icon-button"
+            onClick={() => setPreferences(true)}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg>
+          </button>
+            <button
+              type="button"
+              aria-label="Svuota calendario"
+              title="Svuota calendario"
+              disabled={disabled || state.items.length === 0}
+              className="ghost-button hero-icon-button"
+              onClick={() => {
+                setClearUnlocked(false);
+                setError("");
+                setClearing(true);
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7" /></svg>
+            </button>
+        </div>
+        <section className="sidebar-activities" aria-labelledby="sidebar-activities-title">
+          <h2 id="sidebar-activities-title" className={sidebarExpanded ? undefined : "sr-only"}>Le tue attività</h2>
+          {activities.length === 0 ? <p className="summary-empty-copy" hidden={!sidebarExpanded}>Nessuna attività creata. Usa + per aggiungerne una.</p> :
+            <ul className="sidebar-activity-list">
+              {activities.map(item => {
+                const appearance = eventAppearance(item);
+                return <li key={item.activityId ?? item.id} className="sidebar-activity" title={item.title} tabIndex={sidebarExpanded ? undefined : 0} style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
+                  <span className="sidebar-activity-icon"><EventIcon icon={appearance.icon} /></span>
+                  <span className={sidebarExpanded ? "sidebar-activity-title" : "sr-only"}>{item.title}</span>
+                </li>;
+              })}
+            </ul>}
+        </section>
+      </aside>
+      <main className="calendar-panel">
+        <div
+          className="workspace-tabs"
+          role="tablist"
+          aria-label="Sezioni principali"
+        >
+          {(
+            [
+              { id: "calendar", label: "Calendario" },
+              { id: "statistics", label: "Statistiche" },
+              { id: "settings", label: "Impostazioni" },
+            ] as const
+          ).map((tab, index, tabs) => (
+            <button
+              key={tab.id}
+              id={`tab-${tab.id}`}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`panel-${tab.id}`}
+              tabIndex={activeTab === tab.id ? 0 : -1}
+              className="workspace-tab"
+              onClick={() => setActiveTab(tab.id)}
+              onKeyDown={(event) => {
+                if (
+                  !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                    event.key,
+                  )
+                )
+                  return;
+                event.preventDefault();
+                const next =
+                  event.key === "Home"
+                    ? tabs[0]
+                    : event.key === "End"
+                      ? tabs[tabs.length - 1]
+                      : tabs[
+                          (index +
+                            (event.key === "ArrowLeft" ? -1 : 1) +
+                            tabs.length) %
+                            tabs.length
+                        ];
+                setActiveTab(next.id);
+                document.getElementById(`tab-${next.id}`)?.focus();
+              }}
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                {tab.id === "calendar" ? (
+                  <>
+                    <rect x="3" y="5" width="18" height="16" rx="3" />
+                    <path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2" />
+                  </>
+                ) : tab.id === "statistics" ? (
+                  <path d="M4 20V10h4v10m2 0V4h4v16m2 0v-7h4v7M2 20h20" />
+                ) : (
+                  <>
+                    <path d="M4 7h16M4 17h16" />
+                    <circle
+                      cx="9"
+                      cy="7"
+                      r="3"
+                      fill="rgb(var(--surface-rgb))"
+                    />
+                    <circle
+                      cx="15"
+                      cy="17"
+                      r="3"
+                      fill="rgb(var(--surface-rgb))"
+                    />
+                  </>
+                )}
+              </svg>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <header className="calendar-header">
+          <div>
+            <p className="eyebrow">
+              {activeTab === "settings"
+                ? "Personalizza la tua app"
+                : "Vista settimanale"}
+            </p>
+            <h2>
+              {activeTab === "calendar"
+                ? "Calendario"
+                : activeTab === "statistics"
+                  ? "Statistiche"
+                  : "Impostazioni"}
+            </h2>
+            {activeTab !== "settings" && (
+              <p aria-live="polite">
+                {displayDate(week, { year: "numeric" })} –{" "}
+                {displayDate(addDays(week, 6), { year: "numeric" })}
+              </p>
+            )}
+          </div>
+          {activeTab !== "settings" && (
+            <nav className="week-navigation" aria-label="Navigazione settimane">
+              <button
+                className="secondary-button"
+                aria-label="Settimana precedente"
+                onClick={() => setWeek(addDays(week, -7))}
+              >
+                ← Precedente
+              </button>
+              <button
+                className="secondary-button"
+                onClick={() => setWeek(weekStart(today()))}
+              >
+                Oggi
+              </button>
+              <button
+                className="secondary-button"
+                aria-label="Settimana successiva"
+                onClick={() => setWeek(addDays(week, 7))}
+              >
+                Successiva →
+              </button>
+            </nav>
+          )}
+        </header>
+        {loaded.error && (
+          <div role="alert" className="capacity-warning">
+            <p>{loaded.error}</p>
+            {loaded.raw !== null && (
+              <button
+                className="secondary-button"
+                onClick={() =>
+                  download("recupero-calendario.json", loaded.raw!)
+                }
+              >
+                Esporta archivio da recuperare
+              </button>
+            )}
+          </div>
+        )}
+        {error && !clearing && (
+          <p role="alert" className="capacity-warning">
+            {error}
+          </p>
+        )}
+        <section
+          id="panel-calendar"
+          role="tabpanel"
+          aria-labelledby="tab-calendar"
+          tabIndex={0}
+          hidden={activeTab !== "calendar"}
+        >
+          <WeeklyCalendar
+            state={state}
+            week={week}
+            disabled={disabled}
+            onAdd={(date) => setEditor({ date })}
+            onEdit={setEventMenu}
+          />
+          <section
+            className="summary-card"
+            aria-label="Pianificazione"
+          >
+            <h2>Pianificazione e AI</h2>
+            <p className="summary-empty-copy">
+              La chat del prototipo è temporaneamente disabilitata: rigenerava
+              l’intero piano. Puoi organizzare gli elementi direttamente nel
+              calendario; i futuri suggerimenti dovranno rispettare date,
+              vincoli ed esiti.
+            </p>
+          </section>
+        </section>
+        <section
+          id="panel-statistics"
+          role="tabpanel"
+          aria-labelledby="tab-statistics"
+          tabIndex={0}
+          hidden={activeTab !== "statistics"}
+        >
+          {loaded.error ? (
+            <p className="statistics-empty">
+              Statistiche non disponibili finché l’archivio non è leggibile.
+            </p>
+          ) : (
+            <CalendarStatistics state={state} week={week} />
+          )}
+        </section>
+        <section
+          id="panel-settings"
+          role="tabpanel"
+          aria-labelledby="tab-settings"
+          tabIndex={0}
+          hidden={activeTab !== "settings"}
+        >
+          <PalettePicker
+            value={palette}
+            onChange={changePalette}
+            saveError={paletteSaveError}
+          />
+          <div className="summary-card">
+            <h3>Esporta i tuoi dati</h3>
+            <p>
+              Scarica il calendario completo, gli obiettivi e il profilo in un
+              file JSON da conservare sul tuo dispositivo.
+            </p>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={disabled}
+              onClick={() =>
+                download("calendario.json", JSON.stringify(state, null, 2))
+              }
+            >
+              Esporta
+            </button>
+          </div>
+        </section>
+      </main>
+      {eventMenu && (
+        <CalendarEventMenu
+          item={eventMenu}
+          onClose={() => setEventMenu(null)}
+          onEdit={() => {
+            setEditor({ date: eventMenu.date, occurrence: eventMenu });
+            setEventMenu(null);
+          }}
+          onOutcome={(outcome) => {
+            commit(
+              setOccurrenceOutcome(
+                state,
+                eventMenu.sourceId,
+                eventMenu.occurrenceDate,
+                outcome,
+              ),
+            );
+            setEventMenu(null);
+          }}
+          onDelete={() => {
+            commit(
+              deleteItem(
+                state,
+                {
+                  sourceId: eventMenu.sourceId,
+                  occurrenceDate: eventMenu.occurrenceDate,
+                  scope: "occurrence",
+                },
+                { actor: "user", unlocked: true },
+              ),
+            );
+            setEventMenu(null);
+          }}
+        />
+      )}
+      {editor && (
+        <CalendarItemEditor
+          items={state.items}
+          date={editor.date}
+          occurrence={editor.occurrence}
+          item={state.items.find(
+            (item) => item.id === editor.occurrence?.sourceId,
+          )}
+          onClose={() => setEditor(null)}
+          onSave={(item, unlocked, target, weekdays) => {
+            commit(
+              weekdays
+                ? putWeeklyActivity(
+                    state,
+                    item,
+                    weekdays,
+                    { actor: "user", unlocked },
+                    target,
+                  )
+                : putItem(state, item, { actor: "user", unlocked }, target),
+            );
+            setEditor(null);
+          }}
+          onDelete={(target, unlocked) => {
+            commit(deleteItem(state, target, { actor: "user", unlocked }));
+            setEditor(null);
+          }}
+        />
+      )}
+      {preferences && (
+        <CalendarPreferences
+          state={state}
+          onSave={commit}
+          onClose={() => setPreferences(false)}
+        />
+      )}
+      {clearing && (
+        <CalendarDialog
+          title="Svuota calendario"
+          onClose={() => setClearing(false)}
+        >
+          <p>
+            Verranno eliminati{" "}
+            <strong>tutti gli elementi di tutte le settimane</strong>, inclusi
+            impegni fissi, tempo protetto, serie ricorrenti, eccezioni, note e
+            stati di completamento o salto.
+          </p>
+          <p>
+            Restano il profilo, gli obiettivi, la palette e
+            l’archivio del vecchio prototipo. Questa operazione non è
+            annullabile; puoi prima esportare il calendario.
+          </p>
+          {hasConstraints && (
+            <label className="clear-unlock">
+              <input
+                type="checkbox"
+                checked={clearUnlocked}
+                onChange={(e) => setClearUnlocked(e.target.checked)}
+              />
+              Sblocco esplicitamente tutti i vincoli per eliminarli.
+            </label>
+          )}
+          {error && (
+            <p role="alert" className="capacity-warning">
+              {error}
+            </p>
+          )}
+          <div className="modal-actions">
+            <button
+              className="secondary-button"
+              onClick={() => setClearing(false)}
+            >
+              Annulla
+            </button>
+            <button
+              disabled={hasConstraints && !clearUnlocked}
+              className="primary-button"
+              onClick={() => {
+                try {
+                  commit(clearCalendar(state));
+                  setClearing(false);
+                } catch (cause) {
+                  setError((cause as Error).message);
+                }
+              }}
+            >
+              Conferma: svuota tutte le settimane
+            </button>
+          </div>
+        </CalendarDialog>
+      )}
+    </div>
+  );
 }
 export default App;

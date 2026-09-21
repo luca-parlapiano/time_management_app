@@ -1,7 +1,31 @@
 /** Civil dates and local wall-clock times: never parse YYYY-MM-DD as local/UTC instants. */
 export type ItemKind = "fixed" | "protected" | "flexible";
+export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto", partial: "Parziale" } as const;
+export type ItemOutcome = keyof typeof outcomeLabels;
 export type ItemStatus = "todo" | "completed" | "skipped";
+export const eventIcons = {
+  activity: "Attività", work: "Lavoro", study: "Studio", sport: "Sport",
+  rest: "Riposo", meal: "Pasti", people: "Incontri", heart: "Benessere",
+} as const;
+export const eventColors = {
+  blue: { label: "Blu", value: "#3974cb" },
+  green: { label: "Verde", value: "#348566" },
+  purple: { label: "Viola", value: "#8b5fc2" },
+  orange: { label: "Arancione", value: "#c77728" },
+  pink: { label: "Rosa", value: "#bf5283" },
+  teal: { label: "Turchese", value: "#27868e" },
+} as const;
+export type EventIcon = keyof typeof eventIcons;
+export type EventColor = keyof typeof eventColors;
+export function eventAppearance(item: Pick<ItemData, "icon" | "color" | "kind">) {
+  return {
+    icon: item.icon ?? (item.kind === "fixed" ? "work" : item.kind === "protected" ? "rest" : "activity"),
+    color: item.color ?? (item.kind === "fixed" ? "blue" : item.kind === "protected" ? "green" : "purple"),
+  };
+}
 export interface ItemData {
+  icon?: EventIcon;
+  color?: EventColor;
   title: string;
   date: string;
   endDate: string;
@@ -14,6 +38,9 @@ export interface ItemData {
 }
 export interface CalendarItem extends ItemData {
   id: string;
+  activityId?: string;
+  completedDates?: Record<string, boolean>;
+  outcomes?: Record<string, ItemOutcome>;
   // Weekly on the weekday of date, inclusive until; no end means indefinite.
   recurrence?: { until?: string };
   // Keys always identify the ORIGINAL occurrence date, including moved occurrences.
@@ -23,6 +50,8 @@ export interface Occurrence extends ItemData {
   id: string;
   sourceId: string;
   occurrenceDate: string;
+  completed: boolean;
+  outcome?: ItemOutcome;
   recurring: boolean;
   exception: boolean;
 }
@@ -71,6 +100,8 @@ export function durationMinutes(item: ItemData): number {
 function startMinute(item: ItemData): number { return dateNumber(item.date) / 60_000 + minute(item.start); }
 function endMinute(item: ItemData): number { return dateNumber(item.endDate) / 60_000 + minute(item.end); }
 export function validateData(data: ItemData): void {
+  if (data.icon !== undefined && !Object.hasOwn(eventIcons, data.icon)) throw new Error("Icona non valida.");
+  if (data.color !== undefined && !Object.hasOwn(eventColors, data.color)) throw new Error("Colore non valido.");
   if (typeof data.title !== "string" || !data.title.trim()) throw new Error("Inserisci un titolo.");
   if (!validDate(data.date) || !validDate(data.endDate)) throw new Error("Inserisci date valide.");
   if (![data.start, data.end].every(t => typeof t === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(t))) throw new Error("Inserisci orari validi.");
@@ -85,16 +116,29 @@ export function isOccurrenceDate(item: CalendarItem, date: string): boolean {
 }
 export function validateItem(item: CalendarItem): void {
   validateData(item);
+  if (item.activityId !== undefined && (typeof item.activityId !== "string" || !item.activityId || !item.recurrence)) throw new Error("Attività ricorrente non valida.");
+  if (item.outcomes !== undefined) {
+    if (!item.outcomes || typeof item.outcomes !== "object" || Array.isArray(item.outcomes)) throw new Error("Esiti non validi.");
+    for (const [date, outcome] of Object.entries(item.outcomes)) {
+      if (!validDate(date) || !Object.hasOwn(outcomeLabels, outcome) || (item.recurrence ? !isOccurrenceDate(item, date) : date !== item.date)) throw new Error("Esito non valido.");
+    }
+  }
+  if (item.completedDates !== undefined) {
+    if (!item.completedDates || typeof item.completedDates !== "object" || Array.isArray(item.completedDates)) throw new Error("Completamenti non validi.");
+    for (const [date, completed] of Object.entries(item.completedDates)) {
+      if (!validDate(date) || typeof completed !== "boolean" || (item.recurrence ? !isOccurrenceDate(item, date) : date !== item.date)) throw new Error("Data di completamento non valida.");
+    }
+  }
   if (typeof item.id !== "string" || !item.id || !item.exceptions || typeof item.exceptions !== "object" || Array.isArray(item.exceptions)) throw new Error("Elemento non valido.");
   if (item.recurrence !== undefined) {
-    if (!item.recurrence || typeof item.recurrence !== "object" || Array.isArray(item.recurrence) || item.kind === "flexible") throw new Error("La ricorrenza è disponibile per impegni fissi e tempo protetto.");
+    if (!item.recurrence || typeof item.recurrence !== "object" || Array.isArray(item.recurrence)) throw new Error("Ripetizione non valida.");
     if (item.recurrence.until !== undefined && (!validDate(item.recurrence.until) || item.recurrence.until < item.date)) throw new Error("La fine della serie deve seguire la prima data.");
   } else if (Object.keys(item.exceptions).length) throw new Error("Eccezioni senza serie.");
   for (const [date, data] of Object.entries(item.exceptions)) {
     if (!validDate(date) || !isOccurrenceDate(item, date)) throw new Error("La serie deve includere le date originali delle eccezioni già salvate. Modifica prima le singole eccezioni o conserva la fine attuale della serie.");
     if (data !== null) {
       validateData(data);
-      if (data.kind === "flexible") throw new Error("Un’eccezione a un vincolo deve restare un vincolo.");
+      if (item.kind !== "flexible" && data.kind === "flexible") throw new Error("Un’eccezione a un vincolo deve restare un vincolo.");
     }
   }
 }
@@ -118,7 +162,7 @@ export function validateCalendar(state: CalendarState): void {
   if (state.profile !== null && (!state.profile || typeof state.profile.name !== "string" || typeof state.profile.notes !== "string")) throw new Error("Profilo non valido.");
 }
 function dataOf(item: ItemData): ItemData {
-  return { title: item.title, date: item.date, endDate: item.endDate,
+  return { ...(item.icon !== undefined ? { icon: item.icon } : {}), ...(item.color !== undefined ? { color: item.color } : {}), title: item.title, date: item.date, endDate: item.endDate,
     start: item.start, end: item.end, kind: item.kind, status: item.status, notes: item.notes, goalId: item.goalId };
 }
 function atDate(item: CalendarItem, date: string): ItemData {
@@ -128,8 +172,9 @@ export function occurrences(items: CalendarItem[], from: string, through: string
   const result: Occurrence[] = [];
   function include(item: CalendarItem, original: string, data: ItemData, exception: boolean) {
     if (data.date <= through && (data.endDate > from || (data.endDate === from && data.end > "00:00"))) {
+      const outcome = item.outcomes?.[original] ?? (item.completedDates?.[original] === true ? "completed" : item.completedDates?.[original] === false ? undefined : data.status === "completed" || data.status === "skipped" ? data.status : undefined);
       result.push({ ...data, id: item.recurrence ? `${item.id}@${original}` : item.id,
-        sourceId: item.id, occurrenceDate: original, recurring: Boolean(item.recurrence), exception });
+        sourceId: item.id, occurrenceDate: original, completed: outcome === "completed", outcome, recurring: Boolean(item.recurrence), exception });
     }
   }
   for (const item of items) {
@@ -167,7 +212,7 @@ export function findConflict(items: CalendarItem[], changedId: string): [Occurre
     }
   }
 }
-export interface EditTarget { sourceId: string; occurrenceDate: string; scope: "occurrence" | "series" }
+export interface EditTarget { sourceId: string; occurrenceDate: string; scope: "occurrence" | "series"; applyAppearanceToSeries?: boolean; linkedSourceIds?: string[] }
 export interface EditAccess { actor: "user" | "engine" | "ai"; unlocked?: boolean }
 function guard(item: CalendarItem | undefined, access: EditAccess) {
   if (item && item.kind !== "flexible" && (access.actor !== "user" || !access.unlocked)) throw new Error("Vincolo bloccato: solo l’utente può sbloccarlo esplicitamente.");
@@ -186,10 +231,43 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
       replacement = { ...existing, exceptions: { ...existing.exceptions, [target.occurrenceDate]: data } };
     } else {
       if (existing.recurrence && (replacement.date !== existing.date || !replacement.recurrence)) throw new Error("La data di inizio e la frequenza della serie sono stabili. Modifica una singola occorrenza per spostarla.");
-      replacement = { ...replacement, id: existing.id, exceptions: existing.exceptions };
+      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, outcomes: existing.outcomes, completedDates: existing.completedDates, exceptions: existing.exceptions };
+      if (!existing.recurrence && existing.outcomes && replacement.date !== existing.date) {
+        replacement.outcomes = existing.outcomes[existing.date] === undefined ? {} : { [replacement.date]: existing.outcomes[existing.date] };
+      }
+      if (!existing.recurrence && existing.completedDates && replacement.date !== existing.date) {
+        replacement.completedDates = existing.completedDates[existing.date] === undefined ? {} : { [replacement.date]: existing.completedDates[existing.date] };
+      }
+    }
+    if (existing.recurrence && (target?.applyAppearanceToSeries ||
+      (target?.scope === "series" && (proposed.icon !== existing.icon || proposed.color !== existing.color)))) {
+      const appearance = eventAppearance(proposed);
+      replacement = { ...replacement, ...appearance, exceptions: Object.fromEntries(
+        Object.entries(replacement.exceptions).map(([date, data]) => [date, data === null ? null : { ...data, ...appearance }]),
+      ) };
     }
   } else if (state.items.some(item => item.id === replacement.id)) throw new Error("Identificativo già presente.");
-  const next = { ...state, items: existing ? state.items.map(item => item.id === existing.id ? replacement : item) : [...state.items, replacement] };
+  let next = { ...state, items: existing ? state.items.map(item => item.id === existing.id ? replacement : item) : [...state.items, replacement] };
+  if (existing?.recurrence) {
+    const selected = new Set([existing.id, ...(target?.linkedSourceIds ?? [])]);
+    for (const id of selected) {
+      const member = state.items.find(item => item.id === id);
+      if (!member?.recurrence) throw new Error("Puoi collegare solo appuntamenti ricorrenti.");
+      guard(member, access);
+    }
+    const groups = new Set(state.items.filter(item => selected.has(item.id) && item.activityId).map(item => item.activityId));
+    const members = next.items.filter(item => selected.has(item.id) || item.activityId && groups.has(item.activityId));
+    if (existing.activityId || members.length > 1) {
+      const activityId = existing.activityId ?? existing.id;
+      const shared = { title: proposed.title.trim(), ...eventAppearance(proposed), notes: proposed.notes, goalId: proposed.goalId };
+      const memberIds = new Set(members.map(item => item.id));
+      next = { ...next, items: next.items.map(item => {
+        if (!memberIds.has(item.id)) return item;
+        guard(item, access);
+        return { ...item, ...shared, activityId, exceptions: Object.fromEntries(Object.entries(item.exceptions).map(([date, data]) => [date, data === null ? null : { ...data, ...shared }])) };
+      }) };
+    }
+  }
   validateCalendar(next);
   const conflict = findConflict(next.items, replacement.id);
   if (conflict) throw new Error(`Conflitto: “${conflict[0].title}” e “${conflict[1].title}” il ${displayDate(conflict[1].date, { year: "numeric" })}. Scegli un altro intervallo; nessun vincolo è stato modificato.`);
@@ -206,3 +284,80 @@ export function deleteItem(state: CalendarState, target: EditTarget, access: Edi
   return { ...state, items: state.items.filter(entry => entry.id !== item.id) };
 }
 export function clearCalendar(state: CalendarState): CalendarState { return { ...state, items: [] }; }
+
+/** Create weekly appointments with one shared activity identity, atomically. */
+export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, weekdays: number[], access: EditAccess, target?: EditTarget): CalendarState {
+  if (!proposed.recurrence || !weekdays.length || weekdays.some(day => !Number.isInteger(day) || day < 0 || day > 6) || new Set(weekdays).size !== weekdays.length) throw new Error("Scegli almeno un giorno della settimana.");
+  const existing = target ? state.items.find(item => item.id === target.sourceId) : undefined;
+  if (target && (!existing || existing.recurrence)) throw new Error("Scegli un’attività senza ripetizione da convertire.");
+  guard(existing, access);
+  let next = state;
+  const span = (dateNumber(proposed.endDate) - dateNumber(proposed.date)) / DAY;
+  const dates = weekdays.map(day => {
+    let date = addDays(weekStart(proposed.date), day);
+    if (date < proposed.date) date = addDays(date, 7);
+    return { day, date };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+  // When converting, reuse matching appointments instead of creating overlapping copies.
+  const matches = dates.map(({ date }) => existing ? state.items.filter(item =>
+    item.id !== existing.id && item.title.trim().toLocaleLowerCase("it-IT") === proposed.title.trim().toLocaleLowerCase("it-IT") &&
+    item.kind === proposed.kind && item.start === proposed.start && item.end === proposed.end && durationMinutes(item) === durationMinutes(proposed) &&
+    item.date >= date && (!proposed.recurrence?.until || item.date <= proposed.recurrence.until) &&
+    (dateNumber(item.date) - dateNumber(date)) % (7 * DAY) === 0 &&
+    // A series can be reused only if its end boundary is identical.
+    (!item.recurrence || item.recurrence.until === proposed.recurrence?.until)
+  ) : []);
+  const reused = matches.flat();
+  for (const item of reused) guard(item, access);
+  const replacedIds = new Set([...(existing ? [existing.id] : []), ...reused.map(item => item.id)]);
+  next = { ...state, items: state.items.filter(item => !replacedIds.has(item.id)) };
+  const ids = new Set<string>();
+  for (const [index, { day, date }] of dates.entries()) {
+    if (proposed.recurrence.until && date > proposed.recurrence.until) throw new Error("La fine della ripetizione deve includere tutti i giorni scelti.");
+    const id = existing && index === 0 ? existing.id : `${proposed.id}-${day}`;
+    const exceptions: CalendarItem["exceptions"] = {};
+    const outcomes: NonNullable<CalendarItem["outcomes"]> = {};
+    const completedDates: NonNullable<CalendarItem["completedDates"]> = {};
+    for (const previous of matches[index]) {
+      if (previous.recurrence) Object.assign(exceptions, previous.exceptions);
+      else exceptions[previous.date] = dataOf(previous);
+      Object.assign(outcomes, previous.outcomes);
+      Object.assign(completedDates, previous.completedDates);
+    }
+    if (existing && index === 0) {
+      if (existing.outcomes?.[existing.date]) outcomes[date] = existing.outcomes[existing.date];
+      if (existing.completedDates?.[existing.date] !== undefined) completedDates[date] = existing.completedDates[existing.date];
+      else if (existing.status === "completed" || existing.status === "skipped") outcomes[date] = existing.status;
+    }
+    next = putItem(next, { ...proposed, id, date, endDate: addDays(date, span), status: proposed.kind === "flexible" ? "todo" : undefined, exceptions }, access);
+    next = { ...next, items: next.items.map(item => item.id === id ? { ...item, outcomes, completedDates } : item) };
+    ids.add(id);
+  }
+  const reusedGroups = new Set(reused.map(item => item.activityId).filter(Boolean));
+  next = { ...next, items: next.items.map(item => ids.has(item.id) || item.activityId && reusedGroups.has(item.activityId)
+    ? { ...item, activityId: proposed.id } : item) };
+  validateCalendar(next);
+  return next;
+}
+
+/** Completion records belong to the original appointment date, even after a move. */
+export function setOccurrenceCompleted(state: CalendarState, sourceId: string, date: string, completed: boolean): CalendarState {
+  const item = state.items.find(item => item.id === sourceId);
+  if (!item || !validDate(date) || (item.recurrence ? !isOccurrenceDate(item, date) || item.exceptions[date] === null : item.date !== date)) throw new Error("Appuntamento non trovato.");
+  const next = { ...state, items: state.items.map(entry => {
+    if (entry.id !== sourceId) return entry;
+    if (entry.kind === "flexible" && !entry.recurrence) return { ...entry, status: completed ? "completed" as const : "todo" as const };
+    return { ...entry, completedDates: { ...entry.completedDates, [date]: completed } };
+  }) };
+  validateCalendar(next);
+  return next;
+}
+
+export function setOccurrenceOutcome(state: CalendarState, sourceId: string, date: string, outcome: ItemOutcome): CalendarState {
+  const item = state.items.find(entry => entry.id === sourceId);
+  if (!Object.hasOwn(outcomeLabels, outcome)) throw new Error("Esito non valido.");
+  if (!item || !validDate(date) || (item.recurrence ? !isOccurrenceDate(item, date) || item.exceptions[date] === null : item.date !== date)) throw new Error("Appuntamento non trovato.");
+  const next = { ...state, items: state.items.map(entry => entry.id === sourceId ? { ...entry, outcomes: { ...entry.outcomes, [date]: outcome } } : entry) };
+  validateCalendar(next);
+  return next;
+}

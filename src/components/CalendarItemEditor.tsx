@@ -1,20 +1,28 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { FolderShape } from "./FolderShape";
+import { EventIcon } from "./EventIcon";
 import { CalendarDialog } from "./CalendarDialog";
 import {
-  durationMinutes, kindLabels, statusLabels, type CalendarItem, type CalendarGoal,
-  type EditTarget, type ItemKind, type ItemStatus, type Occurrence,
+  eventAppearance, eventIcons, eventColors, type EventIcon as IconName, type EventColor,
+  displayDate, validDate, validateData, weekStart, addDays, durationMinutes, kindLabels, type CalendarItem,
+  type EditTarget, type ItemKind, type Occurrence,
 } from "../domain/calendar";
 
 interface Props {
   date: string;
   item?: CalendarItem;
   occurrence?: Occurrence;
-  goals: CalendarGoal[];
+  items: CalendarItem[];
   onClose: () => void;
-  onSave: (item: CalendarItem, unlocked: boolean, target?: EditTarget) => void;
+  onSave: (item: CalendarItem, unlocked: boolean, target?: EditTarget, weekdays?: number[]) => void;
   onDelete: (target: EditTarget, unlocked: boolean) => void;
 }
-export function CalendarItemEditor({ date, item, occurrence, goals, onClose, onSave, onDelete }: Props) {
+export function CalendarItemEditor({ date, item, occurrence, items, onClose, onSave, onDelete }: Props) {
+  const dayLabels = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+  const [weekdays, setWeekdays] = useState<number[]>([Array.from({ length: 7 }, (_, i) => addDays(weekStart(date), i)).indexOf(date)]);
+  const [linkedSourceIds, setLinkedSourceIds] = useState<string[]>([]);
+  const linked = items.filter(other => item?.activityId && other.activityId === item.activityId);
+  const candidates = items.filter(other => item && other.id !== item.id && other.recurrence && (!item.activityId || other.activityId !== item.activityId));
   const [scope, setScope] = useState<"occurrence" | "series">("occurrence");
   const initial: CalendarItem = item && occurrence
     ? { ...item, ...occurrence, id: item.id }
@@ -22,28 +30,44 @@ export function CalendarItemEditor({ date, item, occurrence, goals, onClose, onS
   const [draft, setDraft] = useState(initial);
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (error) { errorRef.current?.focus(); errorRef.current?.scrollIntoView({ block: "nearest" }); }
+  }, [error]);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [appearanceChanged, setAppearanceChanged] = useState(false);
   const locked = Boolean(item && item.kind !== "flexible" && !unlocked);
-  const target = item && occurrence ? { sourceId: item.id, occurrenceDate: occurrence.occurrenceDate, scope } : undefined;
+  const target = item && occurrence ? { sourceId: item.id, occurrenceDate: occurrence.occurrenceDate, scope, applyAppearanceToSeries: appearanceChanged, linkedSourceIds } : undefined;
   const seriesEdit = Boolean(item?.recurrence && scope === "series");
   const duration = durationMinutes(draft);
+  const appearance = eventAppearance(draft);
+  const shortDate = (value: string) => validDate(value) ? displayDate(value, { day: "numeric", month: "short", year: "numeric" }) : "Scegli una data";
+  const repeatDays = !item?.recurrence ? weekdays.map(day => dayLabels[day]).join(", ") : (linked.length ? linked : [item]).map(entry => displayDate(entry.date, { weekday: "short", day: undefined, month: undefined })).join(", ");
   function change(patch: Partial<CalendarItem>) { setDraft(current => ({ ...current, ...patch })); setError(""); setConfirmDelete(false); }
+  function changeAppearance(patch: Partial<Pick<CalendarItem, "icon" | "color">>) { setAppearanceChanged(true); change(patch); }
   return <CalendarDialog title={item ? "Modifica elemento" : "Aggiungi attività"} onClose={onClose}>
-    <form onSubmit={event => {
+    <form noValidate onSubmit={event => {
       event.preventDefault();
-      try { onSave(draft, unlocked, target); } catch (cause) { setError((cause as Error).message); }
+      try {
+        validateData(draft);
+        onSave(draft, unlocked, target, !item?.recurrence && draft.recurrence ? weekdays : undefined);
+      } catch (cause) {
+        setError((cause as Error).message);
+        setScheduleOpen(true);
+      }
     }}>
       {item?.recurrence && <div className="form-grid">
         <label>Ambito della modifica
           <select value={scope} onChange={event => {
             const next = event.target.value as typeof scope;
-            setScope(next); setDraft(next === "series" ? item : initial); setUnlocked(false); setError(""); setConfirmDelete(false);
+            setScope(next); setDraft(next === "series" ? item : initial); setAppearanceChanged(false); setUnlocked(false); setError(""); setConfirmDelete(false);
           }}>
             <option value="occurrence">Solo questa occorrenza ({occurrence?.occurrenceDate})</option>
             <option value="series">Intera serie settimanale</option>
           </select>
         </label>
-        <p>{seriesEdit ? "Le modifiche valgono per tutte le date della serie, anche passate. Le eccezioni già salvate restano invariate. La prima data e il giorno settimanale restano gli stessi." : "La modifica o l’eliminazione riguarda soltanto questa data. Le altre occorrenze restano invariate."}</p>
+        <p>{seriesEdit ? "Le modifiche valgono per tutte le date della serie, anche passate. Le eccezioni conservano date, orari e dettagli personalizzati. La prima data e il giorno settimanale restano gli stessi." : "Date, orari ed eliminazione riguardano soltanto questo appuntamento. Titolo, icona, colore e descrizione sono condivisi dagli appuntamenti collegati."}</p>
       </div>}
       {locked && <div className="capacity-warning">
         <p>🔒 Questo vincolo è protetto. Per modificarlo, spostarlo o eliminarlo devi sbloccare {seriesEdit ? "l’intera serie" : "questo elemento"}.</p>
@@ -51,35 +75,89 @@ export function CalendarItemEditor({ date, item, occurrence, goals, onClose, onS
       </div>}
       {unlocked && <p role="status">🔓 Sbloccato per questa modifica. Tornerà protetto dopo il salvataggio.</p>}
       <fieldset disabled={locked} className="editor-fields form-grid">
+        {item?.recurrence && <div className="form-grid">
+          {linked.length > 0 && <p className="editor-hint">Un’unica attività · {linked.length} appuntamenti settimanali: {linked.map(entry => displayDate(entry.date, { weekday: "long", day: undefined, month: undefined })).join(", ")}. Le modifiche ai dettagli si applicano a tutti.</p>}
+          {candidates.length > 0 && <details>
+            <summary>Collega appuntamenti già creati</summary>
+            <p className="editor-hint">Seleziona le altre card della stessa attività. Salvando, useranno titolo, icona, colore e descrizione di questa card. Ogni appuntamento conserva orario e check.</p>
+            <div className="activity-link-options">{candidates.map(other => <label key={other.id} className="activity-check">
+              <input type="checkbox" checked={linkedSourceIds.includes(other.id)} onChange={e => setLinkedSourceIds(current => e.target.checked ? [...current, other.id] : current.filter(id => id !== other.id))} />
+              <span>{other.title} · {displayDate(other.date, { weekday: "long" })} · {other.start}–{other.end}{other.activityId ? " (con tutti gli appuntamenti collegati)" : ""}</span>
+            </label>)}</div>
+          </details>}
+        </div>}
         <label>Titolo<input autoFocus={!locked && !item} required value={draft.title} onChange={e => change({ title: e.target.value })} /></label>
-        <label>Tipo<select value={draft.kind} disabled={Boolean(item?.recurrence)} onChange={e => {
-          const kind = e.target.value as ItemKind;
-          change({ kind, status: kind === "flexible" ? "todo" : undefined, recurrence: undefined });
-        }}>{Object.entries(kindLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-        <div className="form-row form-row-two-columns">
-          <label>Data di inizio<input type="date" min="1900-01-01" max="9998-12-31" required disabled={seriesEdit} value={draft.date} onChange={e => {
-            change({ date: e.target.value, endDate: draft.date === draft.endDate ? e.target.value : draft.endDate });
-          }} /></label>
-          <label>Ora di inizio<input type="time" required value={draft.start} onChange={e => change({ start: e.target.value })} /></label>
-          <label>Data di fine<input type="date" min={draft.date} max="9998-12-31" required value={draft.endDate} onChange={e => change({ endDate: e.target.value })} /></label>
-          <label>Ora di fine<input type="time" required value={draft.end} onChange={e => change({ end: e.target.value })} /></label>
+        <div className="event-appearance" style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
+          {item?.recurrence && <p className="editor-hint">Icona e colore valgono per tutta la serie e per gli appuntamenti collegati, anche nei giorni diversi.</p>}
+          <div className="event-preview"><FolderShape /><span className="event-icon"><EventIcon icon={appearance.icon} /></span><strong>{draft.title.trim() || "La tua attività"}</strong></div>
+          <fieldset className="appearance-options">
+            <legend>Icona</legend>
+            <div className="icon-options compact-icon-options">{(Object.keys(eventIcons) as IconName[]).map(icon => <button key={icon} type="button" className="icon-option" aria-label={eventIcons[icon]} title={eventIcons[icon]} aria-pressed={appearance.icon === icon} onClick={() => changeAppearance({ icon })}>
+              <EventIcon icon={icon} />
+            </button>)}</div>
+          </fieldset>
+          <fieldset className="appearance-options">
+            <legend>Colore</legend>
+            <div className="color-options">{(Object.keys(eventColors) as EventColor[]).map(color => <button key={color} type="button" className="color-option" aria-label={eventColors[color].label} title={eventColors[color].label} aria-pressed={appearance.color === color} style={{ "--swatch": eventColors[color].value } as CSSProperties} onClick={() => changeAppearance({ color })}>
+              <span aria-hidden="true">{appearance.color === color ? "✓" : ""}</span>
+            </button>)}</div>
+          </fieldset>
         </div>
-        <p className="editor-hint">Durata: {Number.isFinite(duration) && duration > 0 ? `${duration} minuti` : "controlla date e orari"}. Per un intervallo notturno indica il giorno successivo come data di fine (massimo 24 ore).</p>
-        {draft.kind === "flexible" && <label>Stato<select value={draft.status} onChange={e => change({ status: e.target.value as ItemStatus })}>
-          {Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        <fieldset className="appearance-options" disabled={Boolean(item?.recurrence)}>
+          <legend>Tipo</legend>
+          <div className="item-kind-options">
+            {(Object.keys(kindLabels) as ItemKind[]).map(kind => <label className="item-kind-option" key={kind} title={kindLabels[kind]}>
+              <input type="radio" name="item-kind" aria-label={kindLabels[kind]} value={kind} checked={draft.kind === kind} onChange={() => {
+                change({ kind, status: kind === "flexible" ? "todo" : undefined });
+              }} />
+              <span>{{ fixed: "Fisso", protected: "Protetto", flexible: "Flessibile" }[kind]}</span>
+            </label>)}
+          </div>
+        </fieldset>
+        <div className="schedule-control">
+          <button type="button" className="schedule-summary" aria-expanded={scheduleOpen} aria-controls="schedule-picker" onClick={() => setScheduleOpen(open => !open)}>
+            <span><strong>{shortDate(draft.date)}{draft.endDate !== draft.date ? ` → ${shortDate(draft.endDate)}` : ""}</strong>
+              <span>{draft.start}–{draft.end}{draft.endDate !== draft.date ? " · termina il giorno indicato" : ""}</span>
+              <small>{draft.recurrence ? `↻ Ogni settimana · ${repeatDays || "scegli i giorni"}${draft.recurrence.until ? ` · fino al ${shortDate(draft.recurrence.until)}` : ""}` : "Una sola volta"}</small>
+            </span><span className="schedule-edit-label">{scheduleOpen ? "Chiudi" : "Modifica"}</span>
+          </button>
+          {scheduleOpen && <div id="schedule-picker" className="schedule-picker form-grid">
+            <div className="form-row form-row-two-columns">
+              {seriesEdit ? <label>Inizio · {shortDate(draft.date)}<input type="time" required value={draft.start} onChange={e => change({ start: e.target.value })} /></label> :
+                <label>Inizio<input type="datetime-local" min="1900-01-01T00:00" max="9998-12-31T23:59" required value={`${draft.date}T${draft.start}`} onChange={e => {
+                  const [date, start] = e.target.value.split("T");
+                  change({ date: date ?? "", start: start ?? "", endDate: draft.date === draft.endDate ? date ?? "" : draft.endDate });
+                }} /></label>}
+              <label>Fine<input type="datetime-local" min={`${draft.date}T${draft.start}`} max="9998-12-31T23:59" required value={`${draft.endDate}T${draft.end}`} onChange={e => {
+                const [endDate, end] = e.target.value.split("T");
+                change({ endDate: endDate ?? "", end: end ?? "" });
+              }} /></label>
+            </div>
+            <p className="editor-hint">{Number.isFinite(duration) && duration > 0 ? `${duration} minuti` : "Controlla date e orari"} · Durata massima 24 ore.</p>
+        {!item?.recurrence && <label>Ripetizione<select value={draft.recurrence ? "weekly" : "none"} onChange={e => change({ recurrence: e.target.value === "weekly" ? {} : undefined })}>
+          <option value="none">Solo questa data</option><option value="weekly">Ogni settimana nei giorni scelti</option>
         </select></label>}
-        {!item && draft.kind !== "flexible" && <label>Ripetizione<select value={draft.recurrence ? "weekly" : "none"} onChange={e => change({ recurrence: e.target.value === "weekly" ? {} : undefined })}>
-          <option value="none">Solo questa data</option><option value="weekly">Ogni settimana nello stesso giorno</option>
-        </select></label>}
-        {draft.recurrence && (!item || seriesEdit) && <label>Ultima data della serie (facoltativa)
+        {!item?.recurrence && draft.recurrence && <fieldset className="appearance-options"><legend>Giorni della settimana</legend>
+          <div className="weekday-options">{dayLabels.map((label, day) => <button type="button" className="icon-option" key={day} aria-pressed={weekdays.includes(day)} onClick={() => setWeekdays(current => current.includes(day) ? current.filter(value => value !== day) : [...current, day].sort())}>{label}</button>)}</div>
+          <p className="editor-hint">La card verrà aggiunta ai giorni scelti, a partire dalla data di inizio. Gli appuntamenti già presenti con lo stesso nome, tipo e orario saranno riutilizzati.</p>
+        </fieldset>}
+        {draft.recurrence && (!item?.recurrence || seriesEdit) && <label>Ultima data della serie
           <input type="date" min={draft.date} value={draft.recurrence.until ?? ""} onChange={e => change({ recurrence: e.target.value ? { until: e.target.value } : {} })} />
         </label>}
-        <label>Obiettivo (facoltativo)<select value={draft.goalId ?? ""} onChange={e => change({ goalId: e.target.value || undefined })}>
-          <option value="">Nessun obiettivo</option>{goals.map(goal => <option key={goal.id} value={goal.id}>{goal.name}</option>)}
-        </select></label>
-        <label>Note (facoltative)<textarea rows={3} value={draft.notes} onChange={e => change({ notes: e.target.value })} /></label>
+            <button type="button" className="secondary-button" onClick={() => {
+              try {
+                validateData({ ...draft, title: draft.title.trim() || "Attività" });
+                if (draft.recurrence && !item?.recurrence && !weekdays.length) throw new Error("Scegli almeno un giorno della settimana.");
+                if (draft.recurrence?.until && (!validDate(draft.recurrence.until) || draft.recurrence.until < draft.date)) throw new Error("Controlla la fine della ripetizione.");
+                setError(""); setScheduleOpen(false);
+              } catch (cause) { setError((cause as Error).message); }
+            }}>Conferma date e ripetizione</button>
+          </div>}
+        </div>
+        <label>Descrizione<textarea rows={3} value={draft.notes} onChange={e => change({ notes: e.target.value })} /></label>
       </fieldset>
-      {error && <p role="alert" className="capacity-warning">{error}</p>}
+      <div className="editor-save-footer">
+      {error && <p ref={errorRef} tabIndex={-1} role="alert" className="capacity-warning editor-save-error">{error}</p>}
       {confirmDelete && <p role="alert">Eliminare {item?.recurrence && scope === "series" ? "l’intera serie, comprese tutte le eccezioni" : "solo questo elemento"}? L’operazione non è annullabile.</p>}
       <div className="modal-actions">
         {target && <button type="button" className="ghost-button" disabled={locked} onClick={() => {
@@ -87,6 +165,7 @@ export function CalendarItemEditor({ date, item, occurrence, goals, onClose, onS
           try { onDelete(target, unlocked); } catch (cause) { setError((cause as Error).message); }
         }}>{confirmDelete ? "Conferma eliminazione" : "Elimina"}</button>}
         <button type="submit" className="primary-button" disabled={locked}>Salva {seriesEdit ? "serie" : "elemento"}</button>
+      </div>
       </div>
     </form>
   </CalendarDialog>;

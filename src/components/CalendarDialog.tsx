@@ -1,16 +1,16 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
-export function CalendarDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function CalendarDialog({ title, onClose, children, compact = false }: { title: string; onClose: () => void; children: ReactNode; compact?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
     dialog?.showModal();
     return () => dialog?.close();
   }, []);
-  return <dialog ref={ref} className="calendar-dialog modal-card" aria-labelledby="dialog-title" onCancel={onClose}>
+  return <dialog ref={ref} className={`calendar-dialog modal-card${compact ? " compact-event-menu" : ""}`} aria-labelledby="dialog-title" onCancel={onClose}>
     <div className="modal-header">
       <h3 id="dialog-title">{title}</h3>
-      <button type="button" className="ghost-button" onClick={onClose}>Chiudi</button>
+      <button type="button" className="ghost-button" aria-label="Chiudi" onClick={onClose}>{compact ? "×" : "Chiudi"}</button>
     </div>
     {children}
   </dialog>;
