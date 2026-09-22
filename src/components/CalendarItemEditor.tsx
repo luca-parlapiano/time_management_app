@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { FolderShape } from "./FolderShape";
+import { activityCovers } from "../activityCovers";
 import { EventIcon } from "./EventIcon";
 import { CalendarDialog } from "./CalendarDialog";
 import {
@@ -45,7 +45,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
   const shortDate = (value: string) => validDate(value) ? displayDate(value, { day: "numeric", month: "short", year: "numeric" }) : "Scegli una data";
   const repeatDays = !item?.recurrence ? weekdays.map(day => dayLabels[day]).join(", ") : (linked.length ? linked : [item]).map(entry => displayDate(entry.date, { weekday: "short", day: undefined, month: undefined })).join(", ");
   function change(patch: Partial<CalendarItem>) { setDraft(current => ({ ...current, ...patch })); setError(""); setConfirmDelete(false); }
-  function changeAppearance(patch: Partial<Pick<CalendarItem, "icon" | "color">>) { setAppearanceChanged(true); change(patch); }
+  function changeAppearance(patch: Partial<Pick<CalendarItem, "icon" | "color" | "coverImage">>) { setAppearanceChanged(true); change(patch); }
   return <CalendarDialog title={item ? "Modifica elemento" : "Aggiungi attività"} onClose={onClose}>
     <form noValidate onSubmit={event => {
       event.preventDefault();
@@ -88,14 +88,18 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
         </div>}
         <label>Titolo<input autoFocus={!locked && !item} required value={draft.title} onChange={e => change({ title: e.target.value })} /></label>
         <div className="event-appearance" style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
-          {item?.recurrence && <p className="editor-hint">Icona e colore valgono per tutta la serie e per gli appuntamenti collegati, anche nei giorni diversi.</p>}
-          <div className="event-preview"><FolderShape /><span className="event-icon"><EventIcon icon={appearance.icon} /></span><strong>{draft.title.trim() || "La tua attività"}</strong></div>
+          {item?.recurrence && <p className="editor-hint">Icona, immagine e colore valgono per tutta la serie e per gli appuntamenti collegati, anche nei giorni diversi.</p>}
+          <div className="event-cover-preview" style={draft.coverImage !== false ? { "--cover-image": `url("${activityCovers[appearance.icon].src}")` } as CSSProperties : undefined}>
+            <span className="event-icon"><EventIcon icon={appearance.icon} /></span><strong>{draft.title.trim() || "La tua attività"}</strong>
+          </div>
           <fieldset className="appearance-options">
             <legend>Icona</legend>
             <div className="icon-options compact-icon-options">{(Object.keys(eventIcons) as IconName[]).map(icon => <button key={icon} type="button" className="icon-option" aria-label={eventIcons[icon]} title={eventIcons[icon]} aria-pressed={appearance.icon === icon} onClick={() => changeAppearance({ icon })}>
               <EventIcon icon={icon} />
             </button>)}</div>
           </fieldset>
+          <label className="activity-check"><input type="checkbox" checked={draft.coverImage !== false} onChange={e => changeAppearance({ coverImage: e.target.checked })} />Immagine predefinita per questa icona</label>
+          {draft.coverImage !== false && <p className="editor-hint">{activityCovers[appearance.icon].label} · {activityCovers[appearance.icon].source ? `Foto di ${activityCovers[appearance.icon].author} / Unsplash` : activityCovers[appearance.icon].author}</p>}
           <fieldset className="appearance-options">
             <legend>Colore</legend>
             <div className="color-options">{(Object.keys(eventColors) as EventColor[]).map(color => <button key={color} type="button" className="color-option" aria-label={eventColors[color].label} title={eventColors[color].label} aria-pressed={appearance.color === color} style={{ "--swatch": eventColors[color].value } as CSSProperties} onClick={() => changeAppearance({ color })}>

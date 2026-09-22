@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from "react";
+import { activityCovers } from "../activityCovers";
 import { EventIcon } from "./EventIcon";
 import { eventAppearance, eventColors, outcomeLabels, type ItemOutcome, type Occurrence } from "../domain/calendar";
 
@@ -24,7 +25,7 @@ export function AgendaEventCard({ item, date, top, height, disabled, onOpen, onD
           <button type="button" className="agenda-delete" disabled={disabled} onClick={() => onDelete(item)} title="Elimina appuntamento" aria-label={`Elimina ${item.title}`} aria-haspopup="dialog"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" /></svg></button>
         </div>
       </header>
-      <div className="agenda-body">{item.notes && <p>{item.notes}</p>}</div>
+      <div className={`agenda-body${item.coverImage !== false ? " agenda-body-photo" : ""}`} style={item.coverImage !== false ? { "--cover-image": `url("${activityCovers[appearance.icon].src}")` } as CSSProperties : undefined}>{item.notes && <p>{item.notes}</p>}</div>
       <div className="agenda-meta"><span>{item.kind !== "flexible" ? "🔒 " : ""}{item.recurring ? "↻ Settimanale" : "Una volta"}</span><span>{times}</span></div>
       <div className="agenda-outcomes" role="group" aria-label={`Esito ${item.title}`}>
         {(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <button key={outcome} type="button" disabled={disabled} aria-pressed={item.outcome === outcome} aria-label={`${outcomeLabels[outcome]}: ${item.title}`} title={outcomeLabels[outcome]} onClick={() => {

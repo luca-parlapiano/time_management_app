@@ -24,6 +24,7 @@ export function eventAppearance(item: Pick<ItemData, "icon" | "color" | "kind">)
   };
 }
 export interface ItemData {
+  coverImage?: boolean;
   icon?: EventIcon;
   color?: EventColor;
   title: string;
@@ -100,6 +101,7 @@ export function durationMinutes(item: ItemData): number {
 function startMinute(item: ItemData): number { return dateNumber(item.date) / 60_000 + minute(item.start); }
 function endMinute(item: ItemData): number { return dateNumber(item.endDate) / 60_000 + minute(item.end); }
 export function validateData(data: ItemData): void {
+  if (data.coverImage !== undefined && typeof data.coverImage !== "boolean") throw new Error("Immagine non valida.");
   if (data.icon !== undefined && !Object.hasOwn(eventIcons, data.icon)) throw new Error("Icona non valida.");
   if (data.color !== undefined && !Object.hasOwn(eventColors, data.color)) throw new Error("Colore non valido.");
   if (typeof data.title !== "string" || !data.title.trim()) throw new Error("Inserisci un titolo.");
@@ -162,7 +164,7 @@ export function validateCalendar(state: CalendarState): void {
   if (state.profile !== null && (!state.profile || typeof state.profile.name !== "string" || typeof state.profile.notes !== "string")) throw new Error("Profilo non valido.");
 }
 function dataOf(item: ItemData): ItemData {
-  return { ...(item.icon !== undefined ? { icon: item.icon } : {}), ...(item.color !== undefined ? { color: item.color } : {}), title: item.title, date: item.date, endDate: item.endDate,
+  return { ...(item.coverImage !== undefined ? { coverImage: item.coverImage } : {}), ...(item.icon !== undefined ? { icon: item.icon } : {}), ...(item.color !== undefined ? { color: item.color } : {}), title: item.title, date: item.date, endDate: item.endDate,
     start: item.start, end: item.end, kind: item.kind, status: item.status, notes: item.notes, goalId: item.goalId };
 }
 function atDate(item: CalendarItem, date: string): ItemData {
@@ -240,8 +242,8 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
       }
     }
     if (existing.recurrence && (target?.applyAppearanceToSeries ||
-      (target?.scope === "series" && (proposed.icon !== existing.icon || proposed.color !== existing.color)))) {
-      const appearance = eventAppearance(proposed);
+      (target?.scope === "series" && (proposed.icon !== existing.icon || proposed.color !== existing.color || proposed.coverImage !== existing.coverImage)))) {
+      const appearance = { ...eventAppearance(proposed), ...(proposed.coverImage !== undefined ? { coverImage: proposed.coverImage } : {}) };
       replacement = { ...replacement, ...appearance, exceptions: Object.fromEntries(
         Object.entries(replacement.exceptions).map(([date, data]) => [date, data === null ? null : { ...data, ...appearance }]),
       ) };
@@ -259,7 +261,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
     const members = next.items.filter(item => selected.has(item.id) || item.activityId && groups.has(item.activityId));
     if (existing.activityId || members.length > 1) {
       const activityId = existing.activityId ?? existing.id;
-      const shared = { title: proposed.title.trim(), ...eventAppearance(proposed), notes: proposed.notes, goalId: proposed.goalId };
+      const shared = { title: proposed.title.trim(), ...eventAppearance(proposed), ...(proposed.coverImage !== undefined ? { coverImage: proposed.coverImage } : {}), notes: proposed.notes, goalId: proposed.goalId };
       const memberIds = new Set(members.map(item => item.id));
       next = { ...next, items: next.items.map(item => {
         if (!memberIds.has(item.id)) return item;

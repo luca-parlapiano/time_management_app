@@ -64,7 +64,9 @@ function App() {
     }
   });
   const [state, setState] = useState(loaded.state);
-  const [sidebarExpanded, setSidebarExpanded] = useState(() => window.matchMedia("(min-width: 721px)").matches);
+  const [sidebarExpanded, setSidebarExpanded] = useState(
+    () => window.matchMedia("(min-width: 721px)").matches,
+  );
   const [activeTab, setActiveTab] = useState<
     "calendar" | "statistics" | "settings"
   >("calendar");
@@ -109,29 +111,69 @@ function App() {
   const disabled = Boolean(loaded.error);
   const activityIds = new Set<string>();
   const activityNames = new Set<string>();
-  const activities = state.items.filter(item => {
+  const activities = state.items.filter((item) => {
     const id = item.activityId ?? item.id;
-    const name = item.title.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("it");
+    const name = item.title
+      .normalize("NFC")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLocaleLowerCase("it");
     const duplicate = activityIds.has(id) || activityNames.has(name);
     activityIds.add(id);
     activityNames.add(name);
     return !duplicate;
   });
   return (
-    <div className={`app-shell drawer-layout${sidebarExpanded ? "" : " sidebar-collapsed"}`}>
-      <aside id="sidebar-drawer" className="hero-panel" aria-label="Barra laterale">
-        <button type="button" className="secondary-button sidebar-toggle" aria-expanded={sidebarExpanded} aria-controls="sidebar-drawer" aria-label={sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"} title={sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"} onClick={() => setSidebarExpanded(value => !value)}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16" /><path d={sidebarExpanded ? "m16 9-3 3 3 3" : "m13 9 3 3-3 3"} /></svg>
+    <div
+      className={`app-shell drawer-layout${sidebarExpanded ? "" : " sidebar-collapsed"}`}
+    >
+      <aside
+        id="sidebar-drawer"
+        className="hero-panel"
+        aria-label="Barra laterale"
+      >
+        <button
+          type="button"
+          className="secondary-button sidebar-toggle"
+          aria-expanded={sidebarExpanded}
+          aria-controls="sidebar-drawer"
+          aria-label={
+            sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"
+          }
+          title={
+            sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"
+          }
+          onClick={() => setSidebarExpanded((value) => !value)}
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <path d="M9 4v16" />
+            <path d={sidebarExpanded ? "m16 9-3 3 3 3" : "m13 9 3 3-3 3"} />
+          </svg>
         </button>
         <div className="sidebar-intro" hidden={!sidebarExpanded}>
-        <p className="eyebrow">Il tuo tempo, in locale</p>
-        <h1>Spazio alle tue giornate.</h1>
-        <p className="hero-copy">
-          Attività, impegni e tempo per te. Un calendario continuo, pronto da
-          usare.
-        </p>
+          <p className="eyebrow">Il tuo tempo, in locale</p>
+          <h1>Spazio alle tue giornate.</h1>
+          <p className="hero-copy">
+            Attività, impegni e tempo per te. Un calendario continuo, pronto da
+            usare.
+          </p>
         </div>
-        <div className="hero-icon-actions" role="group" aria-label="Azioni calendario">
+        <div
+          className="hero-icon-actions"
+          role="group"
+          aria-label="Azioni calendario"
+        >
           <button
             type="button"
             aria-label="Aggiungi attività"
@@ -142,7 +184,18 @@ function App() {
               setEditor({ date: week === weekStart(today()) ? today() : week })
             }
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
           </button>
           <button
             type="button"
@@ -152,35 +205,93 @@ function App() {
             className="secondary-button hero-icon-button"
             onClick={() => setPreferences(true)}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg>
-          </button>
-            <button
-              type="button"
-              aria-label="Svuota calendario"
-              title="Svuota calendario"
-              disabled={disabled || state.items.length === 0}
-              className="ghost-button hero-icon-button"
-              onClick={() => {
-                setClearUnlocked(false);
-                setError("");
-                setClearing(true);
-              }}
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7" /></svg>
-            </button>
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label="Svuota calendario"
+            title="Svuota calendario"
+            disabled={disabled || state.items.length === 0}
+            className="ghost-button hero-icon-button"
+            onClick={() => {
+              setClearUnlocked(false);
+              setError("");
+              setClearing(true);
+            }}
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7" />
+            </svg>
+          </button>
         </div>
-        <section className="sidebar-activities" aria-labelledby="sidebar-activities-title">
-          <h2 id="sidebar-activities-title" className={sidebarExpanded ? undefined : "sr-only"}>Le tue attività</h2>
-          {activities.length === 0 ? <p className="summary-empty-copy" hidden={!sidebarExpanded}>Nessuna attività creata. Usa + per aggiungerne una.</p> :
+        <section
+          className="sidebar-activities"
+          aria-labelledby="sidebar-activities-title"
+        >
+          <h2
+            id="sidebar-activities-title"
+            className={sidebarExpanded ? undefined : "sr-only"}
+          >
+            Le tue statistiche settimanali
+          </h2>
+          {activities.length === 0 ? (
+            <p className="summary-empty-copy" hidden={!sidebarExpanded}>
+              Nessuna attività creata. Usa + per aggiungerne una.
+            </p>
+          ) : (
             <ul className="sidebar-activity-list">
-              {activities.map(item => {
+              {activities.map((item) => {
                 const appearance = eventAppearance(item);
-                return <li key={item.activityId ?? item.id} className="sidebar-activity" title={item.title} tabIndex={sidebarExpanded ? undefined : 0} style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
-                  <span className="sidebar-activity-icon"><EventIcon icon={appearance.icon} /></span>
-                  <span className={sidebarExpanded ? "sidebar-activity-title" : "sr-only"}>{item.title}</span>
-                </li>;
+                return (
+                  <li
+                    key={item.activityId ?? item.id}
+                    className="sidebar-activity"
+                    title={item.title}
+                    tabIndex={sidebarExpanded ? undefined : 0}
+                    style={
+                      {
+                        "--event-color": eventColors[appearance.color].value,
+                      } as CSSProperties
+                    }
+                  >
+                    <span className="sidebar-activity-icon">
+                      <EventIcon icon={appearance.icon} />
+                    </span>
+                    <span
+                      className={
+                        sidebarExpanded ? "sidebar-activity-title" : "sr-only"
+                      }
+                    >
+                      {item.title}
+                    </span>
+                  </li>
+                );
               })}
-            </ul>}
+            </ul>
+          )}
         </section>
       </aside>
       <main className="calendar-panel">
@@ -274,7 +385,9 @@ function App() {
             <p className="eyebrow">
               {activeTab === "settings"
                 ? "Personalizza la tua app"
-                : activeTab === "statistics" ? "Vista annuale" : "Vista settimanale"}
+                : activeTab === "statistics"
+                  ? "Vista annuale"
+                  : "Vista settimanale"}
             </p>
             <h2>
               {activeTab === "calendar"
@@ -347,9 +460,24 @@ function App() {
             week={week}
             disabled={disabled}
             onAdd={(date) => setEditor({ date })}
-            onEdit={item => { setEventMenuDelete(false); setEventMenu(item); }}
-            onDelete={item => { setEventMenuDelete(true); setEventMenu(item); }}
-            onOutcome={(item, outcome) => commit(setOccurrenceOutcome(state, item.sourceId, item.occurrenceDate, outcome))}
+            onEdit={(item) => {
+              setEventMenuDelete(false);
+              setEventMenu(item);
+            }}
+            onDelete={(item) => {
+              setEventMenuDelete(true);
+              setEventMenu(item);
+            }}
+            onOutcome={(item, outcome) =>
+              commit(
+                setOccurrenceOutcome(
+                  state,
+                  item.sourceId,
+                  item.occurrenceDate,
+                  outcome,
+                ),
+              )
+            }
           />
           <details
             className="calendar-planning-note"
@@ -494,9 +622,9 @@ function App() {
             stati di completamento o salto.
           </p>
           <p>
-            Restano il profilo, gli obiettivi, la palette e
-            l’archivio del vecchio prototipo. Questa operazione non è
-            annullabile; puoi prima esportare il calendario.
+            Restano il profilo, gli obiettivi, la palette e l’archivio del
+            vecchio prototipo. Questa operazione non è annullabile; puoi prima
+            esportare il calendario.
           </p>
           {hasConstraints && (
             <label className="clear-unlock">

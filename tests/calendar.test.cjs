@@ -426,3 +426,24 @@ test('conversion does not absorb different overlapping appointments and remains 
     assert.deepEqual(state, before);
   }
 });
+
+test('cover photo choice persists and updates linked series and exceptions without changing outcomes', () => {
+  let state = c.putWeeklyActivity(c.emptyCalendar(), series('covers', { icon: 'sport', coverImage: true }), [0, 2, 4], user);
+  const first = state.items.find(entry => entry.date === '2026-09-14');
+  const occurrence = c.occurrences(state.items, '2026-09-21', '2026-09-21')[0];
+  state = put(state, { ...first, ...occurrence, notes: 'Nota conservata' }, unlocked, target(first.id, '2026-09-21'));
+  state = c.setOccurrenceOutcome(state, first.id, '2026-09-21', 'completed');
+  state = put(state, { ...state.items.find(entry => entry.id === first.id), coverImage: false }, unlocked,
+    { ...target(first.id, '2026-09-14', 'series'), applyAppearanceToSeries: true });
+  assert.ok(state.items.every(entry => entry.coverImage === false));
+  assert.equal(state.items.find(entry => entry.id === first.id).exceptions['2026-09-21'].coverImage, false);
+  const disk = new MemoryStorage();
+  storage.saveCalendar(disk, state);
+  const loaded = storage.loadCalendar(disk);
+  assert.equal(loaded.error, null);
+  const week = c.occurrences(loaded.state.items, '2026-09-21', '2026-09-27');
+  assert.ok(week.every(entry => entry.coverImage === false));
+  assert.equal(week.find(entry => entry.sourceId === first.id).outcome, 'completed');
+  assert.equal(week.find(entry => entry.sourceId === first.id).notes, 'Nota conservata');
+  assert.throws(() => put(c.emptyCalendar(), item('bad-cover', { coverImage: 'url' })), /Immagine non valida/);
+});
