@@ -69,6 +69,7 @@ function App() {
     "calendar" | "statistics" | "settings"
   >("calendar");
   const [week, setWeek] = useState(() => weekStart(today()));
+  const [eventMenuDelete, setEventMenuDelete] = useState(false);
   const [eventMenu, setEventMenu] = useState<Occurrence | null>(null);
   const [editor, setEditor] = useState<{
     date: string;
@@ -346,7 +347,9 @@ function App() {
             week={week}
             disabled={disabled}
             onAdd={(date) => setEditor({ date })}
-            onEdit={setEventMenu}
+            onEdit={item => { setEventMenuDelete(false); setEventMenu(item); }}
+            onDelete={item => { setEventMenuDelete(true); setEventMenu(item); }}
+            onOutcome={(item, outcome) => commit(setOccurrenceOutcome(state, item.sourceId, item.occurrenceDate, outcome))}
           />
           <details
             className="calendar-planning-note"
@@ -409,6 +412,7 @@ function App() {
       </main>
       {eventMenu && (
         <CalendarEventMenu
+          initialConfirmDelete={eventMenuDelete}
           item={eventMenu}
           onClose={() => setEventMenu(null)}
           onEdit={() => {
