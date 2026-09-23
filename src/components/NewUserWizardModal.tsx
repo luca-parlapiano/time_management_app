@@ -1,73 +1,10 @@
 import { useMemo, useState } from "react";
+import type { FixedScheduleDraft, NewUserWizardDraft, NewUserWizardModalProps, NewUserWizardSubmission, PlanPreviewOption } from "../model/NewUserWizardModal.js";
+import type { FixedCommitment, GoalInput, RawAnswers, Weekday } from "../model/planning.js";
 import { newUserWizardSteps } from "../onboarding/newUserWizardSteps";
-import {
-  createEmptyGoal,
-  defaultAnswers,
-  formatWeeklyGoalDuration,
-  goalPriorityOptions,
-  weekdayLabels,
-  weeklyGoalDurationOptions,
-} from "../planner/defaults";
-import type {
-  FlexibilityMode,
-  GoalInput,
-  FixedCommitment,
-  RawAnswers,
-  Weekday,
-} from "../domain/planning";
+import { createEmptyGoal, defaultAnswers, formatWeeklyGoalDuration, goalPriorityOptions, weekdayLabels, weeklyGoalDurationOptions } from "../planner/defaults";
 import { formatTimeRange } from "../utils/time";
-
-interface NewUserWizardModalProps {
-  onClose: () => void;
-  onSubmit: (submission: NewUserWizardSubmission) => void;
-}
-
-export interface NewUserWizardSubmission {
-  answers: RawAnswers;
-  selectedPlan: {
-    id: string;
-    title: string;
-    description: string;
-  };
-}
-
-interface FixedScheduleDraft {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  days: Weekday[];
-}
-
-interface NewUserWizardDraft {
-  goals: GoalInput[];
-  planDuration: "weekly" | "monthly" | "quarterly" | "semiannual" | "annual";
-  fixedSchedules: FixedScheduleDraft[];
-  protectedSchedules: FixedScheduleDraft[];
-  sleepHoursTarget: number;
-  energyProfile: RawAnswers["energyProfile"];
-  focusBlockMinutes: number;
-  workStyle: "deep_work" | "alternating" | "short_sprints";
-  flexibilityMode: FlexibilityMode;
-  planIntensity: "light" | "balanced" | "push";
-  mainDifficulties: Array<
-    "procrastination" | "overload" | "context_switching" | "unexpected_events"
-  >;
-  selectedPreviewId?: string;
-}
-
-interface PlanPreviewOption {
-  id: string;
-  title: string;
-  summary: string;
-  focusLabel: string;
-  bufferLabel: string;
-  description: string;
-  weekPreview: Array<{
-    day: string;
-    slots: Array<"focus" | "support" | "buffer" | "free">;
-  }>;
-}
+export type { NewUserWizardSubmission } from "../model/NewUserWizardModal.js";
 
 const planDurationOptions: Array<{
   value: NewUserWizardDraft["planDuration"];

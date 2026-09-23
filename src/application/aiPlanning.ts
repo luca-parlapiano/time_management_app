@@ -1,17 +1,9 @@
-import type { PlannerResult } from "../domain/planning";
+import type { AIPlanningRequest } from "../model/aiPlanning.js";
+import type { PlannerResult } from "../model/planning.js";
+export type { AIPlanningRequest } from "../model/aiPlanning.js";
 
 // Contratto stabile da inviare in futuro a un servizio AI: niente istruzioni libere
 // e tutti i vincoli restano espliciti e verificabili lato server.
-export interface AIPlanningRequest {
-  profile: PlannerResult["profile"];
-  capacity: PlannerResult["capacityCheck"];
-  derivedFeatures: PlannerResult["derivedFeatures"];
-  hardConstraints: {
-    fixedCommitments: PlannerResult["profile"]["fixedCommitments"];
-    protectedTime: PlannerResult["profile"]["protectedTime"];
-    sleepWindow: PlannerResult["profile"]["sleepWindow"];
-  };
-}
 
 export function createAIPlanningRequest(result: PlannerResult): AIPlanningRequest {
   return {

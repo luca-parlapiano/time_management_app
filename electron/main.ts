@@ -1,3 +1,5 @@
+import { DatabaseService } from "./databaseService.js";
+import type { DatabaseWrite } from "../src/model/database.js";
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,7 +7,7 @@ import { LlamaPlanningRuntime } from "./llamaPlanningRuntime.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const projectRoot = path.join(__dirname, "..");
+const projectRoot = path.join(__dirname, "../..");
 const resourceRoot = app.isPackaged ? process.resourcesPath : path.join(projectRoot, "resources");
 const planningIntentRuntime = new LlamaPlanningRuntime(resourceRoot);
 
@@ -61,10 +63,18 @@ function createMainWindow() {
     return;
   }
 
-  void mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+  void mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
 }
 
+let database: DatabaseService | undefined;
 app.whenReady().then(() => {
+  database = new DatabaseService(path.join(app.getPath("userData"), "agenda.sqlite"));
+  const trusted = (event: Electron.IpcMainInvokeEvent) => {
+    const sender = BrowserWindow.fromWebContents(event.sender);
+    if (!sender || event.senderFrame !== event.sender.mainFrame) throw new Error("Richiesta database non autorizzata.");
+  };
+  ipcMain.handle("planner-db:read", event => { trusted(event); return database!.read(); });
+  ipcMain.handle("planner-db:write", (event, input: DatabaseWrite) => { trusted(event); return database!.write(input); });
   createMainWindow();
 
   app.on("activate", () => {
@@ -80,4 +90,4 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("before-quit", () => planningIntentRuntime.stop());
+app.on("before-quit", () => { planningIntentRuntime.stop(); void database?.close(); });

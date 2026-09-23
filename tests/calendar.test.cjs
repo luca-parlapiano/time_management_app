@@ -447,3 +447,41 @@ test('cover photo choice persists and updates linked series and exceptions witho
   assert.equal(week.find(entry => entry.sourceId === first.id).notes, 'Nota conservata');
   assert.throws(() => put(c.emptyCalendar(), item('bad-cover', { coverImage: 'url' })), /Immagine non valida/);
 });
+
+const archives = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/outcomeArchive.js'));
+test('outcome migration uses original occurrence identity and actual moved date, with no invented timestamps', () => {
+  let state = put(c.emptyCalendar(), series('history'));
+  const original = c.occurrences(state.items, '2026-09-21', '2026-09-21')[0];
+  state = put(state, { ...state.items[0], ...original, date: '2026-09-22', endDate: '2026-09-22' }, unlocked, target('history', '2026-09-21'));
+  state = c.setOccurrenceOutcome(state, 'history', '2026-09-21', 'partial');
+  const migrated = archives.migrateOutcomeHistory(state);
+  assert.equal(migrated.length, 1);
+  assert.equal(migrated[0].eventDate, '2026-09-22');
+  assert.equal(migrated[0].occurrenceDate, '2026-09-21');
+  assert.equal(migrated[0].recordedAt, null);
+  assert.equal(migrated[0].outcome, 'partial');
+});
+test('corrections preserve an audit trail but count each appointment once, independent of deletion', () => {
+  let state = put(c.emptyCalendar(), item('history'));
+  const occurrence = c.occurrences(state.items, '2026-09-14', '2026-09-14')[0];
+  const first = archives.outcomeRecord(state, occurrence, 'partial', '2026-09-14T11:00:00.000Z');
+  const second = archives.outcomeRecord(state, occurrence, 'completed', '2026-09-14T12:00:00.000Z');
+  const history = [first, second];
+  state = c.clearCalendar(state);
+  assert.equal(history.length, 2);
+  assert.deepEqual(archives.latestOutcomes(history), [second]);
+  const archive = { format: 'time-planner-backup', version: 1, calendar: state, history };
+  assert.deepEqual(archives.parseArchive(archives.exportArchive(archive)).history, history);
+});
+test('import validates backup version, duplicate IDs, dates and outcomes before accepting data', () => {
+  const state = put(c.emptyCalendar(), item('history', { status: 'completed' }));
+  const legacy = archives.parseArchive(JSON.stringify(state));
+  assert.equal(legacy.history.length, 1);
+  assert.equal(legacy.history[0].recordedAt, null);
+  assert.throws(() => archives.parseArchive('{broken'));
+  assert.throws(() => archives.parseArchive(JSON.stringify({ ...legacy, version: 9 })), /Formato/);
+  assert.throws(() => archives.validateArchive({ ...legacy, history: [legacy.history[0], legacy.history[0]] }), /Storico/);
+  for (const patch of [{ outcome: 'wrong' }, { eventDate: '2026-02-30' }, { recordedAt: 'yesterday' }]) {
+    assert.throws(() => archives.validateArchive({ ...legacy, history: [{ ...legacy.history[0], ...patch }] }), /Storico/);
+  }
+});

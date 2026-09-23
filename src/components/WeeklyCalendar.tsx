@@ -1,16 +1,8 @@
 import type { CSSProperties } from "react";
+import { addDays, displayDate, occurrences, today } from "../domain/calendar";
+import type { WeeklyCalendarProps } from "../model/WeeklyCalendar.js";
 import { AgendaEventCard } from "./AgendaEventCard";
-import { addDays, displayDate, occurrences, today, type CalendarState, type ItemOutcome, type Occurrence } from "../domain/calendar";
 
-interface WeeklyCalendarProps {
-  state: CalendarState;
-  week: string;
-  disabled?: boolean;
-  onAdd: (date: string) => void;
-  onEdit: (item: Occurrence) => void;
-  onDelete: (item: Occurrence) => void;
-  onOutcome: (item: Occurrence, outcome: ItemOutcome) => void;
-}
 function minutes(time: string) {
   const [hours, mins] = time.split(":").map(Number);
   return hours * 60 + mins;

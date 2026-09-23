@@ -1,12 +1,5 @@
-import type { CalendarActivity as PlanBlock, Weekday } from "../domain/planning";
-import type {
-  AdaptiveCapacityProfile,
-  BlockOutcome,
-  SimulatedBlockEvent,
-  SimulatedWeek,
-  SimulationInput,
-  SimulationRun
-} from "./contracts";
+import type { CalendarActivity as PlanBlock, Weekday } from "../model/planning.js";
+import type { AdaptiveCapacityProfile, BlockOutcome, SimulatedBlockEvent, SimulatedWeek, SimulationInput, SimulationRun } from "../model/simulationContracts.js";
 
 const dayScores: Record<Weekday, number> = {
   mon: 0.96,

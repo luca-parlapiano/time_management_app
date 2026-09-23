@@ -1,14 +1,11 @@
-import { emptyCalendar, validateCalendar, type CalendarState } from "../domain/calendar";
+import { emptyCalendar, validateCalendar } from "../domain/calendar";
+import type { CalendarState } from "../model/calendar.js";
+import type { CalendarLoad, CalendarStorage } from "../model/localCalendarStorage.js";
+export type { CalendarLoad,CalendarStorage } from "../model/localCalendarStorage.js";
 
 export const CALENDAR_STORAGE_KEY = "time-planner.calendar.v2";
 export const LEGACY_STORAGE_KEY = "time-planner.local-state.v1";
-export type CalendarStorage = Pick<Storage, "getItem" | "setItem">;
-export interface CalendarLoad {
-  state: CalendarState;
-  raw: string | null;
-  legacy: string | null;
-  error: string | null;
-}
+
 export function loadCalendar(storage: CalendarStorage): CalendarLoad {
   let raw: string | null = null;
   let legacy: string | null = null;

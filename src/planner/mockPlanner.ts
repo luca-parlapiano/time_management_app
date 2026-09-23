@@ -1,14 +1,4 @@
-import type {
-  DerivedFeatures,
-  GoalInput,
-  PlanCapacityCheck,
-  PlannerDecision,
-  PlannerResult,
-  RawAnswers,
-  UserProfile,
-  Weekday,
-  WeeklyPlan
-} from "../domain/planning";
+import type { DerivedFeatures, GoalInput, PlanCapacityCheck, PlannerDecision, PlannerResult, RawAnswers, UserProfile, Weekday, WeeklyPlan } from "../model/planning.js";
 
 const weekdays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 

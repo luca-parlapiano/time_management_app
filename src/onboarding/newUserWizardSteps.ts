@@ -1,11 +1,5 @@
-export interface NewUserWizardStep {
-  id: string;
-  eyebrow: string;
-  title: string;
-  description: string;
-  userGuidance: string;
-  plannedFields: string[];
-}
+import type { NewUserWizardStep } from "../model/newUserWizardSteps.js";
+export type { NewUserWizardStep } from "../model/newUserWizardSteps.js";
 
 export const newUserWizardSteps: NewUserWizardStep[] = [
   {

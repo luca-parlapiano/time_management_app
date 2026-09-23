@@ -1,4 +1,4 @@
-import type { PlannerGateway } from "../application/contracts";
+import type { PlannerGateway } from "../model/applicationContracts.js";
 import { buildPrototypePlan, checkPlanCapacity } from "../planner/mockPlanner";
 import { simulateWeeks } from "../simulation/weekSimulation";
 

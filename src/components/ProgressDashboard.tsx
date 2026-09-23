@@ -1,27 +1,6 @@
 import { useEffect, useState } from "react";
-import type { ActivityEvent, ActivityOutcome, CalendarActivity, WeeklyPlan } from "../domain/planning";
-import type { SimulatedBlockEvent } from "../simulation/contracts";
-
-interface ProgressDashboardProps {
-  plan: WeeklyPlan;
-  events: Record<string, ActivityEvent>;
-  simulatedEvents: SimulatedBlockEvent[];
-  onClear: () => void;
-}
-
-type DashboardMode = "real" | "simulated";
-
-interface DashboardEvent {
-  blockId: string;
-  outcome: ActivityOutcome;
-  recovered?: boolean;
-}
-
-interface ProgressRow {
-  label: string;
-  completed: number;
-  attempted: number;
-}
+import type { CalendarActivity, WeeklyPlan } from "../model/planning.js";
+import type { DashboardEvent, DashboardMode, ProgressChartProps, ProgressDashboardProps, ProgressRow } from "../model/ProgressDashboard.js";
 
 function getFocusWindow(start: string) {
   const hour = Number(start.split(":")[0]);
@@ -53,7 +32,7 @@ function getRows(plan: WeeklyPlan, events: DashboardEvent[], getLabel: (block: C
   });
 }
 
-function ProgressChart({ title, rows }: { title: string; rows: ProgressRow[] }) {
+function ProgressChart({ title, rows }: ProgressChartProps) {
   return (
     <section className="progress-chart" aria-label={title}>
       <h3>{title}</h3>

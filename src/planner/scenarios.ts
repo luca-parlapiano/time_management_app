@@ -1,12 +1,6 @@
+import type { SimulationScenario } from "../model/scenarios.js";
 import { defaultAnswers } from "./defaults";
-import type { RawAnswers } from "../domain/planning";
-
-export interface SimulationScenario {
-  id: string;
-  name: string;
-  description: string;
-  answers: RawAnswers;
-}
+export type { SimulationScenario } from "../model/scenarios.js";
 
 export const simulationScenarios: SimulationScenario[] = [
   {

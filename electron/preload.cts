@@ -7,3 +7,8 @@ contextBridge.exposeInMainWorld("plannerAI", {
     return ipcRenderer.invoke("planner-ai:interpret", text);
   },
 });
+
+contextBridge.exposeInMainWorld("plannerDB", {
+  read: () => ipcRenderer.invoke("planner-db:read"),
+  write: (input: unknown) => ipcRenderer.invoke("planner-db:write", input),
+});

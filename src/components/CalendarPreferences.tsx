@@ -1,30 +1,16 @@
 import { useState } from "react";
+import type { CalendarPreferencesProps } from "../model/CalendarPreferences.js";
 import { CalendarDialog } from "./CalendarDialog";
-import type { CalendarState, ItemData } from "../domain/calendar";
 
-export function CalendarPreferences({ state, onSave, onClose }: {
-  state: CalendarState; onSave: (next: CalendarState) => void; onClose: () => void;
-}) {
+export function CalendarPreferences({ state, onSave, onClose }: CalendarPreferencesProps) {
   const [profile, setProfile] = useState(state.profile ?? { name: "", notes: "" });
   const [goals, setGoals] = useState(state.goals);
   const [error, setError] = useState("");
   return <CalendarDialog title="Profilo" onClose={onClose}>
-    <form onSubmit={e => {
+    <form onSubmit={async e => {
       e.preventDefault();
       try {
-        const remainingIds = new Set(goals.map(goal => goal.id));
-        function unlinkRemovedGoal<T extends ItemData>(item: T): T {
-          if (item.goalId === undefined || remainingIds.has(item.goalId)) return item;
-          const next = { ...item };
-          delete next.goalId;
-          return next;
-        }
-        const items = state.items.map(item => ({
-          ...unlinkRemovedGoal(item),
-          exceptions: Object.fromEntries(Object.entries(item.exceptions).map(([date, exception]) =>
-            [date, exception === null ? null : unlinkRemovedGoal(exception)])),
-        }));
-        onSave({ ...state, items, profile, goals });
+        await onSave(profile, goals);
         onClose();
       }
       catch (cause) { setError((cause as Error).message); }

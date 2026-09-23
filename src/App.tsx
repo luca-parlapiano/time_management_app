@@ -1,114 +1,37 @@
-import { useLayoutEffect, useState, type CSSProperties } from "react";
-import { EventIcon } from "./components/EventIcon";
-import { CalendarStatistics } from "./components/CalendarStatistics";
-import { CalendarEventMenu } from "./components/CalendarEventMenu";
-import { WeeklyCalendar } from "./components/WeeklyCalendar";
-import { CalendarItemEditor } from "./components/CalendarItemEditor";
+import type { CSSProperties } from "react";
+import { useLayoutEffect, useState } from "react";
+import { ArchiveSettings } from "./components/ArchiveSettings";
 import { CalendarDialog } from "./components/CalendarDialog";
+import { CalendarEventMenu } from "./components/CalendarEventMenu";
+import { CalendarItemEditor } from "./components/CalendarItemEditor";
 import { CalendarPreferences } from "./components/CalendarPreferences";
+import { CalendarStatistics } from "./components/CalendarStatistics";
+import { EventIcon } from "./components/EventIcon";
 import { PalettePicker } from "./components/PalettePicker";
-import { loadPalette, PALETTE_STORAGE_KEY, type Palette } from "./theme";
-import {
-  setOccurrenceOutcome,
-  putWeeklyActivity,
-  addDays,
-  clearCalendar,
-  deleteItem,
-  displayDate,
-  eventAppearance,
-  eventColors,
-  putItem,
-  today,
-  weekStart,
-  type CalendarState,
-  type Occurrence,
-} from "./domain/calendar";
-import {
-  loadCalendar,
-  saveCalendar,
-} from "./infrastructure/localCalendarStorage";
-
-function readableArchive(data: string) {
-  try {
-    return JSON.stringify(JSON.parse(data), null, 2);
-  } catch {
-    return data;
-  }
-}
-function download(name: string, data: string) {
-  const url = URL.createObjectURL(
-    new Blob([data], { type: "application/json" }),
-  );
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = name;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-function App() {
-  const [loaded] = useState(() => {
-    try {
-      return loadCalendar(window.localStorage);
-    } catch {
-      return {
-        state: {
-          version: 2,
-          items: [],
-          goals: [],
-          profile: null,
-        } as CalendarState,
-        raw: null,
-        legacy: null,
-        error: "Archivio locale non accessibile. Riapri l’app per riprovare.",
-      };
-    }
-  });
-  const [state, setState] = useState(loaded.state);
+import { WeeklyCalendar } from "./components/WeeklyCalendar";
+import { addDays, displayDate, eventAppearance, eventColors, today, weekStart } from "./domain/calendar";
+import { useDB } from "./hooks/useDB";
+import { useLoading } from "./hooks/useLoading";
+import type { AppTab, CalendarEditorState } from "./model/App.js";
+import type { Occurrence } from "./model/calendar.js";
+function AppContent() {
+  const { palette, paletteError: paletteSaveError, changePalette, state, archive, saving, recordOutcome, saveItem, deleteItem: removeItem, savePreferences, clearCalendar: clearAll } = useDB();
+  const { isLoading } = useLoading();
   const [sidebarExpanded, setSidebarExpanded] = useState(
     () => window.matchMedia("(min-width: 721px)").matches,
   );
-  const [activeTab, setActiveTab] = useState<
-    "calendar" | "statistics" | "settings"
-  >("calendar");
+  const [activeTab, setActiveTab] = useState<AppTab>("calendar");
   const [week, setWeek] = useState(() => weekStart(today()));
   const [eventMenuDelete, setEventMenuDelete] = useState(false);
   const [eventMenu, setEventMenu] = useState<Occurrence | null>(null);
-  const [editor, setEditor] = useState<{
-    date: string;
-    occurrence?: Occurrence;
-  } | null>(null);
+  const [editor, setEditor] = useState<CalendarEditorState | null>(null);
   const [preferences, setPreferences] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [clearUnlocked, setClearUnlocked] = useState(false);
   const [error, setError] = useState("");
-  const [palette, setPalette] = useState(loadPalette);
-  const [paletteSaveError, setPaletteSaveError] = useState(false);
-  useLayoutEffect(() => {
-    document.documentElement.dataset.palette = palette;
-  }, [palette]);
-  function changePalette(next: Palette) {
-    setPalette(next);
-    try {
-      window.localStorage.setItem(PALETTE_STORAGE_KEY, next);
-      setPaletteSaveError(false);
-    } catch {
-      setPaletteSaveError(true);
-    }
-  }
-  function commit(next: CalendarState) {
-    if (loaded.error) throw new Error(loaded.error);
-    try {
-      saveCalendar(window.localStorage, next);
-    } catch {
-      throw new Error(
-        "Salvataggio non riuscito. Nessuna modifica applicata: controlla lo spazio disponibile e riprova.",
-      );
-    }
-    setState(next);
-    setError("");
-  }
+  useLayoutEffect(() => { document.documentElement.dataset.palette = palette; }, [palette]);
   const hasConstraints = state.items.some((item) => item.kind !== "flexible");
-  const disabled = Boolean(loaded.error);
+  const disabled = saving;
   const activityIds = new Set<string>();
   const activityNames = new Set<string>();
   const activities = state.items.filter((item) => {
@@ -428,21 +351,7 @@ function App() {
             </nav>
           )}
         </header>
-        {loaded.error && (
-          <div role="alert" className="capacity-warning">
-            <p>{loaded.error}</p>
-            {loaded.raw !== null && (
-              <button
-                className="secondary-button"
-                onClick={() =>
-                  download("recupero-calendario.json", loaded.raw!)
-                }
-              >
-                Esporta archivio da recuperare
-              </button>
-            )}
-          </div>
-        )}
+        {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
         {error && !clearing && (
           <p role="alert" className="capacity-warning">
             {error}
@@ -468,16 +377,7 @@ function App() {
               setEventMenuDelete(true);
               setEventMenu(item);
             }}
-            onOutcome={(item, outcome) =>
-              commit(
-                setOccurrenceOutcome(
-                  state,
-                  item.sourceId,
-                  item.occurrenceDate,
-                  outcome,
-                ),
-              )
-            }
+            onOutcome={recordOutcome}
           />
           <details
             className="calendar-planning-note"
@@ -499,13 +399,7 @@ function App() {
           tabIndex={0}
           hidden={activeTab !== "statistics"}
         >
-          {loaded.error ? (
-            <p className="statistics-empty">
-              Statistiche non disponibili finché l’archivio non è leggibile.
-            </p>
-          ) : (
-            <CalendarStatistics state={state} />
-          )}
+          <CalendarStatistics state={state} history={archive.history} />
         </section>
         <section
           id="panel-settings"
@@ -519,23 +413,7 @@ function App() {
             onChange={changePalette}
             saveError={paletteSaveError}
           />
-          <div className="summary-card">
-            <h3>Esporta i tuoi dati</h3>
-            <p>
-              Scarica il calendario completo, gli obiettivi e il profilo in un
-              file JSON da conservare sul tuo dispositivo.
-            </p>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={disabled}
-              onClick={() =>
-                download("calendario.json", JSON.stringify(state, null, 2))
-              }
-            >
-              Esporta
-            </button>
-          </div>
+          <ArchiveSettings />
         </section>
       </main>
       {eventMenu && (
@@ -547,29 +425,12 @@ function App() {
             setEditor({ date: eventMenu.date, occurrence: eventMenu });
             setEventMenu(null);
           }}
-          onOutcome={(outcome) => {
-            commit(
-              setOccurrenceOutcome(
-                state,
-                eventMenu.sourceId,
-                eventMenu.occurrenceDate,
-                outcome,
-              ),
-            );
+          onOutcome={async outcome => {
+            await recordOutcome(eventMenu, outcome);
             setEventMenu(null);
           }}
-          onDelete={() => {
-            commit(
-              deleteItem(
-                state,
-                {
-                  sourceId: eventMenu.sourceId,
-                  occurrenceDate: eventMenu.occurrenceDate,
-                  scope: "occurrence",
-                },
-                { actor: "user", unlocked: true },
-              ),
-            );
+          onDelete={async () => {
+            await removeItem({sourceId:eventMenu.sourceId, occurrenceDate:eventMenu.occurrenceDate, scope:"occurrence"}, true);
             setEventMenu(null);
           }}
         />
@@ -583,22 +444,12 @@ function App() {
             (item) => item.id === editor.occurrence?.sourceId,
           )}
           onClose={() => setEditor(null)}
-          onSave={(item, unlocked, target, weekdays) => {
-            commit(
-              weekdays
-                ? putWeeklyActivity(
-                    state,
-                    item,
-                    weekdays,
-                    { actor: "user", unlocked },
-                    target,
-                  )
-                : putItem(state, item, { actor: "user", unlocked }, target),
-            );
+          onSave={async (item, unlocked, target, weekdays) => {
+            await saveItem(item, unlocked, target, weekdays);
             setEditor(null);
           }}
-          onDelete={(target, unlocked) => {
-            commit(deleteItem(state, target, { actor: "user", unlocked }));
+          onDelete={async (target, unlocked) => {
+            await removeItem(target, unlocked);
             setEditor(null);
           }}
         />
@@ -606,7 +457,7 @@ function App() {
       {preferences && (
         <CalendarPreferences
           state={state}
-          onSave={commit}
+          onSave={savePreferences}
           onClose={() => setPreferences(false)}
         />
       )}
@@ -622,7 +473,7 @@ function App() {
             stati di completamento o salto.
           </p>
           <p>
-            Restano il profilo, gli obiettivi, la palette e l’archivio del
+            Restano lo storico degli esiti, il profilo, gli obiettivi, la palette e l’archivio del
             vecchio prototipo. Questa operazione non è annullabile; puoi prima
             esportare il calendario.
           </p>
@@ -649,11 +500,11 @@ function App() {
               Annulla
             </button>
             <button
-              disabled={hasConstraints && !clearUnlocked}
+              disabled={saving || hasConstraints && !clearUnlocked}
               className="primary-button"
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  commit(clearCalendar(state));
+                  await clearAll();
                   setClearing(false);
                 } catch (cause) {
                   setError((cause as Error).message);
@@ -668,4 +519,8 @@ function App() {
     </div>
   );
 }
-export default App;
+export default function App() {
+  const { ready, error, retry } = useDB();
+  if (!ready) return <main className="database-loading"><h1>Agenda</h1>{error && <><p role="alert">{error}</p><button className="secondary-button" onClick={() => void retry()}>Riprova</button></>}</main>;
+  return <AppContent />;
+}

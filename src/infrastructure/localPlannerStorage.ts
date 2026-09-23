@@ -1,19 +1,7 @@
-import type { ActivityEvent, PlannerResult, RawAnswers } from "../domain/planning";
+import type { LocalPlannerState } from "../model/localPlannerStorage.js";
+export type { LocalActivePlan,LocalPlannerState } from "../model/localPlannerStorage.js";
 
 const STORAGE_KEY = "time-planner.local-state.v1";
-
-export interface LocalActivePlan {
-  id: string;
-  title: string;
-  description: string;
-}
-
-export interface LocalPlannerState {
-  answers: RawAnswers;
-  plannerResult: PlannerResult;
-  activePlan: LocalActivePlan;
-  blockEvents: Record<string, ActivityEvent>;
-}
 
 function hasRequiredFields(value: unknown): value is LocalPlannerState {
   if (!value || typeof value !== "object") return false;

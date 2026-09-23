@@ -1,4 +1,4 @@
-import type { EventIcon } from "./domain/calendar";
+import type { EventIcon } from "./model/calendar.js";
 
 export const activityCovers: Record<EventIcon, { src: string; label: string; author: string; source: string }> = {
   activity: { src: new URL("./assets/activity-covers/activity.jpg", import.meta.url).href, label: "Sentiero nel bosco", author: "Annie Spratt", source: "https://unsplash.com/photos/KpYvNH3IPVw" },

@@ -1,23 +1,13 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import { activityCovers } from "../activityCovers";
-import { EventIcon } from "./EventIcon";
+import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventIcons, kindLabels, validDate, validateData, weekStart } from "../domain/calendar";
+import type { CalendarItem, EventColor, EventIcon as IconName, ItemKind } from "../model/calendar.js";
+import type { CalendarItemEditorProps } from "../model/CalendarItemEditor.js";
 import { CalendarDialog } from "./CalendarDialog";
-import {
-  eventAppearance, eventIcons, eventColors, type EventIcon as IconName, type EventColor,
-  displayDate, validDate, validateData, weekStart, addDays, durationMinutes, kindLabels, type CalendarItem,
-  type EditTarget, type ItemKind, type Occurrence,
-} from "../domain/calendar";
+import { EventIcon } from "./EventIcon";
 
-interface Props {
-  date: string;
-  item?: CalendarItem;
-  occurrence?: Occurrence;
-  items: CalendarItem[];
-  onClose: () => void;
-  onSave: (item: CalendarItem, unlocked: boolean, target?: EditTarget, weekdays?: number[]) => void;
-  onDelete: (target: EditTarget, unlocked: boolean) => void;
-}
-export function CalendarItemEditor({ date, item, occurrence, items, onClose, onSave, onDelete }: Props) {
+export function CalendarItemEditor({ date, item, occurrence, items, onClose, onSave, onDelete }: CalendarItemEditorProps) {
   const dayLabels = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
   const [weekdays, setWeekdays] = useState<number[]>([Array.from({ length: 7 }, (_, i) => addDays(weekStart(date), i)).indexOf(date)]);
   const [linkedSourceIds, setLinkedSourceIds] = useState<string[]>([]);
@@ -47,11 +37,11 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
   function change(patch: Partial<CalendarItem>) { setDraft(current => ({ ...current, ...patch })); setError(""); setConfirmDelete(false); }
   function changeAppearance(patch: Partial<Pick<CalendarItem, "icon" | "color" | "coverImage">>) { setAppearanceChanged(true); change(patch); }
   return <CalendarDialog title={item ? "Modifica elemento" : "Aggiungi attività"} onClose={onClose}>
-    <form noValidate onSubmit={event => {
+    <form noValidate onSubmit={async event => {
       event.preventDefault();
       try {
         validateData(draft);
-        onSave(draft, unlocked, target, !item?.recurrence && draft.recurrence ? weekdays : undefined);
+        await onSave(draft, unlocked, target, !item?.recurrence && draft.recurrence ? weekdays : undefined);
       } catch (cause) {
         setError((cause as Error).message);
         setScheduleOpen(true);
@@ -164,9 +154,9 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
       {error && <p ref={errorRef} tabIndex={-1} role="alert" className="capacity-warning editor-save-error">{error}</p>}
       {confirmDelete && <p role="alert">Eliminare {item?.recurrence && scope === "series" ? "l’intera serie, comprese tutte le eccezioni" : "solo questo elemento"}? L’operazione non è annullabile.</p>}
       <div className="modal-actions">
-        {target && <button type="button" className="ghost-button" disabled={locked} onClick={() => {
+        {target && <button type="button" className="ghost-button" disabled={locked} onClick={async () => {
           if (!confirmDelete) { setConfirmDelete(true); return; }
-          try { onDelete(target, unlocked); } catch (cause) { setError((cause as Error).message); }
+          try { await onDelete(target, unlocked); } catch (cause) { setError((cause as Error).message); }
         }}>{confirmDelete ? "Conferma eliminazione" : "Elimina"}</button>}
         <button type="submit" className="primary-button" disabled={locked}>Salva {seriesEdit ? "serie" : "elemento"}</button>
       </div>

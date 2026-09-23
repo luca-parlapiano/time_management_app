@@ -1,15 +1,6 @@
 import { useEffect, useState } from "react";
-import type { PlannerResult, RawAnswers } from "../domain/planning";
-import type { SimulationRun } from "../simulation/contracts";
+import type { SimulationPanelProps } from "../model/SimulationPanel.js";
 import { formatTimeRange } from "../utils/time";
-
-interface SimulationPanelProps {
-  answers: RawAnswers;
-  result: PlannerResult;
-  simulation: SimulationRun | null;
-  onSimulationChange: (simulation: SimulationRun | null) => void;
-  onAdvanceSimulation: (weekCount: number) => void;
-}
 
 function formatMinutes(totalMinutes: number) {
   const hours = Math.floor(totalMinutes / 60);

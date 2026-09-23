@@ -1,8 +1,9 @@
+import type { CalendarItem, CalendarState, EditAccess, EditTarget, ItemData, ItemKind, ItemOutcome, ItemStatus, Occurrence } from "../model/calendar.js";
+export type { CalendarGoal,CalendarItem,CalendarProfile,CalendarState,EditAccess,EditTarget,EventColor,EventIcon,ItemData,ItemKind,ItemOutcome,ItemStatus,Occurrence } from "../model/calendar.js";
 /** Civil dates and local wall-clock times: never parse YYYY-MM-DD as local/UTC instants. */
-export type ItemKind = "fixed" | "protected" | "flexible";
-export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto", partial: "Parziale" } as const;
-export type ItemOutcome = keyof typeof outcomeLabels;
-export type ItemStatus = "todo" | "completed" | "skipped";
+
+export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto", partial: "Parziale" } as const satisfies Record<ItemOutcome, string>;
+
 export const eventIcons = {
   activity: "Attività", work: "Lavoro", study: "Studio", sport: "Sport",
   rest: "Riposo", meal: "Pasti", people: "Incontri", heart: "Benessere",
@@ -15,55 +16,14 @@ export const eventColors = {
   pink: { label: "Rosa", value: "#bf5283" },
   teal: { label: "Turchese", value: "#27868e" },
 } as const;
-export type EventIcon = keyof typeof eventIcons;
-export type EventColor = keyof typeof eventColors;
+
 export function eventAppearance(item: Pick<ItemData, "icon" | "color" | "kind">) {
   return {
     icon: item.icon ?? (item.kind === "fixed" ? "work" : item.kind === "protected" ? "rest" : "activity"),
     color: item.color ?? (item.kind === "fixed" ? "blue" : item.kind === "protected" ? "green" : "purple"),
   };
 }
-export interface ItemData {
-  coverImage?: boolean;
-  icon?: EventIcon;
-  color?: EventColor;
-  title: string;
-  date: string;
-  endDate: string;
-  start: string;
-  end: string;
-  kind: ItemKind;
-  status?: ItemStatus;
-  notes: string;
-  goalId?: string;
-}
-export interface CalendarItem extends ItemData {
-  id: string;
-  activityId?: string;
-  completedDates?: Record<string, boolean>;
-  outcomes?: Record<string, ItemOutcome>;
-  // Weekly on the weekday of date, inclusive until; no end means indefinite.
-  recurrence?: { until?: string };
-  // Keys always identify the ORIGINAL occurrence date, including moved occurrences.
-  exceptions: Record<string, ItemData | null>;
-}
-export interface Occurrence extends ItemData {
-  id: string;
-  sourceId: string;
-  occurrenceDate: string;
-  completed: boolean;
-  outcome?: ItemOutcome;
-  recurring: boolean;
-  exception: boolean;
-}
-export interface CalendarGoal { id: string; name: string }
-export interface CalendarProfile { name: string; notes: string }
-export interface CalendarState {
-  version: 2;
-  items: CalendarItem[];
-  goals: CalendarGoal[];
-  profile: CalendarProfile | null;
-}
+
 export const kindLabels: Record<ItemKind, string> = {
   fixed: "Impegno fisso", protected: "Tempo protetto", flexible: "Attività flessibile",
 };
@@ -214,8 +174,7 @@ export function findConflict(items: CalendarItem[], changedId: string): [Occurre
     }
   }
 }
-export interface EditTarget { sourceId: string; occurrenceDate: string; scope: "occurrence" | "series"; applyAppearanceToSeries?: boolean; linkedSourceIds?: string[] }
-export interface EditAccess { actor: "user" | "engine" | "ai"; unlocked?: boolean }
+
 function guard(item: CalendarItem | undefined, access: EditAccess) {
   if (item && item.kind !== "flexible" && (access.actor !== "user" || !access.unlocked)) throw new Error("Vincolo bloccato: solo l’utente può sbloccarlo esplicitamente.");
 }

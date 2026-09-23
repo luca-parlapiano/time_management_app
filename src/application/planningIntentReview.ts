@@ -1,44 +1,7 @@
-import type { GoalInput, RawAnswers } from "../domain/planning";
-import type { PlanningIntent } from "../domain/planningIntent";
-
-export interface GoalIntentResolution {
-  intentIndex: number;
-  priority?: number;
-  desiredWeeklyMinutes?: number;
-}
-
-export type PlanningIntentMissingField = {
-  key: string;
-  category: "goals" | "tasks" | "habits";
-  intentIndex: number;
-  field:
-    | "priority"
-    | "desiredWeeklyMinutes"
-    | "durationMinutes"
-    | "whenExpression"
-    | "frequency";
-  question: string;
-};
-
-export interface PlanningIntentReview {
-  intent: PlanningIntent;
-  requiredGoalDetails: Array<{
-    intentIndex: number;
-    name: string;
-    needsPriority: true;
-    needsDesiredWeeklyMinutes: true;
-  }>;
-  missingFields: PlanningIntentMissingField[];
-  unmapped: {
-    goalDeadlines: Array<{ name: string; deadlineExpression: string }>;
-    tasks: PlanningIntent["tasks"];
-    habits: PlanningIntent["habits"];
-    constraints: PlanningIntent["constraints"];
-    preferences: PlanningIntent["preferences"];
-  };
-  questions: string[];
-  readyForFinalConfirmation: boolean;
-}
+import type { GoalInput, RawAnswers } from "../model/planning.js";
+import type { PlanningIntent } from "../model/planningIntent.js";
+import type { GoalIntentResolution, PlanningIntentApplication, PlanningIntentMissingField, PlanningIntentReview } from "../model/planningIntentReview.js";
+export type { GoalIntentResolution,PlanningIntentApplication,PlanningIntentMissingField,PlanningIntentReview } from "../model/planningIntentReview.js";
 
 function uniqueQuestions(questions: string[]) {
   return [...new Set(questions.map((question) => question.trim()).filter(Boolean))];
@@ -186,12 +149,6 @@ export function applyConfirmedIntentGoals(
     ...currentAnswers,
     goals: mode === "replace" ? confirmedGoals : [...currentAnswers.goals, ...confirmedGoals],
   };
-}
-
-export interface PlanningIntentApplication {
-  answers: RawAnswers;
-  changes: string[];
-  questions: string[];
 }
 
 function normalizedGoalName(name: string) {

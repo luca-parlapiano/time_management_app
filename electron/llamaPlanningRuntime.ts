@@ -1,22 +1,8 @@
+import type { PlanningIntentRuntimeResponse, ApplyTemplateResponse, CompletionResponse } from "../src/model/aiRuntime.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-
-export interface PlanningIntentRuntimeResponse {
-  intent: unknown;
-  rawText: string;
-  runtime: string;
-}
-
-interface ApplyTemplateResponse {
-  prompt?: unknown;
-}
-
-interface CompletionResponse {
-  content?: unknown;
-  error?: { message?: unknown };
-}
 
 const DEFAULT_SERVER_URL = "http://127.0.0.1:39281";
 const DEFAULT_MODEL_REPOSITORY = "Qwen/Qwen3-4B-GGUF:Q4_K_M";

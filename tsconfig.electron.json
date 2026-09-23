@@ -7,8 +7,13 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "outDir": "dist-electron",
-    "rootDir": "electron",
-    "types": ["node"]
+    "rootDir": "./",
+    "types": [
+      "node"
+    ]
   },
-  "include": ["electron/**/*.ts", "electron/**/*.cts"]
+  "include": [
+    "electron/**/*.ts",
+    "electron/**/*.cts"
+  ]
 }

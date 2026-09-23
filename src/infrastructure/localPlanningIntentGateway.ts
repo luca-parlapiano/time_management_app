@@ -1,9 +1,6 @@
-import { parsePlanningIntent, type PlanningIntent } from "../domain/planningIntent";
-
-export interface LocalPlanningIntentResult {
-  intent: PlanningIntent;
-  runtime: string;
-}
+import { parsePlanningIntent } from "../domain/planningIntent";
+import type { LocalPlanningIntentResult } from "../model/localPlanningIntentGateway.js";
+export type { LocalPlanningIntentResult } from "../model/localPlanningIntentGateway.js";
 
 export async function interpretPlanningMessage(text: string): Promise<LocalPlanningIntentResult> {
   if (!window.plannerAI) {

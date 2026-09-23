@@ -1,4 +1,5 @@
-import type { EventIcon as IconName } from "../domain/calendar";
+import type { EventIconProps } from "../model/EventIcon.js";
+import type { EventIcon as IconName } from "../model/calendar.js";
 
 const paths: Record<IconName, string> = {
   activity: "m5 12 4 4L19 6",
@@ -11,6 +12,6 @@ const paths: Record<IconName, string> = {
   heart: "M20 5c-3-3-6-1-8 1-2-2-5-4-8-1s-1 7 8 15c9-8 11-12 8-15Z",
 };
 
-export function EventIcon({ icon }: { icon: IconName }) {
+export function EventIcon({ icon }: EventIconProps) {
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[icon]} /></svg>;
 }

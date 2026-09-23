@@ -1,14 +1,15 @@
-import { useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
+import { useState } from "react";
 import { activityCovers } from "../activityCovers";
+import { eventAppearance, eventColors, outcomeLabels } from "../domain/calendar";
+import { useLoading } from "../hooks/useLoading";
+import type { AgendaEventCardProps } from "../model/AgendaEventCard.js";
+import type { ItemOutcome } from "../model/calendar.js";
 import { EventIcon } from "./EventIcon";
-import { eventAppearance, eventColors, outcomeLabels, type ItemOutcome, type Occurrence } from "../domain/calendar";
 
-export function AgendaEventCard({ item, date, top, height, disabled, onOpen, onDelete, onOutcome }: {
-  item: Occurrence; date: string; top: string; height: string; disabled?: boolean;
-  onOpen: (item: Occurrence) => void;
-  onDelete: (item: Occurrence) => void;
-  onOutcome: (item: Occurrence, outcome: ItemOutcome) => void;
-}) {
+export function AgendaEventCard({ item, date, top, height, disabled, onOpen, onDelete, onOutcome }: AgendaEventCardProps) {
+  const { isLoading } = useLoading();
+  const pending = isLoading(`outcome:${item.id}`);
   const [error, setError] = useState("");
   const appearance = eventAppearance(item);
   const times = `${item.date < date ? "↳" : item.start}–${item.endDate > date ? "↗" : item.end}`;
@@ -26,10 +27,11 @@ export function AgendaEventCard({ item, date, top, height, disabled, onOpen, onD
         </div>
       </header>
       <div className={`agenda-body${item.coverImage !== false ? " agenda-body-photo" : ""}`} style={item.coverImage !== false ? { "--cover-image": `url("${activityCovers[appearance.icon].src}")` } as CSSProperties : undefined}>{item.notes && <p>{item.notes}</p>}</div>
+      {pending && <span role="status">Salvataggio…</span>}
       <div className="agenda-meta"><span>{item.kind !== "flexible" ? "🔒 " : ""}{item.recurring ? "↻ Settimanale" : "Una volta"}</span><span>{times}</span></div>
-      <div className="agenda-outcomes" role="group" aria-label={`Esito ${item.title}`}>
-        {(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <button key={outcome} type="button" disabled={disabled} aria-pressed={item.outcome === outcome} aria-label={`${outcomeLabels[outcome]}: ${item.title}`} title={outcomeLabels[outcome]} onClick={() => {
-          try { onOutcome(item, outcome); setError(""); } catch (cause) { setError((cause as Error).message); }
+      <div className="agenda-outcomes" role="group" aria-busy={pending} aria-label={`Esito ${item.title}`}>
+        {(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <button key={outcome} type="button" disabled={disabled} aria-pressed={item.outcome === outcome} aria-label={`${outcomeLabels[outcome]}: ${item.title}`} title={outcomeLabels[outcome]} onClick={async () => {
+          try { await onOutcome(item, outcome); setError(""); } catch (cause) { setError((cause as Error).message); }
         }}><span aria-hidden="true">{outcome === "completed" ? "✓" : outcome === "partial" ? "◐" : "×"}</span><small>{outcomeLabels[outcome]}</small></button>)}
       </div>
     </div>

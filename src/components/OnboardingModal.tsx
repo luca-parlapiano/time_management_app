@@ -1,18 +1,8 @@
 import { useMemo, useState } from "react";
 import { plannerAppService } from "../application/plannerAppService";
-import {
-  createEmptyGoal,
-  formatWeeklyGoalDuration,
-  goalPriorityOptions,
-  weeklyGoalDurationOptions
-} from "../planner/defaults";
-import type { GoalInput, RawAnswers } from "../domain/planning";
-
-interface OnboardingModalProps {
-  answers: RawAnswers;
-  onClose: () => void;
-  onSubmit: (answers: RawAnswers) => void;
-}
+import type { OnboardingModalProps } from "../model/OnboardingModal.js";
+import type { GoalInput, RawAnswers } from "../model/planning.js";
+import { createEmptyGoal, formatWeeklyGoalDuration, goalPriorityOptions, weeklyGoalDurationOptions } from "../planner/defaults";
 
 export function OnboardingModal({ answers, onClose, onSubmit }: OnboardingModalProps) {
   const [localAnswers, setLocalAnswers] = useState<RawAnswers>(answers);

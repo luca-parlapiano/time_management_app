@@ -1,15 +1,9 @@
 import { FormEvent, useState } from "react";
 import { applyPlanningIntentUpdate } from "../application/planningIntentReview";
-import type { PlannerResult, RawAnswers, Weekday } from "../domain/planning";
 import { interpretPlanningMessage } from "../infrastructure/localPlanningIntentGateway";
+import type { ChatMessage, PlannerChatProps, PlanningOutputProps } from "../model/PlannerChat.js";
+import type { PlannerResult, Weekday } from "../model/planning.js";
 import { weekdayLabels } from "../planner/defaults";
-
-interface ChatMessage {
-  id: number;
-  role: "assistant" | "user";
-  text: string;
-  planning?: PlannerResult;
-}
 
 const initialMessages: ChatMessage[] = [
   {
@@ -18,12 +12,6 @@ const initialMessages: ChatMessage[] = [
     text: "Ciao! Raccontami cosa vuoi organizzare, cambiare o aggiungere al tuo piano.",
   },
 ];
-
-interface PlannerChatProps {
-  answers: RawAnswers | null;
-  result: PlannerResult | null;
-  onApplyAnswers: (answers: RawAnswers) => Promise<PlannerResult>;
-}
 
 export function PlannerChat({ answers, result, onApplyAnswers }: PlannerChatProps) {
   const [draft, setDraft] = useState("");
@@ -145,7 +133,7 @@ export function PlannerChat({ answers, result, onApplyAnswers }: PlannerChatProp
   );
 }
 
-function PlanningOutput({ result }: { result: PlannerResult }) {
+function PlanningOutput({ result }: PlanningOutputProps) {
   const blocksByDay = result.plan.blocks.reduce<Partial<Record<Weekday, PlannerResult["plan"]["blocks"]>>>(
     (groups, block) => {
       groups[block.day] = [...(groups[block.day] ?? []), block];

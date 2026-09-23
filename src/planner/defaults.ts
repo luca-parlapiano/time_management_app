@@ -1,4 +1,4 @@
-import type { GoalInput, RawAnswers, Weekday } from "../domain/planning";
+import type { GoalInput, RawAnswers, Weekday } from "../model/planning.js";
 
 export const weekdayLabels: { key: Weekday; label: string }[] = [
   { key: "mon", label: "Lun" },

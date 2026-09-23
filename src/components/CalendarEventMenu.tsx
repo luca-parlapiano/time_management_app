@@ -1,19 +1,14 @@
 import { useState } from "react";
+import { displayDate, outcomeLabels } from "../domain/calendar";
+import type { ItemOutcome } from "../model/calendar.js";
+import type { CalendarEventMenuProps } from "../model/CalendarEventMenu.js";
 import { CalendarDialog } from "./CalendarDialog";
-import { displayDate, outcomeLabels, type ItemOutcome, type Occurrence } from "../domain/calendar";
 
-export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, initialConfirmDelete = false }: {
-  item: Occurrence;
-  initialConfirmDelete?: boolean;
-  onClose: () => void;
-  onEdit: () => void;
-  onOutcome: (outcome: ItemOutcome) => void;
-  onDelete: () => void;
-}) {
+export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, initialConfirmDelete = false }: CalendarEventMenuProps) {
   const [confirmDelete, setConfirmDelete] = useState(initialConfirmDelete);
   const [error, setError] = useState("");
-  function run(action: () => void) {
-    try { action(); } catch (cause) { setError((cause as Error).message); }
+  async function run(action: () => Promise<void>) {
+    try { await action(); } catch (cause) { setError((cause as Error).message); }
   }
   return <CalendarDialog compact title={item.title} onClose={onClose}>
     <p className="editor-hint">{displayDate(item.date, { weekday: "long" })} · {item.start}–{item.end}</p>
