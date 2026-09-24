@@ -1,3 +1,4 @@
+import { isIntegerInRange, isPositiveNumber } from "../utils/numbers.js";
 import type { GoalInput, RawAnswers } from "../model/planning.js";
 import type { PlanningIntent } from "../model/planningIntent.js";
 import type { GoalIntentResolution, PlanningIntentApplication, PlanningIntentMissingField, PlanningIntentReview } from "../model/planningIntentReview.js";
@@ -117,16 +118,16 @@ function validatedGoal(intent: PlanningIntent, resolution: GoalIntentResolution)
   if (!goal) throw new Error(`Obiettivo ${resolution.intentIndex} non presente nell'intento`);
   const priority = resolution.priority ?? goal.priority;
   const desiredWeeklyMinutes = resolution.desiredWeeklyMinutes ?? goal.desiredWeeklyMinutes;
-  if (!Number.isInteger(priority) || Number(priority) < 1 || Number(priority) > 5) {
+  if (!isIntegerInRange(priority, 1, 5)) {
     throw new Error(`La priorita di "${goal.name}" deve essere un intero tra 1 e 5`);
   }
-  if (!Number.isInteger(desiredWeeklyMinutes) || Number(desiredWeeklyMinutes) < 1) {
+  if (!isIntegerInRange(desiredWeeklyMinutes, 1)) {
     throw new Error(`I minuti settimanali di "${goal.name}" devono essere un intero positivo`);
   }
   return {
     name: goal.name,
-    priority: Number(priority),
-    desiredWeeklyMinutes: Number(desiredWeeklyMinutes),
+    priority,
+    desiredWeeklyMinutes,
   };
 }
 
@@ -210,7 +211,7 @@ function explicitGoalIncrease(currentAnswers: RawAnswers, userText: string): Goa
   const duration = userText.match(/\b(\d+(?:[.,]\d+)?)\s*(ore?|h|min(?:ut[oi])?)\b/i);
   if (!duration) return null;
   const amount = Number(duration[1].replace(",", "."));
-  if (!Number.isFinite(amount) || amount <= 0) return null;
+  if (!isPositiveNumber(amount)) return null;
   const unit = duration[2].toLocaleLowerCase("it");
   const desiredWeeklyMinutes = Math.round(
     unit.startsWith("or") || unit === "h" ? amount * 60 : amount,

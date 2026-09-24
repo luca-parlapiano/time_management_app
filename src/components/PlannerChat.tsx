@@ -1,17 +1,10 @@
+import { initialChatMessages as initialMessages } from "../constants.js";
 import { FormEvent, useState } from "react";
 import { applyPlanningIntentUpdate } from "../application/planningIntentReview";
 import { interpretPlanningMessage } from "../infrastructure/localPlanningIntentGateway";
 import type { ChatMessage, PlannerChatProps, PlanningOutputProps } from "../model/PlannerChat.js";
 import type { PlannerResult, Weekday } from "../model/planning.js";
 import { weekdayLabels } from "../planner/defaults";
-
-const initialMessages: ChatMessage[] = [
-  {
-    id: 1,
-    role: "assistant",
-    text: "Ciao! Raccontami cosa vuoi organizzare, cambiare o aggiungere al tuo piano.",
-  },
-];
 
 export function PlannerChat({ answers, result, onApplyAnswers }: PlannerChatProps) {
   const [draft, setDraft] = useState("");

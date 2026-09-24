@@ -1,3 +1,4 @@
+import { StatisticsRepository } from "../repository/StatisticsRepository";
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clearCalendar, deleteItem, emptyCalendar, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
 import { outcomeRecord } from "../domain/outcomeArchive";
@@ -50,7 +51,11 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Salvataggio non riuscito.'); throw cause; }
     finally { locked.current = false; setSaving(false); }
   }, [repository, run]);
+  const statistics = useMemo(() => new StatisticsRepository(snapshot?.archive ?? emptyArchive), [snapshot?.archive]);
   const value = useMemo<DBContextValue>(() => ({
+    getDailyStatistics: date => statistics.getDailyStatistics(date),
+    getWeeklyStatistics: (event, date) => statistics.getWeeklyStatistics(event, date),
+    getWeeklyActivities: date => statistics.getWeeklyActivities(date),
     palette, paletteError,
     changePalette: async value => {
       try { await repository.savePalette(value); setPalette(value); setPaletteError(false); }
@@ -85,6 +90,6 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       if (!archive) throw new Error('Backup non disponibile.');
       return repository.exportBackup(archive);
     }, {mode:'local',scope:'backup',message:'Preparazione backup…'}),
-  }), [snapshot,error,saving,retry,mutate,repository,run,palette,paletteError]);
+  }), [snapshot,error,saving,retry,mutate,repository,run,palette,paletteError,statistics]);
   return <DBContext.Provider value={value}>{children}</DBContext.Provider>;
 }

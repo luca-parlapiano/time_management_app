@@ -1,21 +1,11 @@
+import { DAY, outcomeLabels, eventIcons, eventColors } from "../constants.js";
+export { outcomeLabels, eventIcons, eventColors, kindLabels, statusLabels } from "../constants.js";
+import { toMinutes as minute } from "../utils/time.js";
+import { addDays, dateNumber, displayDate, validDate, weekStart } from "../utils/dates.js";
+import { isIntegerInRange, isPositiveNumber } from "../utils/numbers.js";
 import type { CalendarItem, CalendarState, EditAccess, EditTarget, ItemData, ItemKind, ItemOutcome, ItemStatus, Occurrence } from "../model/calendar.js";
 export type { CalendarGoal,CalendarItem,CalendarProfile,CalendarState,EditAccess,EditTarget,EventColor,EventIcon,ItemData,ItemKind,ItemOutcome,ItemStatus,Occurrence } from "../model/calendar.js";
 /** Civil dates and local wall-clock times: never parse YYYY-MM-DD as local/UTC instants. */
-
-export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto", partial: "Parziale" } as const satisfies Record<ItemOutcome, string>;
-
-export const eventIcons = {
-  activity: "Attività", work: "Lavoro", study: "Studio", sport: "Sport",
-  rest: "Riposo", meal: "Pasti", people: "Incontri", heart: "Benessere",
-} as const;
-export const eventColors = {
-  blue: { label: "Blu", value: "#3974cb" },
-  green: { label: "Verde", value: "#348566" },
-  purple: { label: "Viola", value: "#8b5fc2" },
-  orange: { label: "Arancione", value: "#c77728" },
-  pink: { label: "Rosa", value: "#bf5283" },
-  teal: { label: "Turchese", value: "#27868e" },
-} as const;
 
 export function eventAppearance(item: Pick<ItemData, "icon" | "color" | "kind">) {
   return {
@@ -24,37 +14,8 @@ export function eventAppearance(item: Pick<ItemData, "icon" | "color" | "kind">)
   };
 }
 
-export const kindLabels: Record<ItemKind, string> = {
-  fixed: "Impegno fisso", protected: "Tempo protetto", flexible: "Attività flessibile",
-};
-export const statusLabels: Record<ItemStatus, string> = {
-  todo: "Da fare", completed: "Completato", skipped: "Saltato",
-};
 export const emptyCalendar = (): CalendarState => ({ version: 2, items: [], goals: [], profile: null });
-const DAY = 86_400_000;
-export function dateNumber(date: string): number { return Date.parse(`${date}T00:00:00Z`); }
-export function addDays(date: string, count: number): string {
-  return new Date(dateNumber(date) + count * DAY).toISOString().slice(0, 10);
-}
-export function today(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-export function weekStart(date: string): string {
-  return addDays(date, -((new Date(dateNumber(date)).getUTCDay() + 6) % 7));
-}
-export function displayDate(date: string, options?: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", ...options, timeZone: "UTC" }).format(new Date(dateNumber(date)));
-}
-export function validDate(date: unknown): date is string {
-  return typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) &&
-    date >= "1900-01-01" && date <= "9998-12-31" && Number.isFinite(dateNumber(date)) &&
-    new Date(dateNumber(date)).toISOString().slice(0, 10) === date;
-}
-function minute(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
+export { addDays, dateNumber, displayDate, today, validDate, weekStart } from "../utils/dates.js";
 export function durationMinutes(item: ItemData): number {
   return (dateNumber(item.endDate) - dateNumber(item.date)) / 60_000 + minute(item.end) - minute(item.start);
 }
@@ -67,7 +28,8 @@ export function validateData(data: ItemData): void {
   if (typeof data.title !== "string" || !data.title.trim()) throw new Error("Inserisci un titolo.");
   if (!validDate(data.date) || !validDate(data.endDate)) throw new Error("Inserisci date valide.");
   if (![data.start, data.end].every(t => typeof t === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(t))) throw new Error("Inserisci orari validi.");
-  if (!Number.isFinite(durationMinutes(data)) || durationMinutes(data) <= 0 || durationMinutes(data) > 1440) throw new Error("La fine deve seguire l’inizio. Durata massima: 24 ore; per il sonno scegli la data del giorno successivo.");
+  const duration = durationMinutes(data);
+  if (!isPositiveNumber(duration) || duration > 1440) throw new Error("La fine deve seguire l’inizio. Durata massima: 24 ore; per il sonno scegli la data del giorno successivo.");
   if (!["fixed", "protected", "flexible"].includes(data.kind)) throw new Error("Tipo non valido.");
   if (data.kind === "flexible" ? !["todo", "completed", "skipped"].includes(data.status ?? "") : data.status !== undefined) throw new Error("Stato non valido per questo tipo.");
   if (typeof data.notes !== "string" || (data.goalId !== undefined && typeof data.goalId !== "string")) throw new Error("Note o obiettivo non validi.");
@@ -248,7 +210,7 @@ export function clearCalendar(state: CalendarState): CalendarState { return { ..
 
 /** Create weekly appointments with one shared activity identity, atomically. */
 export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, weekdays: number[], access: EditAccess, target?: EditTarget): CalendarState {
-  if (!proposed.recurrence || !weekdays.length || weekdays.some(day => !Number.isInteger(day) || day < 0 || day > 6) || new Set(weekdays).size !== weekdays.length) throw new Error("Scegli almeno un giorno della settimana.");
+  if (!proposed.recurrence || !weekdays.length || weekdays.some(day => !isIntegerInRange(day, 0, 6)) || new Set(weekdays).size !== weekdays.length) throw new Error("Scegli almeno un giorno della settimana.");
   const existing = target ? state.items.find(item => item.id === target.sourceId) : undefined;
   if (target && (!existing || existing.recurrence)) throw new Error("Scegli un’attività senza ripetizione da convertire.");
   guard(existing, access);

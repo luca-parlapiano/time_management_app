@@ -1,7 +1,6 @@
+import { PLANNER_STORAGE_KEY as STORAGE_KEY } from "../constants.js";
 import type { LocalPlannerState } from "../model/localPlannerStorage.js";
 export type { LocalActivePlan,LocalPlannerState } from "../model/localPlannerStorage.js";
-
-const STORAGE_KEY = "time-planner.local-state.v1";
 
 function hasRequiredFields(value: unknown): value is LocalPlannerState {
   if (!value || typeof value !== "object") return false;

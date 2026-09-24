@@ -1,3 +1,5 @@
+import { AppIcon } from "./icons/AppIcon";
+import { WeeklyDoughnut } from "./components/WeeklyDoughnut";
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useState } from "react";
 import { ArchiveSettings } from "./components/ArchiveSettings";
@@ -6,7 +8,7 @@ import { CalendarEventMenu } from "./components/CalendarEventMenu";
 import { CalendarItemEditor } from "./components/CalendarItemEditor";
 import { CalendarPreferences } from "./components/CalendarPreferences";
 import { CalendarStatistics } from "./components/CalendarStatistics";
-import { EventIcon } from "./components/EventIcon";
+import { EventIcon } from "./icons/EventIcon";
 import { PalettePicker } from "./components/PalettePicker";
 import { WeeklyCalendar } from "./components/WeeklyCalendar";
 import { addDays, displayDate, eventAppearance, eventColors, today, weekStart } from "./domain/calendar";
@@ -15,7 +17,7 @@ import { useLoading } from "./hooks/useLoading";
 import type { AppTab, CalendarEditorState } from "./model/App.js";
 import type { Occurrence } from "./model/calendar.js";
 function AppContent() {
-  const { palette, paletteError: paletteSaveError, changePalette, state, archive, saving, recordOutcome, saveItem, deleteItem: removeItem, savePreferences, clearCalendar: clearAll } = useDB();
+  const { getWeeklyActivities, palette, paletteError: paletteSaveError, changePalette, state, archive, saving, recordOutcome, saveItem, deleteItem: removeItem, savePreferences, clearCalendar: clearAll } = useDB();
   const { isLoading } = useLoading();
   const [sidebarExpanded, setSidebarExpanded] = useState(
     () => window.matchMedia("(min-width: 721px)").matches,
@@ -32,20 +34,7 @@ function AppContent() {
   useLayoutEffect(() => { document.documentElement.dataset.palette = palette; }, [palette]);
   const hasConstraints = state.items.some((item) => item.kind !== "flexible");
   const disabled = saving;
-  const activityIds = new Set<string>();
-  const activityNames = new Set<string>();
-  const activities = state.items.filter((item) => {
-    const id = item.activityId ?? item.id;
-    const name = item.title
-      .normalize("NFC")
-      .trim()
-      .replace(/\s+/g, " ")
-      .toLocaleLowerCase("it");
-    const duplicate = activityIds.has(id) || activityNames.has(name);
-    activityIds.add(id);
-    activityNames.add(name);
-    return !duplicate;
-  });
+  const activities = getWeeklyActivities(week);
   return (
     <div
       className={`app-shell drawer-layout${sidebarExpanded ? "" : " sidebar-collapsed"}`}
@@ -68,21 +57,7 @@ function AppContent() {
           }
           onClick={() => setSidebarExpanded((value) => !value)}
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <rect x="3" y="4" width="18" height="16" rx="3" />
-            <path d="M9 4v16" />
-            <path d={sidebarExpanded ? "m16 9-3 3 3 3" : "m13 9 3 3-3 3"} />
-          </svg>
+          <AppIcon name={sidebarExpanded ? "sidebar-close" : "sidebar-open"} size={24} />
         </button>
         <div className="sidebar-intro" hidden={!sidebarExpanded}>
           <p className="eyebrow">Il tuo tempo, in locale</p>
@@ -107,18 +82,7 @@ function AppContent() {
               setEditor({ date: week === weekStart(today()) ? today() : week })
             }
           >
-            <svg
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <AppIcon name="add" size={26} />
           </button>
           <button
             type="button"
@@ -128,20 +92,7 @@ function AppContent() {
             className="secondary-button hero-icon-button"
             onClick={() => setPreferences(true)}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
-            </svg>
+            <AppIcon name="profile" size={24} />
           </button>
           <button
             type="button"
@@ -155,19 +106,7 @@ function AppContent() {
               setClearing(true);
             }}
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7" />
-            </svg>
+            <AppIcon name="trash" size={24} />
           </button>
         </div>
         <section
@@ -180,19 +119,20 @@ function AppContent() {
           >
             Le tue statistiche settimanali
           </h2>
+          <p className="sidebar-weekly-range" hidden={!sidebarExpanded}>{displayDate(week)} – {displayDate(addDays(week, 6))}</p>
           {activities.length === 0 ? (
             <p className="summary-empty-copy" hidden={!sidebarExpanded}>
               Nessuna attività creata. Usa + per aggiungerne una.
             </p>
           ) : (
             <ul className="sidebar-activity-list">
-              {activities.map((item) => {
+              {activities.map(({event: item, statistics}) => {
                 const appearance = eventAppearance(item);
                 return (
                   <li
                     key={item.activityId ?? item.id}
                     className="sidebar-activity"
-                    title={item.title}
+                    title={`${item.title}: ${statistics.completed} superate, ${statistics.skipped} non superate, ${statistics.partial} parziali, ${statistics.pending} senza esito`}
                     tabIndex={sidebarExpanded ? undefined : 0}
                     style={
                       {
@@ -209,7 +149,9 @@ function AppContent() {
                       }
                     >
                       {item.title}
+
                     </span>
+                    {sidebarExpanded && <WeeklyDoughnut title={item.title} statistics={statistics} />}
                   </li>
                 );
               })}
@@ -263,42 +205,7 @@ function AppContent() {
                 document.getElementById(`tab-${next.id}`)?.focus();
               }}
             >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                {tab.id === "calendar" ? (
-                  <>
-                    <rect x="3" y="5" width="18" height="16" rx="3" />
-                    <path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2" />
-                  </>
-                ) : tab.id === "statistics" ? (
-                  <path d="M4 20V10h4v10m2 0V4h4v16m2 0v-7h4v7M2 20h20" />
-                ) : (
-                  <>
-                    <path d="M4 7h16M4 17h16" />
-                    <circle
-                      cx="9"
-                      cy="7"
-                      r="3"
-                      fill="rgb(var(--surface-rgb))"
-                    />
-                    <circle
-                      cx="15"
-                      cy="17"
-                      r="3"
-                      fill="rgb(var(--surface-rgb))"
-                    />
-                  </>
-                )}
-              </svg>
+              <AppIcon name={tab.id} />
               {tab.label}
             </button>
           ))}

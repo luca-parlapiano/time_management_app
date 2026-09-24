@@ -82,3 +82,31 @@ La persistenza reale richiede Electron (`npm run dev`); il solo server Vite non 
 - `npm test`: test del dominio e del database SQLite, inclusi riapertura, transazioni fallite, revisioni concorrenti, backup e worker asincrono.
 - Con Vite attivo, `/tests/database.browser.html`: test dei Provider, loading, errori e migrazione su archivi temporanei. La UI dimostrativa usa un repository in memoria: non modifica i dati dell’utente.
 - `npm run build`: compilazione renderer e processo Electron.
+
+## Statistiche settimanali per attività
+
+`StatisticsRepository` è il middleware di lettura tra l’archivio già caricato dal database e il DBProvider. Non esegue una seconda lettura SQLite durante il rendering e non salva totali derivati. Il Provider lo ricrea quando cambia l’archivio confermato dal repository: salvataggi, importazioni ed eliminazioni aggiornano così le statistiche.
+
+La UI usa esclusivamente il Provider:
+
+```tsx
+const { getWeeklyStatistics, getWeeklyActivities } = useDB();
+const statistics = getWeeklyStatistics(evento, "2026-09-23");
+const cards = getWeeklyActivities("2026-09-23");
+```
+
+La data è una data civile `YYYY-MM-DD`. La settimana va dal lunedì alla domenica inclusi. Il risultato contiene intervallo, sette riepiloghi giornalieri, totale appuntamenti, superati (`completed`), non superati (`skipped`), parziali, senza esito (`pending`), numero di esiti registrati e percentuale di superati sugli esiti registrati (`null` se non ci sono esiti). Gli appuntamenti senza esito non vengono considerati falliti.
+
+Il raggruppamento mantiene una card per attività con identità condivisa o titolo normalizzato, come nella barra laterale. L’ultimo esito per identità dell’occorrenza prevale sulle registrazioni precedenti. Si usa la data dell’appuntamento salvata nell’esito, non il giorno in cui viene premuto il pulsante; i dati storici restano validi anche dopo l’eliminazione dell’appuntamento. Gli appuntamenti notturni vengono contati una sola volta nel giorno di inizio. Le card mostrano le attività attualmente presenti nel calendario; le settimane senza appuntamenti mostrano zero.
+
+I modelli sono in `src/model/weeklyStatistics.ts`; i test delle regole in `tests/weekly-statistics.test.cjs`.
+
+## Statistiche giornaliere
+
+`useDB().getDailyStatistics("2026-09-23")` espone il nuovo metodo del middleware. Restituisce totale pianificato, conteggi per esito, `recorded`, `completionPercent` e segmenti `activities` con titolo, icona, colore, numero di appuntamenti, `completed` e `contributionPercent`. I modelli sono in `src/model/dailyStatistics.ts`.
+
+Il grafico giornaliero rappresenta la composizione della giornata: conta una volta ogni appuntamento che occupa quella data, comprese le continuazioni dal giorno precedente; una fine a mezzanotte non occupa il giorno successivo. Il completamento è `completed / total * 100`; il contributo di ogni segmento è il numero di appuntamenti superati di quella attività diviso per tutti gli appuntamenti pianificati nella giornata. La quota non completata resta grigia: parziali, non superati e senza esito non valgono come superati. Non si usano pesi basati sulla durata né percentuali arbitrarie per gli esiti parziali. Titoli normalizzati uguali con lo stesso colore e icona condividono un segmento; colori diversi restano distinti.
+
+Le correzioni degli esiti vengono deduplicate per identità dell’occorrenza. Lo storico compare alla data dell’evento salvata, anche dopo l’eliminazione; quando presente nella stessa giornata, l’evento attuale fornisce colore e titolo aggiornati. Un evento spostato può comparire nella nuova giornata come appuntamento attuale e nella vecchia come storico. Per questo la somma dei grafici giornalieri non equivale al totale settimanale degli appuntamenti, che li attribuisce una sola volta alla data di inizio o alla data storica dell’esito.
+
+I risultati sono memorizzati nel middleware fino al successivo aggiornamento del Provider. `DailyDoughnut` usa Chart.js e i colori degli eventi; il calendario mostra un grafico compatto con percentuale centrale solo se `recorded > 0`. Senza esiti mostra i pallini dei colori pianificati, senza grafico né percentuale; senza appuntamenti la cella resta vuota. Il clic sulla giornata apre il dettaglio con legenda dei contributi percentuali ed esiti. I canvas sono inizializzati solo quando visibili.

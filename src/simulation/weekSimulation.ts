@@ -1,20 +1,8 @@
+import { simulationDayScores as dayScores } from "../constants.js";
+import { toMinutes } from "../utils/time.js";
+import { clamp, percentage } from "../utils/math.js";
 import type { CalendarActivity as PlanBlock, Weekday } from "../model/planning.js";
 import type { AdaptiveCapacityProfile, BlockOutcome, SimulatedBlockEvent, SimulatedWeek, SimulationInput, SimulationRun } from "../model/simulationContracts.js";
-
-const dayScores: Record<Weekday, number> = {
-  mon: 0.96,
-  tue: 1,
-  wed: 0.93,
-  thu: 0.9,
-  fri: 0.84,
-  sat: 0.9,
-  sun: 0.86
-};
-
-function toMinutes(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-}
 
 function getDuration(block: PlanBlock) {
   const start = toMinutes(block.start);
@@ -50,7 +38,7 @@ function getBaseReliability(input: SimulationInput) {
   }[answers.flexibilityMode];
   const focusPenalty = Math.max(0, answers.focusMinutes - 60) / 300;
 
-  return Math.min(0.92, Math.max(0.35, 0.78 - workloadPenalty + flexibilityBonus - focusPenalty));
+  return clamp(0.78 - workloadPenalty + flexibilityBonus - focusPenalty, 0.35, 0.92);
 }
 
 function simulateFocusBlock(
@@ -129,7 +117,7 @@ function buildAdaptiveProfile(input: SimulationInput, weeks: SimulatedWeek[]): A
 }
 
 function buildRecommendation(profile: AdaptiveCapacityProfile, input: SimulationInput) {
-  const completionPercent = Math.round(profile.completionConfidence * 100);
+  const completionPercent = Math.round(percentage(profile.completionConfidence, 1));
   if (profile.completionConfidence < 0.65) {
     return `La simulazione stima una capacita' reale di ${profile.sustainableWeeklyMinutes} minuti a settimana (${completionPercent}% del piano). Riduci il carico iniziale e proteggi blocchi da ${profile.sustainableFocusMinutes} minuti.`;
   }

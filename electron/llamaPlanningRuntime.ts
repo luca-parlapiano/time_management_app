@@ -1,13 +1,9 @@
+import { DEFAULT_SERVER_URL, DEFAULT_MODEL_REPOSITORY, STARTUP_TIMEOUT_MS, REQUEST_TIMEOUT_MS } from "../src/constants.js";
 import type { PlanningIntentRuntimeResponse, ApplyTemplateResponse, CompletionResponse } from "../src/model/aiRuntime.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-
-const DEFAULT_SERVER_URL = "http://127.0.0.1:39281";
-const DEFAULT_MODEL_REPOSITORY = "Qwen/Qwen3-4B-GGUF:Q4_K_M";
-const STARTUP_TIMEOUT_MS = 5 * 60 * 1_000;
-const REQUEST_TIMEOUT_MS = 60_000;
 
 export class LlamaPlanningRuntime {
   private server: ChildProcess | null = null;

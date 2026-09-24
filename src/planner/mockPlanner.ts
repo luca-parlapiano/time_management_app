@@ -1,6 +1,7 @@
+import { weekdays } from "../constants.js";
+import { toMinutes, toTime } from "../utils/time.js";
+import { clamp } from "../utils/math.js";
 import type { DerivedFeatures, GoalInput, PlanCapacityCheck, PlannerDecision, PlannerResult, RawAnswers, UserProfile, Weekday, WeeklyPlan } from "../model/planning.js";
-
-const weekdays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 function getFixedCommitments(raw: RawAnswers) {
   if (raw.fixedCommitments && raw.fixedCommitments.length > 0) {
@@ -8,12 +9,6 @@ function getFixedCommitments(raw: RawAnswers) {
   }
 
   return [{ title: "Lavoro", days: raw.workDays, start: raw.workStart, end: raw.workEnd }];
-}
-
-// Converte un orario "HH:MM" in minuti totali per poter fare calcoli numerici.
-function toMinutes(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
 }
 
 function getDurationMinutes(start: string, end: string) {
@@ -25,25 +20,6 @@ function getDurationMinutes(start: string, end: string) {
   }
 
   return endMinutes - startMinutes;
-}
-
-function clampMinutes(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function normalizeDayMinutes(totalMinutes: number) {
-  const minutesInDay = 24 * 60;
-  return ((totalMinutes % minutesInDay) + minutesInDay) % minutesInDay;
-}
-
-// Fa l'operazione opposta: da minuti totali torna alla stringa "HH:MM".
-function toTime(totalMinutes: number) {
-  const normalizedMinutes = normalizeDayMinutes(totalMinutes);
-  const hours = Math.floor(normalizedMinutes / 60)
-    .toString()
-    .padStart(2, "0");
-  const minutes = (normalizedMinutes % 60).toString().padStart(2, "0");
-  return `${hours}:${minutes}`;
 }
 
 // Usa la priorita' per dare un colore piu' evidente ai goal importanti.
@@ -288,7 +264,7 @@ function createGoalDecisions(
   focusMinutes: number,
   preferredFocusWindow: DerivedFeatures["preferredFocusWindow"]
 ): PlannerDecision[] {
-  const duration = clampMinutes(focusMinutes, 30, 120);
+  const duration = clamp(focusMinutes, 30, 120);
 
   return goals
     .filter((goal) => goal.name.trim().length > 0)
@@ -313,7 +289,7 @@ function createGoalBlocks(profile: UserProfile, focusMinutes: number) {
 
   const preferredFocusWindow = getPreferredFocusWindow(profile);
   const rankedGoals = [...goals].sort((a, b) => b.priority - a.priority);
-  const duration = clampMinutes(focusMinutes, 30, 120);
+  const duration = clamp(focusMinutes, 30, 120);
   const blocksByDay = weekdays.reduce<Record<Weekday, number>>((acc, day) => {
     acc[day] = 0;
     return acc;
@@ -384,7 +360,7 @@ export function deriveFeatures(
   profile: UserProfile,
   capacityCheck: PlanCapacityCheck
 ): DerivedFeatures {
-  const focusBlockMinutes = clampMinutes(raw.focusMinutes, 30, 120);
+  const focusBlockMinutes = clamp(raw.focusMinutes, 30, 120);
   const estimatedFocusBlocks = Math.max(
     1,
     Math.ceil(capacityCheck.totalGoalMinutes / focusBlockMinutes)

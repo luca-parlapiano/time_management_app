@@ -1,3 +1,4 @@
+import { isPositiveNumber } from "../utils/numbers.js";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { activityCovers } from "../activityCovers";
@@ -5,7 +6,7 @@ import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, ev
 import type { CalendarItem, EventColor, EventIcon as IconName, ItemKind } from "../model/calendar.js";
 import type { CalendarItemEditorProps } from "../model/CalendarItemEditor.js";
 import { CalendarDialog } from "./CalendarDialog";
-import { EventIcon } from "./EventIcon";
+import { EventIcon } from "../icons/EventIcon";
 
 export function CalendarItemEditor({ date, item, occurrence, items, onClose, onSave, onDelete }: CalendarItemEditorProps) {
   const dayLabels = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
@@ -127,7 +128,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
                 change({ endDate: endDate ?? "", end: end ?? "" });
               }} /></label>
             </div>
-            <p className="editor-hint">{Number.isFinite(duration) && duration > 0 ? `${duration} minuti` : "Controlla date e orari"} · Durata massima 24 ore.</p>
+            <p className="editor-hint">{isPositiveNumber(duration) ? `${duration} minuti` : "Controlla date e orari"} · Durata massima 24 ore.</p>
         {!item?.recurrence && <label>Ripetizione<select value={draft.recurrence ? "weekly" : "none"} onChange={e => change({ recurrence: e.target.value === "weekly" ? {} : undefined })}>
           <option value="none">Solo questa data</option><option value="weekly">Ogni settimana nei giorni scelti</option>
         </select></label>}

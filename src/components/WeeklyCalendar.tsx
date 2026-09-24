@@ -1,12 +1,10 @@
+import { percentage } from "../utils/math.js";
+import { toMinutes as minutes } from "../utils/time.js";
 import type { CSSProperties } from "react";
 import { addDays, displayDate, occurrences, today } from "../domain/calendar";
 import type { WeeklyCalendarProps } from "../model/WeeklyCalendar.js";
 import { AgendaEventCard } from "./AgendaEventCard";
 
-function minutes(time: string) {
-  const [hours, mins] = time.split(":").map(Number);
-  return hours * 60 + mins;
-}
 export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit, onDelete, onOutcome }: WeeklyCalendarProps) {
   const visible = occurrences(state.items, week, addDays(week, 6));
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
@@ -23,7 +21,7 @@ export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit, onDelete,
     <aside className="calendar-time-column" aria-label="Orari">
       <header className="day-header">Orari</header>
       <div className="time-timeline">
-        {hours.map((hour, index) => <span key={hour} className="calendar-hour" style={{ top: `${index / (lastHour - firstHour) * 100}%` }}>{String(hour).padStart(2, "0")}:00</span>)}
+        {hours.map((hour, index) => <span key={hour} className="calendar-hour" style={{ top: `${percentage(index, lastHour - firstHour)}%` }}>{String(hour).padStart(2, "0")}:00</span>)}
       </div>
     </aside>
     {days.map((date, dayIndex) => {
@@ -38,8 +36,8 @@ export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit, onDelete,
             const start = item.date < date ? 0 : minutes(item.start);
             const end = item.endDate > date ? 1440 : minutes(item.end);
             return <AgendaEventCard key={item.id} item={item} date={date} disabled={disabled}
-              top={`${(start - firstHour * 60) / totalMinutes * 100}%`}
-              height={`calc(${(end - start) / totalMinutes * 100}% - 1px)`}
+              top={`${percentage(start - firstHour * 60, totalMinutes)}%`}
+              height={`calc(${percentage(end - start, totalMinutes)}% - 1px)`}
               onOpen={onEdit} onDelete={onDelete} onOutcome={onOutcome} />;
           })}
         </div>

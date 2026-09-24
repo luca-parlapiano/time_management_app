@@ -1,3 +1,6 @@
+import { planDurationOptions, sleepHoursOptions, focusBlockOptions, energyOptions, workStyleOptions, flexibilityOptions, planIntensityOptions, difficultyOptions } from "../constants.js";
+import { percentage } from "../utils/math.js";
+import { toMinutes, toTime } from "../utils/time.js";
 import { useMemo, useState } from "react";
 import type { FixedScheduleDraft, NewUserWizardDraft, NewUserWizardModalProps, NewUserWizardSubmission, PlanPreviewOption } from "../model/NewUserWizardModal.js";
 import type { FixedCommitment, GoalInput, RawAnswers, Weekday } from "../model/planning.js";
@@ -5,127 +8,6 @@ import { newUserWizardSteps } from "../onboarding/newUserWizardSteps";
 import { createEmptyGoal, defaultAnswers, formatWeeklyGoalDuration, goalPriorityOptions, weekdayLabels, weeklyGoalDurationOptions } from "../planner/defaults";
 import { formatTimeRange } from "../utils/time";
 export type { NewUserWizardSubmission } from "../model/NewUserWizardModal.js";
-
-const planDurationOptions: Array<{
-  value: NewUserWizardDraft["planDuration"];
-  title: string;
-  description: string;
-}> = [
-  {
-    value: "weekly",
-    title: "1 settimana",
-    description:
-      "Il dettaglio resta molto concreto e adatto a una griglia operativa.",
-  },
-  {
-    value: "monthly",
-    title: "1 mese",
-    description:
-      "Utile se vuoi un piano che copra il ritmo medio delle prossime settimane.",
-  },
-  {
-    value: "quarterly",
-    title: "3 mesi",
-    description:
-      "Adatto quando vuoi distribuire obiettivi importanti su un trimestre.",
-  },
-  {
-    value: "semiannual",
-    title: "6 mesi",
-    description:
-      "Buono per percorsi di crescita o cambi di routine piu' lenti.",
-  },
-  {
-    value: "annual",
-    title: "1 anno",
-    description:
-      "Serve per dare una direzione lunga, non per riempire tutto il calendario.",
-  },
-];
-
-const sleepHoursOptions = [6, 7, 8, 9];
-const focusBlockOptions = [30, 60, 90, 120];
-const energyOptions: Array<{
-  value: keyof RawAnswers["energyProfile"];
-  label: string;
-}> = [
-  { value: "morning", label: "Mattina" },
-  { value: "afternoon", label: "Pomeriggio" },
-  { value: "evening", label: "Sera" },
-];
-const workStyleOptions: Array<{
-  value: NewUserWizardDraft["workStyle"];
-  title: string;
-  description: string;
-}> = [
-  {
-    value: "deep_work",
-    title: "Una cosa per volta",
-    description: "Preferisci sessioni piu' profonde e meno cambi di contesto.",
-  },
-  {
-    value: "alternating",
-    title: "Alternanza",
-    description:
-      "Ti trovi bene a distribuire attivita' diverse nella stessa giornata.",
-  },
-  {
-    value: "short_sprints",
-    title: "Sessioni brevi",
-    description: "Rendi meglio con blocchi piu' corti e frequenti.",
-  },
-];
-const flexibilityOptions: Array<{
-  value: NewUserWizardDraft["flexibilityMode"];
-  title: string;
-  description: string;
-}> = [
-  {
-    value: "rigid",
-    title: "Rigido",
-    description: "Pochi spazi vuoti, calendario piu' serrato e difeso.",
-  },
-  {
-    value: "mixed",
-    title: "Misto",
-    description: "Buon equilibrio tra struttura e margine per adattarsi.",
-  },
-  {
-    value: "flexible",
-    title: "Flessibile",
-    description: "Più buffer e più spazio per assorbire cambiamenti.",
-  },
-];
-const planIntensityOptions: Array<{
-  value: NewUserWizardDraft["planIntensity"];
-  title: string;
-  description: string;
-}> = [
-  {
-    value: "light",
-    title: "Leggero",
-    description: "Meglio meno carico e piu' margine per recuperare.",
-  },
-  {
-    value: "balanced",
-    title: "Equilibrato",
-    description: "Distribuzione sostenibile senza riempire ogni spazio.",
-  },
-  {
-    value: "push",
-    title: "Spinto",
-    description: "Vuoi usare molto del tempo disponibile per avanzare.",
-  },
-];
-const difficultyOptions: Array<{
-  value: NewUserWizardDraft["mainDifficulties"][number];
-  title: string;
-}> = [
-  { value: "procrastination", title: "Procrastinazione" },
-  { value: "overload", title: "Sovraccarico" },
-  { value: "context_switching", title: "Troppi cambi di contesto" },
-  { value: "unexpected_events", title: "Imprevisti frequenti" },
-];
 
 function buildPreviewOptions(
   draft: NewUserWizardDraft,
@@ -269,20 +151,6 @@ function createFixedScheduleDraft(
   };
 }
 
-function toMinutes(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-function toTime(totalMinutes: number) {
-  const normalized = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
-  const hours = Math.floor(normalized / 60)
-    .toString()
-    .padStart(2, "0");
-  const minutes = (normalized % 60).toString().padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
-
 function buildWizardSubmission(
   draft: NewUserWizardDraft,
   selectedPreview: PlanPreviewOption,
@@ -392,7 +260,7 @@ export function NewUserWizardModal({
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === newUserWizardSteps.length - 1;
   const progressPercentage =
-    ((currentStepIndex + 1) / newUserWizardSteps.length) * 100;
+    percentage(currentStepIndex + 1, newUserWizardSteps.length);
   const activeGoals = useMemo(
     () => draft.goals.filter((goal) => goal.name.trim().length > 0),
     [draft.goals],

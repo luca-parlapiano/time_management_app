@@ -1,3 +1,4 @@
+import { percentage } from "../utils/math.js";
 import { useEffect, useState } from "react";
 import type { SimulationPanelProps } from "../model/SimulationPanel.js";
 import { formatTimeRange } from "../utils/time";
@@ -134,7 +135,7 @@ export function SimulationPanel({
               </div>
               <div className="capacity-metric">
                 <span>Affidabilita' stimata</span>
-                <strong>{Math.round(simulation.profile.completionConfidence * 100)}%</strong>
+                <strong>{Math.round(percentage(simulation.profile.completionConfidence, 1))}%</strong>
               </div>
               <div className="capacity-metric">
                 <span>Fascia piu' affidabile</span>
@@ -142,7 +143,7 @@ export function SimulationPanel({
               </div>
               <div className="capacity-metric">
                 <span>Buffer efficaci</span>
-                <strong>{Math.round(simulation.profile.bufferEffectiveness * 100)}%</strong>
+                <strong>{Math.round(percentage(simulation.profile.bufferEffectiveness, 1))}%</strong>
               </div>
             </div>
             <div className="week-results">
@@ -150,7 +151,7 @@ export function SimulationPanel({
                 <article className="week-result" key={week.weekNumber}>
                   <div>
                     <span>Settimana {week.weekNumber}</span>
-                    <strong>{Math.round(week.completionRate * 100)}% completato</strong>
+                    <strong>{Math.round(percentage(week.completionRate, 1))}% completato</strong>
                   </div>
                   <p>
                     {formatMinutes(week.completedFocusMinutes)} su {formatMinutes(week.plannedFocusMinutes)}. {week.completedBlocks} completati, {week.movedBlocks} recuperati, {week.skippedBlocks} saltati.

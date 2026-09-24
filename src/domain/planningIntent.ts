@@ -1,14 +1,7 @@
+import { requiredRootKeys } from "../constants.js";
+import { isIntegerInRange } from "../utils/numbers.js";
 import type { PlanningIntent, PlanningIntentParseResult } from "../model/planningIntent.js";
 export type { PlanningIntent,PlanningIntentDescription,PlanningIntentGoal,PlanningIntentHabit,PlanningIntentParseResult,PlanningIntentSource,PlanningIntentTask } from "../model/planningIntent.js";
-
-const requiredRootKeys = [
-  "goals",
-  "tasks",
-  "habits",
-  "constraints",
-  "preferences",
-  "questions",
-] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -75,7 +68,7 @@ function validateOptionalDuration(
 ) {
   if (!("durationMinutes" in item)) return;
   const duration = item.durationMinutes;
-  if (!Number.isInteger(duration) || Number(duration) < 1 || Number(duration) > 720) {
+  if (!isIntegerInRange(duration, 1, 720)) {
     errors.push(`${path}.durationMinutes deve essere un intero tra 1 e 720`);
   }
 }
@@ -95,10 +88,10 @@ export function parsePlanningIntent(value: unknown): PlanningIntentParseResult {
 
   validateItems(value.goals, "goals", ["name", "priority", "desiredWeeklyMinutes", "deadlineExpression", "source"], (item, path) => {
     validateText(item.name, `${path}.name`, errors, 120);
-    if ("priority" in item && (!Number.isInteger(item.priority) || Number(item.priority) < 1 || Number(item.priority) > 5)) {
+    if ("priority" in item && (!isIntegerInRange(item.priority, 1, 5))) {
       errors.push(`${path}.priority deve essere un intero tra 1 e 5`);
     }
-    if ("desiredWeeklyMinutes" in item && (!Number.isInteger(item.desiredWeeklyMinutes) || Number(item.desiredWeeklyMinutes) < 1 || Number(item.desiredWeeklyMinutes) > 10080)) {
+    if ("desiredWeeklyMinutes" in item && (!isIntegerInRange(item.desiredWeeklyMinutes, 1, 10080))) {
       errors.push(`${path}.desiredWeeklyMinutes deve essere un intero tra 1 e 10080`);
     }
     validateOptionalText(item, "deadlineExpression", path, errors, 80);

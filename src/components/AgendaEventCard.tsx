@@ -1,3 +1,4 @@
+import { AppIcon } from "../icons/AppIcon";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { activityCovers } from "../activityCovers";
@@ -5,7 +6,7 @@ import { eventAppearance, eventColors, outcomeLabels } from "../domain/calendar"
 import { useLoading } from "../hooks/useLoading";
 import type { AgendaEventCardProps } from "../model/AgendaEventCard.js";
 import type { ItemOutcome } from "../model/calendar.js";
-import { EventIcon } from "./EventIcon";
+import { EventIcon } from "../icons/EventIcon";
 
 export function AgendaEventCard({ item, date, top, height, disabled, onOpen, onDelete, onOutcome }: AgendaEventCardProps) {
   const { isLoading } = useLoading();
@@ -23,7 +24,7 @@ export function AgendaEventCard({ item, date, top, height, disabled, onOpen, onD
         <div className="agenda-tools">
           <button type="button" className="agenda-compact-outcome" disabled={disabled} onClick={() => onOpen(item)} title={item.outcome ? outcomeLabels[item.outcome] : "Registra esito"} aria-label={`Esito ${item.title}: ${item.outcome ? outcomeLabels[item.outcome] : "non registrato"}`} aria-haspopup="dialog">{item.outcome === "completed" ? "✓" : item.outcome === "partial" ? "◐" : item.outcome === "skipped" ? "×" : "○"}</button>
           <button type="button" disabled={disabled} onClick={() => onOpen(item)} title="Altre azioni" aria-label={`Altre azioni per ${item.title}`} aria-haspopup="dialog">⋯</button>
-          <button type="button" className="agenda-delete" disabled={disabled} onClick={() => onDelete(item)} title="Elimina appuntamento" aria-label={`Elimina ${item.title}`} aria-haspopup="dialog"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" /></svg></button>
+          <button type="button" className="agenda-delete" disabled={disabled} onClick={() => onDelete(item)} title="Elimina appuntamento" aria-label={`Elimina ${item.title}`} aria-haspopup="dialog"><AppIcon name="delete-event" size={15} /></button>
         </div>
       </header>
       <div className={`agenda-body${item.coverImage !== false ? " agenda-body-photo" : ""}`} style={item.coverImage !== false ? { "--cover-image": `url("${activityCovers[appearance.icon].src}")` } as CSSProperties : undefined}>{item.notes && <p>{item.notes}</p>}</div>

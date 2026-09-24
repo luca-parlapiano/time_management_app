@@ -1,3 +1,5 @@
+import { useDB } from "../hooks/useDB";
+import { DailyDoughnut } from "./DailyDoughnut";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { addDays, displayDate, eventAppearance, eventColors, occurrences, outcomeLabels, today } from "../domain/calendar";
@@ -5,9 +7,10 @@ import { latestOutcomes, statisticsOutcomeLabels } from "../domain/outcomeArchiv
 import type { Occurrence } from "../model/calendar.js";
 import type { CalendarStatisticsProps } from "../model/CalendarStatistics.js";
 import { CalendarDialog } from "./CalendarDialog";
-import { EventIcon } from "./EventIcon";
+import { EventIcon } from "../icons/EventIcon";
 
 export function CalendarStatistics({ state, history }: CalendarStatisticsProps) {
+  const { getDailyStatistics } = useDB();
   const [year, setYear] = useState(() => Number(today().slice(0, 4)));
   const [showHistory, setShowHistory] = useState(false);
   const [historyLimit, setHistoryLimit] = useState(50);
@@ -15,7 +18,7 @@ export function CalendarStatistics({ state, history }: CalendarStatisticsProps) 
   const yearOutcomes = latest.filter(record => record.eventDate.startsWith(`${year}-`));
   const yearHistory = history.filter(record => record.eventDate.startsWith(`${year}-`)).slice().reverse();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const { entries, byDate } = useMemo(() => {
+  const { byDate } = useMemo(() => {
     const from = `${year}-01-01`;
     const through = `${year}-12-31`;
     const entries = occurrences(state.items, from, through);
@@ -29,7 +32,7 @@ export function CalendarStatistics({ state, history }: CalendarStatisticsProps) 
         byDate.set(date, day);
       }
     }
-    return { entries, byDate };
+    return { byDate };
   }, [state.items, year]);
 
   return <div className="annual-statistics">
@@ -69,12 +72,11 @@ export function CalendarStatistics({ state, history }: CalendarStatisticsProps) 
               const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
               const events = byDate.get(date) ?? [];
               const recorded = yearOutcomes.filter(record => record.eventDate === date);
-              const colors = [...new Set([...events.map(item => eventColors[eventAppearance(item).color].value), ...recorded.map(record => eventColors[record.color].value)])];
+              const daily = getDailyStatistics(date);
               return <td key={column} className={column % 7 >= 5 ? "planner-weekend" : undefined}>
-                <button type="button" className={`annual-day${events.length || recorded.length ? " annual-day-events" : ""}`} aria-current={date === today() ? "date" : undefined} aria-label={`${displayDate(date, { weekday: "long", year: "numeric" })}, ${events.length} eventi, ${recorded.length} esiti`} title={events.length ? events.map(item => `${item.start} ${item.title}`).join("\n") : `${displayDate(date)}: nessun evento`} onClick={() => setSelectedDate(date)}>
+                <button type="button" className={`annual-day${events.length || recorded.length ? " annual-day-events" : ""}`} aria-current={date === today() ? "date" : undefined} aria-label={`${displayDate(date, { weekday: "long", year: "numeric" })}, ${daily.total} appuntamenti, ${daily.recorded ? `${Math.round(daily.completionPercent)}% completato` : "nessun esito"}: ${daily.activities.map(item => `${item.title} ${item.count}`).join(", ")}, ${recorded.length} esiti`} title={daily.total ? daily.activities.map(item => `${item.title}: ${item.count}`).join("\n") : `${displayDate(date)}: nessun evento`} onClick={() => setSelectedDate(date)}>
                   <span className="planner-day-number">{day}</span>
-                  <span className="annual-event-dots" aria-hidden="true">{colors.slice(0, 3).map(color => <i key={color} style={{ backgroundColor: color }} />)}</span>
-                  {(events.length > 0 || recorded.length > 0) && <span className="annual-event-count" aria-hidden="true">{recorded.length ? "• " + recorded.length : events.length}</span>}
+                  {daily.total > 0 && <DailyDoughnut statistics={daily} compact />}
                 </button>
               </td>;
             })}
@@ -89,6 +91,7 @@ export function CalendarStatistics({ state, history }: CalendarStatisticsProps) 
       </tbody></table></div>{yearHistory.length > historyLimit && <button className="secondary-button" onClick={() => setHistoryLimit(value => value + 50)}>Mostra altre registrazioni</button>}</>}
     </CalendarDialog>}
     {selectedDate && <CalendarDialog title={displayDate(selectedDate, { weekday: "long", year: "numeric" })} onClose={() => setSelectedDate(null)}>
+      <DailyDoughnut statistics={getDailyStatistics(selectedDate)} />
       {latest.some(record => record.eventDate === selectedDate) && <section><h4>Esiti salvati</h4><ul>{latest.filter(record => record.eventDate === selectedDate).map(record => <li key={record.id}>{record.title}: <strong>{statisticsOutcomeLabels[record.outcome]}</strong></li>)}</ul></section>}
       {(byDate.get(selectedDate) ?? []).length === 0 ? <p>Nessun evento attuale nel calendario per questa data.</p> : <ul className="annual-event-list">
         {byDate.get(selectedDate)!.map(item => {

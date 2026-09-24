@@ -1,10 +1,9 @@
+import { CALENDAR_STORAGE_KEY, LEGACY_STORAGE_KEY } from "../constants.js";
+export { CALENDAR_STORAGE_KEY, LEGACY_STORAGE_KEY } from "../constants.js";
 import { emptyCalendar, validateCalendar } from "../domain/calendar";
 import type { CalendarState } from "../model/calendar.js";
 import type { CalendarLoad, CalendarStorage } from "../model/localCalendarStorage.js";
 export type { CalendarLoad,CalendarStorage } from "../model/localCalendarStorage.js";
-
-export const CALENDAR_STORAGE_KEY = "time-planner.calendar.v2";
-export const LEGACY_STORAGE_KEY = "time-planner.local-state.v1";
 
 export function loadCalendar(storage: CalendarStorage): CalendarLoad {
   let raw: string | null = null;

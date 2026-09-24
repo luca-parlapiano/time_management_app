@@ -1,3 +1,5 @@
+import type { DailyStatistics } from "./dailyStatistics.js";
+import type { StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary } from "./weeklyStatistics.js";
 import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTarget, ItemOutcome, Occurrence } from "./calendar.js";
 import type { LoadingOptions } from "./loading.js";
 import type { CalendarStorage } from "./localCalendarStorage.js";
@@ -32,6 +34,9 @@ export interface DBRepository {
 }
 
 export interface DBContextValue {
+  getDailyStatistics(date: string): DailyStatistics;
+  getWeeklyStatistics(event: StatisticsEvent, dailyDate: string): WeeklyActivityStatistics;
+  getWeeklyActivities(dailyDate: string): WeeklyActivitySummary[];
   palette: Palette;
   paletteError: boolean;
   changePalette(value: Palette): Promise<void>;

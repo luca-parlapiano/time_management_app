@@ -1,3 +1,4 @@
+import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
 import { DatabaseSync } from 'node:sqlite';
 import { validateArchive } from '../src/domain/outcomeArchive.js';
 import type { DatabaseSnapshot, DatabaseWrite } from '../src/model/database.js';
@@ -47,11 +48,11 @@ export class SQLiteStore {
     const previous = JSON.parse(this.metadata('previousImport') ?? 'null') as PlannerArchive | null;
     if (previous) validateArchive(previous);
     const parsedRevision = JSON.parse(revision);
-    if (!Number.isSafeInteger(parsedRevision) || parsedRevision < 0) throw new Error('Versione archivio non valida.');
+    if (!isNonNegativeSafeInteger(parsedRevision)) throw new Error('Versione archivio non valida.');
     return {archive,revision:parsedRevision,previous};
   }
   write(input: DatabaseWrite): DatabaseSnapshot {
-    if (!input || (input.expectedRevision !== null && (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0))) throw new Error('Richiesta database non valida.');
+    if (!input || (input.expectedRevision !== null && (!isNonNegativeSafeInteger(input.expectedRevision)))) throw new Error('Richiesta database non valida.');
     validateArchive(input.archive);
     if (input.previous) validateArchive(input.previous);
     this.db.exec('BEGIN IMMEDIATE');

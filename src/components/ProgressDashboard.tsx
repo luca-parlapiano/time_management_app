@@ -1,3 +1,4 @@
+import { percentage } from "../utils/math.js";
 import { useEffect, useState } from "react";
 import type { CalendarActivity, WeeklyPlan } from "../model/planning.js";
 import type { DashboardEvent, DashboardMode, ProgressChartProps, ProgressDashboardProps, ProgressRow } from "../model/ProgressDashboard.js";
@@ -41,7 +42,7 @@ function ProgressChart({ title, rows }: ProgressChartProps) {
       ) : (
         <div className="progress-chart-rows">
           {rows.map((row) => {
-            const percent = Math.round((row.completed / row.attempted) * 100);
+            const percent = Math.round(percentage(row.completed, row.attempted));
             return (
               <div className="progress-row" key={row.label}>
                 <div className="progress-row-label">
@@ -81,7 +82,7 @@ export function ProgressDashboard({ plan, events, simulatedEvents, onClear }: Pr
   const notNeeded = activeEvents.filter((event) => event.outcome === "not-needed").length;
   const recovered = activeEvents.filter((event) => event.recovered).length;
   const attempted = completed + skipped;
-  const completionRate = attempted === 0 ? null : Math.round((completed / attempted) * 100);
+  const completionRate = attempted === 0 ? null : Math.round(percentage(completed, attempted));
   const objectiveRows = getRows(plan, activeEvents, (block) => block.title);
   const windowRows = getRows(plan, activeEvents, (block) => getFocusWindow(block.start));
   const hasRealEvents = realEvents.length > 0;
