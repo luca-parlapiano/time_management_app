@@ -224,7 +224,9 @@ test('legacy events retain defaults and unsupported appearance values are reject
 });
 
 test('appearance selected from one recurrence updates the series and moved exceptions, preserving schedules and deletions', () => {
-  const { id, exceptions, ...movedData } = fixed('moved', { goalId: undefined });
+  const movedData = fixed('moved', { goalId: undefined });
+  delete movedData.id;
+  delete movedData.exceptions;
   const original = series('gym', { icon: 'work', color: 'blue', exceptions: {
     '2026-09-21': { ...movedData, date: '2026-09-22', endDate: '2026-09-22', start: '15:00', end: '16:00', notes: 'Personalizzato', icon: 'heart', color: 'pink' },
     '2026-09-28': null,

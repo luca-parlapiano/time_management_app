@@ -3,7 +3,7 @@ export { outcomeLabels, eventIcons, eventColors, kindLabels, statusLabels } from
 import { toMinutes as minute } from "../utils/time.js";
 import { addDays, dateNumber, displayDate, validDate, weekStart } from "../utils/dates.js";
 import { isIntegerInRange, isPositiveNumber } from "../utils/numbers.js";
-import type { CalendarItem, CalendarState, EditAccess, EditTarget, ItemData, ItemKind, ItemOutcome, ItemStatus, Occurrence } from "../model/calendar.js";
+import type { CalendarItem, CalendarState, EditAccess, EditTarget, ItemData, ItemOutcome, Occurrence } from "../model/calendar.js";
 export type { CalendarGoal,CalendarItem,CalendarProfile,CalendarState,EditAccess,EditTarget,EventColor,EventIcon,ItemData,ItemKind,ItemOutcome,ItemStatus,Occurrence } from "../model/calendar.js";
 /** Civil dates and local wall-clock times: never parse YYYY-MM-DD as local/UTC instants. */
 
@@ -214,7 +214,6 @@ export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, 
   const existing = target ? state.items.find(item => item.id === target.sourceId) : undefined;
   if (target && (!existing || existing.recurrence)) throw new Error("Scegli un’attività senza ripetizione da convertire.");
   guard(existing, access);
-  let next = state;
   const span = (dateNumber(proposed.endDate) - dateNumber(proposed.date)) / DAY;
   const dates = weekdays.map(day => {
     let date = addDays(weekStart(proposed.date), day);
@@ -233,7 +232,7 @@ export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, 
   const reused = matches.flat();
   for (const item of reused) guard(item, access);
   const replacedIds = new Set([...(existing ? [existing.id] : []), ...reused.map(item => item.id)]);
-  next = { ...state, items: state.items.filter(item => !replacedIds.has(item.id)) };
+  let next = { ...state, items: state.items.filter(item => !replacedIds.has(item.id)) };
   const ids = new Set<string>();
   for (const [index, { day, date }] of dates.entries()) {
     if (proposed.recurrence.until && date > proposed.recurrence.until) throw new Error("La fine della ripetizione deve includere tutti i giorni scelti.");

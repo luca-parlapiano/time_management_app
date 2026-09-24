@@ -22,7 +22,6 @@ let db: DBContextValue;
 let loading: LoadingContextValue;
 let initializeCount=0;
 let gate: Promise<void> | null=null;
-let release: (()=>void) | null=null;
 let rejectGate: ((error: Error)=>void) | null=null;
 let failInitialization=true;
 const date=today();
@@ -66,7 +65,7 @@ try {
  check(db!.archive.history.length===1&&db!.state.items[0].outcomes?.[date]==='partial','Provider commits calendar and audit together');
  await act(async()=>{await db.recordOutcome(occurrence,'completed');});
  check(db!.archive.history.length===2&&loading!.pending===0,'Correction preserves history and releases loading');
- gate=new Promise<void>((resolve,reject)=>{release=resolve;rejectGate=reject;});
+ gate=new Promise<void>((_resolve,reject)=>{rejectGate=reject;});
  let pending!:Promise<void>, failure:unknown;
  await act(async()=>{pending=db.recordOutcome(occurrence,'skipped').catch(error=>{failure=error;});});
  check(db!.saving&&loading!.isLoading(`outcome:${occurrence.id}`)&&!loading!.blocking,'Local save is observable without blocking dialog');

@@ -1,7 +1,7 @@
 import { simulationDayScores as dayScores } from "../constants.js";
 import { toMinutes } from "../utils/time.js";
 import { clamp, percentage } from "../utils/math.js";
-import type { CalendarActivity as PlanBlock, Weekday } from "../model/planning.js";
+import type { CalendarActivity as PlanBlock } from "../model/planning.js";
 import type { AdaptiveCapacityProfile, BlockOutcome, SimulatedBlockEvent, SimulatedWeek, SimulationInput, SimulationRun } from "../model/simulationContracts.js";
 
 function getDuration(block: PlanBlock) {

@@ -82,6 +82,9 @@ app.whenReady().then(() => {
       createMainWindow();
     }
   });
+}).catch((error: unknown) => {
+  console.error("Avvio dell’app non riuscito:", error);
+  app.quit();
 });
 
 app.on("window-all-closed", () => {

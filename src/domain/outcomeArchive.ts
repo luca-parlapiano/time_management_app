@@ -1,4 +1,3 @@
-import { statisticsOutcomeLabels } from "../constants.js";
 export { statisticsOutcomeLabels } from "../constants.js";
 import { isFiniteNumber } from "../utils/numbers.js";
 import type { CalendarState, ItemOutcome, Occurrence } from "../model/calendar.js";

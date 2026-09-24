@@ -1,5 +1,5 @@
 import { percentage } from "../utils/math.js";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { SimulationPanelProps } from "../model/SimulationPanel.js";
 import { formatTimeRange } from "../utils/time";
 
@@ -16,19 +16,16 @@ export function SimulationPanel({
   onAdvanceSimulation,
   onSimulationChange,
 }: SimulationPanelProps) {
-  const [weekCount, setWeekCount] = useState(0);
+  const weekCount = useRef(0);
 
   useEffect(() => {
-    setWeekCount(0);
+    weekCount.current = 0;
     onSimulationChange(null);
-  }, [answers, result]);
+  }, [answers, result, onSimulationChange]);
 
   function advanceSimulation(numberOfWeeks: number) {
-    setWeekCount((currentWeekCount) => {
-      const nextWeekCount = currentWeekCount + numberOfWeeks;
-      onAdvanceSimulation(nextWeekCount);
-      return nextWeekCount;
-    });
+    weekCount.current += numberOfWeeks;
+    onAdvanceSimulation(weekCount.current);
   }
 
   return (

@@ -1,5 +1,6 @@
 import { initialChatMessages as initialMessages } from "../constants.js";
-import { FormEvent, useState } from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { applyPlanningIntentUpdate } from "../application/planningIntentReview";
 import { interpretPlanningMessage } from "../infrastructure/localPlanningIntentGateway";
 import type { ChatMessage, PlannerChatProps, PlanningOutputProps } from "../model/PlannerChat.js";
