@@ -53,6 +53,8 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
   }, [repository, run]);
   const statistics = useMemo(() => new StatisticsRepository(snapshot?.archive ?? emptyArchive), [snapshot?.archive]);
   const value = useMemo<DBContextValue>(() => ({
+    getStatisticsActivities: () => statistics.getStatisticsActivities(),
+    getActivityYearStatistics: (id, year, referenceDate) => statistics.getActivityYearStatistics(id, year, referenceDate),
     getDailyStatistics: date => statistics.getDailyStatistics(date),
     getWeeklyStatistics: (event, date) => statistics.getWeeklyStatistics(event, date),
     getWeeklyActivities: date => statistics.getWeeklyActivities(date),

@@ -1,3 +1,7 @@
+import { ACTIVITY_PARTIAL_WEIGHT } from "../constants.js";
+import type { StatisticsActivity, ActivityYearStatistics, ActivityDayStatistics } from "../model/activityStatistics.js";
+import { isIntegerInRange } from "../utils/numbers.js";
+import { today } from "../utils/dates.js";
 import { percentage } from "../utils/math.js";
 import type { DailyActivitySegment, DailyStatistics, DailyStatisticsEntry } from "../model/dailyStatistics.js";
 import { addDays, eventAppearance, occurrences, validDate, weekStart } from '../domain/calendar.js';
@@ -113,6 +117,65 @@ export class StatisticsRepository {
     result.activities.forEach(segment => { segment.contributionPercent = percentage(segment.completed, result.total); });
     this.dailyCache.set(date, result);
     return result;
+  }
+
+  /** Elenca una sola voce per attività, includendo lo storico delle attività eliminate. */
+  getStatisticsActivities(): StatisticsActivity[] {
+    const seen = new Set<string>();
+    const result: StatisticsActivity[] = [];
+    for (const event of this.archive.calendar.items) {
+      if (seen.has(event.id)) continue;
+      this.group(event).forEach(item => seen.add(item.id));
+      result.push({id: event.id, title: event.title, ...eventAppearance(event)});
+    }
+    for (const record of this.latest) {
+      if (seen.has(record.sourceId) || result.some(item => normalizedTitle(item.title) === normalizedTitle(record.title))) continue;
+      seen.add(record.sourceId);
+      result.push({id: record.sourceId, title: record.title, color: record.color, icon: record.icon});
+    }
+    return result;
+  }
+
+  /** Calcola l’anno per attività: parziale vale 50% solo in questa vista.
+   * Ogni occorrenza conta nel giorno di inizio; lo storico usa la data salvata.
+   * Le occorrenze senza esito pesano zero nella media, ma restano distinguibili.
+   */
+  getActivityYearStatistics(id: string, year: number, referenceDate = today()): ActivityYearStatistics {
+    if (!isIntegerInRange(year, 1900, 9998) || !validDate(referenceDate)) throw new Error('Periodo non valido.');
+    const activity = this.getStatisticsActivities().find(item => item.id === id);
+    if (!activity) throw new Error('Attività non trovata.');
+    const source = this.archive.calendar.items.find(item => item.id === id);
+    const members = source ? this.group(source) : [];
+    const sourceIds = new Set([id, ...members.map(item => item.id)]);
+    const activityIds = new Set(members.map(item => item.activityId ?? item.id));
+    const names = new Set([normalizedTitle(activity.title), ...members.map(item => normalizedTitle(item.title))]);
+    const knownSources = new Set(this.archive.calendar.items.map(item => item.id));
+    const from = `${year}-01-01`, through = `${year}-12-31`;
+    const entries = new Map<string, StatisticsEntry>();
+    for (const event of occurrences(members, from, through)) {
+      if (event.date >= from && event.date <= through) entries.set(occurrenceKey(event.sourceId, event.occurrenceDate), {date: event.date, outcome: event.outcome});
+    }
+    for (const record of this.latest) {
+      if (!sourceIds.has(record.sourceId) && !activityIds.has(record.activityId) && !( !knownSources.has(record.sourceId) && names.has(normalizedTitle(record.title)))) continue;
+      const key = occurrenceKey(record.sourceId, record.occurrenceDate);
+      entries.delete(key);
+      if (record.eventDate >= from && record.eventDate <= through) entries.set(key, {date: record.eventDate, outcome: record.outcome});
+    }
+    const days = new Map<string, ActivityDayStatistics>();
+    for (let date = from; date <= through; date = addDays(date, 1)) {
+      days.set(date, {date, total: 0, completed: 0, partial: 0, skipped: 0, pending: 0, percent: null, state: 'empty'});
+    }
+    for (const entry of entries.values()) {
+      const day = days.get(entry.date)!;
+      day.total++;
+      day[entry.outcome ?? 'pending']++;
+    }
+    for (const day of days.values()) {
+      if (!day.total) continue;
+      day.state = day.date > referenceDate ? 'future' : day.pending === day.total ? 'pending' : 'recorded';
+      if (day.state === 'recorded') day.percent = percentage(day.completed + day.partial * ACTIVITY_PARTIAL_WEIGHT, day.total);
+    }
+    return {activity, year, days: [...days.values()]};
   }
 
   getWeeklyActivities(dailyDate: string): WeeklyActivitySummary[] {

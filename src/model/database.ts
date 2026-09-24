@@ -1,3 +1,4 @@
+import type { StatisticsActivity, ActivityYearStatistics } from "./activityStatistics.js";
 import type { DailyStatistics } from "./dailyStatistics.js";
 import type { StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary } from "./weeklyStatistics.js";
 import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTarget, ItemOutcome, Occurrence } from "./calendar.js";
@@ -34,6 +35,8 @@ export interface DBRepository {
 }
 
 export interface DBContextValue {
+  getStatisticsActivities(): StatisticsActivity[];
+  getActivityYearStatistics(id: string, year: number, referenceDate?: string): ActivityYearStatistics;
   getDailyStatistics(date: string): DailyStatistics;
   getWeeklyStatistics(event: StatisticsEvent, dailyDate: string): WeeklyActivityStatistics;
   getWeeklyActivities(dailyDate: string): WeeklyActivitySummary[];

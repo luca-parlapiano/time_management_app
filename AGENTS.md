@@ -44,7 +44,7 @@
 - Conservare l’identità originale delle occorrenze spostate e deduplicare le correzioni degli esiti.
 - Il completamento giornaliero usa attività superate / totale pianificato. I contributi hanno i colori delle attività; il resto è grigio.
 - Senza esiti mostrare solo i pallini; non presentare gli appuntamenti futuri come risultati registrati.
-- Non assegnare pesi arbitrari agli esiti parziali. Le regole statistiche cambiano solo su richiesta esplicita.
+- Nella vista “Per attività”, su richiesta dell’utente, un esito parziale vale 50%; la media comprende tutte le occorrenze pianificate della giornata. Questa regola non modifica la panoramica. Altre regole statistiche cambiano solo su richiesta esplicita.
 
 ## Verifiche
 

@@ -117,3 +117,41 @@ test('daily progress: no outcomes differs from recorded zero completion',()=>{
  const zero=new StatisticsRepository(data).getDailyStatistics('2026-09-21');
  assert.equal(zero.recorded,1);assert.equal(zero.completionPercent,0);
 });
+
+test('activity heatmap: partial weight, mixed occurrences, future and empty states',()=>{
+ const data=archive([item('a'),item('b'),item('c','2026-09-22'),item('future','2026-09-28',{recurrence:{}})]);
+ data.history=[record(data,'a','2026-09-21','completed'),record(data,'b','2026-09-21','partial')];
+ const repo=new StatisticsRepository(data);
+ assert.equal(repo.getStatisticsActivities().length,1);
+ const stats=repo.getActivityYearStatistics('a',2026,'2026-09-23');
+ assert.equal(stats.days.length,365);
+ const day=date=>stats.days.find(day=>day.date===date);
+ assert.equal(day('2026-09-21').percent,75);
+ assert.equal(day('2026-09-21').state,'recorded');
+ assert.equal(day('2026-09-22').state,'pending');
+ assert.equal(day('2026-09-23').state,'empty');
+ assert.equal(day('2026-09-28').state,'future');
+ assert.equal(day('2026-09-28').percent,null);
+ assert.equal(repo.getDailyStatistics('2026-09-21').completionPercent,50);
+});
+
+test('activity heatmap: latest saved date, archived events, leap year and invalid input',()=>{
+ const event=item('a'),data=archive([event]),first=record(data,'a',event.date,'completed');
+ const repo=new StatisticsRepository(archive([],[first,{...first,id:'correction',eventDate:'2024-02-29',outcome:'partial'}]));
+ assert.equal(repo.getStatisticsActivities().length,1);
+ const year=repo.getActivityYearStatistics('a',2024,'2026-09-23');
+ assert.equal(year.days.length,366);assert.equal(year.days.find(day=>day.date==='2024-02-29').percent,50);
+ assert.equal(repo.getActivityYearStatistics('a',2026,'2026-09-23').days.find(day=>day.date===event.date).state,'empty');
+ assert.throws(()=>repo.getActivityYearStatistics('a',2026.5),/Periodo/);
+ assert.throws(()=>repo.getActivityYearStatistics('missing',2026),/Attività/);
+});
+
+test('activity heatmap: zero differs from unrecorded; pending occurrences stay in denominator',()=>{
+ const data=archive([item('a'),item('b')]);
+ data.history=[record(data,'a','2026-09-21','skipped')];
+ let day=new StatisticsRepository(data).getActivityYearStatistics('a',2026,'2026-09-23').days.find(day=>day.date==='2026-09-21');
+ assert.equal(day.state,'recorded');assert.equal(day.percent,0);assert.equal(day.pending,1);
+ data.history.push(record(data,'a','2026-09-21','completed'));
+ day=new StatisticsRepository(data).getActivityYearStatistics('a',2026,'2026-09-23').days.find(day=>day.date==='2026-09-21');
+ assert.equal(day.percent,50);
+});

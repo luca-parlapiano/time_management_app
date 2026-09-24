@@ -452,3 +452,6 @@ export const DEFAULT_MODEL_REPOSITORY = "Qwen/Qwen3-4B-GGUF:Q4_K_M";
 export const STARTUP_TIMEOUT_MS = 5 * 60 * 1_000;
 
 export const REQUEST_TIMEOUT_MS = 60_000;
+
+/** Peso dell’esito parziale nella sola vista annuale per attività. */
+export const ACTIVITY_PARTIAL_WEIGHT = 0.5;
