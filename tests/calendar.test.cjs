@@ -2,7 +2,12 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { join } = require('node:path');
 const c = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/calendar.js'));
-const storage = require(join(process.env.CALENDAR_TEST_BUILD, 'infrastructure/localCalendarStorage.js'));
+// Verifica il formato serializzabile del dominio; la persistenza reale è in sqlite.test.mjs.
+const roundTripCalendar = state => {
+  const restored = JSON.parse(JSON.stringify(state));
+  c.validateCalendar(restored);
+  return restored;
+};
 const user = { actor: 'user' };
 const unlocked = { actor: 'user', unlocked: true };
 const engine = { actor: 'engine', unlocked: true };
@@ -11,19 +16,11 @@ const fixed = (id, patch = {}) => item(id, { kind: 'fixed', status: undefined, .
 const series = (id, patch = {}) => fixed(id, { recurrence: {}, ...patch });
 const target = (sourceId, occurrenceDate = '2026-09-14', scope = 'occurrence') => ({ sourceId, occurrenceDate, scope });
 const put = (state, value, access = user, where) => c.putItem(state, value, access, where);
-class MemoryStorage {
-  data = new Map();
-  getItem(key) { return this.data.get(key) ?? null; }
-  setItem(key, value) { this.data.set(key, value); }
-}
-
-test('calendar works without profile or plan across weeks and restart', () => {
-  const disk = new MemoryStorage();
-  let state = storage.loadCalendar(disk).state;
+test('calendar works without profile or plan across weeks and serialization', () => {
+  let state = c.emptyCalendar();
   state = put(state, item('first'));
   state = put(state, item('second', { date: '2026-10-05', endDate: '2026-10-05' }));
-  storage.saveCalendar(disk, state);
-  const reloaded = storage.loadCalendar(disk).state;
+  const reloaded = roundTripCalendar(state);
   // JSON omits optional properties whose value is undefined.
   assert.deepEqual(reloaded, JSON.parse(JSON.stringify(state)));
   assert.equal(reloaded.profile, null);
@@ -78,16 +75,14 @@ test('recurrence exception moves one occurrence between weeks and persists stabl
   assert.deepEqual(moved.map(x => x.id), ['work@2026-10-05', 'work@2026-09-21']);
   assert.equal(moved[1].exception, true);
   assert.equal(c.occurrences(state.items, '2026-09-28', '2026-10-04').length, 1);
-  const disk = new MemoryStorage(); storage.saveCalendar(disk, state);
-  assert.deepEqual(storage.loadCalendar(disk).state, JSON.parse(JSON.stringify(state)));
+  assert.deepEqual(roundTripCalendar(state), JSON.parse(JSON.stringify(state)));
 });
-test('deleted occurrence frees only its date, and does not return after restart', () => {
+test('deleted occurrence frees only its date, and does not return after serialization', () => {
   let state = put(c.emptyCalendar(), series('work'));
   state = c.deleteItem(state, target('work', '2026-09-21'), unlocked);
   state = put(state, item('free', { date: '2026-09-21', endDate: '2026-09-21' }), engine);
   assert.throws(() => put(state, item('blocked', { date: '2026-09-28', endDate: '2026-09-28' }), engine), /Conflitto/);
-  const disk = new MemoryStorage(); storage.saveCalendar(disk, state);
-  const loaded = storage.loadCalendar(disk).state;
+  const loaded = roundTripCalendar(state);
   assert.deepEqual(c.occurrences(loaded.items, '2026-09-21', '2026-09-27').map(x => x.id), ['free']);
 });
 test('series edit preserves exception snapshots; series delete removes all exceptions', () => {
@@ -136,38 +131,14 @@ test('invalid dates, times, durations, recurrence and goal references are reject
   assert.throws(() => put(c.emptyCalendar(), series('bad', { recurrence: { until: '2026-09-13' } })));
   assert.throws(() => put(c.emptyCalendar(), series('bad', { exceptions: { '2026-09-15': null } })));
 });
-test('clear removes all weeks, series and outcomes, retains goals/profile/legacy/palette', () => {
-  const disk = new MemoryStorage();
-  disk.setItem(storage.LEGACY_STORAGE_KEY, '{"old":"untouched"}');
-  disk.setItem('time-planner.palette.v1', 'night');
+test('clear removes all weeks and series while retaining goals and profile', () => {
   let state = { ...c.emptyCalendar(), goals: [{ id: 'g', name: 'Study' }], profile: { name: 'Me', notes: 'Evenings' } };
   state = put(state, item('done', { goalId: 'g', status: 'completed' }));
   state = put(state, series('weekly', { start: '12:00', end: '13:00', exceptions: { '2026-09-21': null } }));
-  const cleared = c.clearCalendar(state); storage.saveCalendar(disk, cleared);
-  assert.deepEqual(storage.loadCalendar(disk).state, { ...state, items: [] });
-  assert.equal(disk.getItem(storage.LEGACY_STORAGE_KEY), '{"old":"untouched"}');
-  assert.equal(disk.getItem('time-planner.palette.v1'), 'night');
+  const cleared = c.clearCalendar(state);
+  assert.deepEqual(roundTripCalendar(cleared), { ...state, items: [] });
   assert.deepEqual(c.clearCalendar(cleared), cleared);
 });
-test('legacy data is preserved byte-for-byte; no arbitrary dates or automatic import', () => {
-  const disk = new MemoryStorage();
-  const raw = '{"answers":{"goals":[]},"plannerResult":{"plan":{"blocks":[{"day":"mon"}]}},"blockEvents":{}}';
-  disk.setItem(storage.LEGACY_STORAGE_KEY, raw);
-  const loaded = storage.loadCalendar(disk);
-  assert.equal(loaded.legacy, raw); assert.deepEqual(loaded.state, c.emptyCalendar());
-  storage.saveCalendar(disk, put(loaded.state, item('new')));
-  assert.equal(disk.getItem(storage.LEGACY_STORAGE_KEY), raw);
-});
-test('corrupt or unsupported archive stays recoverable; failed reads/writes are surfaced', () => {
-  for (const raw of ['{broken', '{"version":99}', JSON.stringify({ ...c.emptyCalendar(), items: [{ id: 'broken' }] })]) {
-    const disk = new MemoryStorage(); disk.setItem(storage.CALENDAR_STORAGE_KEY, raw);
-    const loaded = storage.loadCalendar(disk);
-    assert.ok(loaded.error); assert.equal(loaded.raw, raw); assert.equal(disk.getItem(storage.CALENDAR_STORAGE_KEY), raw);
-  }
-  assert.ok(storage.loadCalendar({ getItem() { throw Error('denied'); } }).error);
-  assert.throws(() => storage.saveCalendar({ setItem() { throw Error('quota'); } }, c.emptyCalendar()), /quota/);
-});
-
 test('persisted items contain domain fields only, not presentation occurrence metadata', () => {
   const state = put(c.emptyCalendar(), series('work'));
   const occurrence = c.occurrences(state.items, '2026-09-21', '2026-09-27')[0];
@@ -200,25 +171,19 @@ test('conflict detection agrees with exhaustive expansion across finite randomiz
   }
 });
 
-test('event appearance survives storage, weekly expansion and an individual exception', () => {
-  const disk = new MemoryStorage();
+test('event appearance survives serialization, weekly expansion and an individual exception', () => {
   let state = put(c.emptyCalendar(), series('visual', { icon: 'sport', color: 'orange' }));
   const occurrence = c.occurrences(state.items, '2026-09-21', '2026-09-27')[0];
   assert.deepEqual(c.eventAppearance(occurrence), { icon: 'sport', color: 'orange' });
   state = put(state, { ...state.items[0], ...occurrence, icon: 'heart', color: 'pink' }, unlocked, target('visual', '2026-09-21'));
-  storage.saveCalendar(disk, state);
-  const loaded = storage.loadCalendar(disk);
-  assert.equal(loaded.error, null);
-  assert.deepEqual(c.eventAppearance(c.occurrences(loaded.state.items, '2026-09-21', '2026-09-27')[0]), { icon: 'heart', color: 'pink' });
-  assert.deepEqual(c.eventAppearance(c.occurrences(loaded.state.items, '2026-09-28', '2026-10-04')[0]), { icon: 'sport', color: 'orange' });
+  const loaded = roundTripCalendar(state);
+  assert.deepEqual(c.eventAppearance(c.occurrences(loaded.items, '2026-09-21', '2026-09-27')[0]), { icon: 'heart', color: 'pink' });
+  assert.deepEqual(c.eventAppearance(c.occurrences(loaded.items, '2026-09-28', '2026-10-04')[0]), { icon: 'sport', color: 'orange' });
 });
 
-test('legacy events retain defaults and unsupported appearance values are rejected', () => {
-  const disk = new MemoryStorage();
-  storage.saveCalendar(disk, put(c.emptyCalendar(), fixed('legacy')));
-  const loaded = storage.loadCalendar(disk);
-  assert.equal(loaded.error, null);
-  assert.deepEqual(c.eventAppearance(loaded.state.items[0]), { icon: 'work', color: 'blue' });
+test('events without appearance retain defaults and unsupported appearance values are rejected', () => {
+  const loaded = roundTripCalendar(put(c.emptyCalendar(), fixed('defaults')));
+  assert.deepEqual(c.eventAppearance(loaded.items[0]), { icon: 'work', color: 'blue' });
   assert.throws(() => put(c.emptyCalendar(), item('bad-icon', { icon: 'unknown' })), /Icona non valida/);
   assert.throws(() => put(c.emptyCalendar(), item('bad-color', { color: 'unknown' })), /Colore non valido/);
 });
@@ -239,9 +204,7 @@ test('appearance selected from one recurrence updates the series and moved excep
   assert.equal(state.items[0].start, original.start);
   assert.deepEqual(state.items[0].exceptions['2026-09-21'], { ...original.exceptions['2026-09-21'], icon: 'sport', color: 'orange' });
   assert.equal(state.items[0].exceptions['2026-09-28'], null);
-  const disk = new MemoryStorage();
-  storage.saveCalendar(disk, state);
-  for (const occurrence of c.occurrences(storage.loadCalendar(disk).state.items, '2026-09-14', '2026-10-11')) {
+  for (const occurrence of c.occurrences(roundTripCalendar(state).items, '2026-09-14', '2026-10-11')) {
     assert.deepEqual(c.eventAppearance(occurrence), { icon: 'sport', color: 'orange' });
   }
 });
@@ -263,9 +226,7 @@ test('one activity creates Monday Wednesday Friday appointments, with independen
   state = c.setOccurrenceCompleted(state, week[0].sourceId, week[0].occurrenceDate, true);
   assert.deepEqual(c.occurrences(state.items, '2026-09-14', '2026-09-20').map(x => x.completed), [true, false, false]);
   assert.ok(c.occurrences(state.items, '2026-09-21', '2026-09-27').every(x => !x.completed));
-  const disk = new MemoryStorage();
-  storage.saveCalendar(disk, state);
-  state = storage.loadCalendar(disk).state;
+  state = roundTripCalendar(state);
   const wed = c.occurrences(state.items, '2026-09-14', '2026-09-20')[1];
   const source = state.items.find(x => x.id === wed.sourceId);
   state = put(state, { ...source, ...wed, title: 'Allenamento', icon: 'heart', color: 'pink', notes: 'Scheda A' }, unlocked, target(wed.sourceId, wed.occurrenceDate));
@@ -332,9 +293,7 @@ test('completion remains consistent with flexible status and follows a reschedul
 
 test('flexible activities repeat on selected days, persist, and allow editing one occurrence', () => {
   let state = c.putWeeklyActivity(c.emptyCalendar(), item('gym', { recurrence: {} }), [0, 2, 4], user);
-  const disk = new MemoryStorage();
-  storage.saveCalendar(disk, state);
-  state = storage.loadCalendar(disk).state;
+  state = roundTripCalendar(state);
   const week = c.occurrences(state.items, '2026-09-21', '2026-09-27');
   assert.deepEqual(week.map(x => x.date), ['2026-09-21', '2026-09-23', '2026-09-25']);
   const first = week[0];
@@ -362,9 +321,7 @@ test('all three outcomes persist per appointment without affecting linked days o
   for (const [index, outcome] of ['completed', 'skipped', 'partial'].entries()) {
     state = c.setOccurrenceOutcome(state, week[index].sourceId, week[index].occurrenceDate, outcome);
   }
-  const disk = new MemoryStorage();
-  storage.saveCalendar(disk, state);
-  state = storage.loadCalendar(disk).state;
+  state = roundTripCalendar(state);
   assert.deepEqual(c.occurrences(state.items, '2026-09-14', '2026-09-20').map(x => x.outcome), ['completed', 'skipped', 'partial']);
   assert.equal(c.occurrences(state.items, '2026-09-14', '2026-09-20').filter(x => x.completed).length, 1);
   assert.ok(c.occurrences(state.items, '2026-09-21', '2026-09-27').every(x => x.outcome === undefined));
@@ -399,9 +356,7 @@ test('converting Palestra reuses an identical appointment on September 21 and pr
   assert.equal(week[0].sourceId, 'original');
   assert.equal(week[0].outcome, 'partial');
   assert.equal(week[0].notes, 'Scheda personale');
-  const disk = new MemoryStorage();
-  storage.saveCalendar(disk, state);
-  assert.equal(c.occurrences(storage.loadCalendar(disk).state.items, '2026-09-21', '2026-09-27').length, 3);
+  assert.equal(c.occurrences(roundTripCalendar(state).items, '2026-09-21', '2026-09-27').length, 3);
 });
 
 test('conversion reuses a matching weekly series while keeping deleted and moved occurrences', () => {
@@ -439,11 +394,8 @@ test('cover photo choice persists and updates linked series and exceptions witho
     { ...target(first.id, '2026-09-14', 'series'), applyAppearanceToSeries: true });
   assert.ok(state.items.every(entry => entry.coverImage === false));
   assert.equal(state.items.find(entry => entry.id === first.id).exceptions['2026-09-21'].coverImage, false);
-  const disk = new MemoryStorage();
-  storage.saveCalendar(disk, state);
-  const loaded = storage.loadCalendar(disk);
-  assert.equal(loaded.error, null);
-  const week = c.occurrences(loaded.state.items, '2026-09-21', '2026-09-27');
+  const loaded = roundTripCalendar(state);
+  const week = c.occurrences(loaded.items, '2026-09-21', '2026-09-27');
   assert.ok(week.every(entry => entry.coverImage === false));
   assert.equal(week.find(entry => entry.sourceId === first.id).outcome, 'completed');
   assert.equal(week.find(entry => entry.sourceId === first.id).notes, 'Nota conservata');

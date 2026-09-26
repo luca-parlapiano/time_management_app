@@ -3,7 +3,6 @@ import type { DailyStatistics } from "./dailyStatistics.js";
 import type { StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary } from "./weeklyStatistics.js";
 import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTarget, ItemOutcome, Occurrence } from "./calendar.js";
 import type { LoadingOptions } from "./loading.js";
-import type { CalendarStorage } from "./localCalendarStorage.js";
 import type { PlannerArchive } from "./outcomeArchive.js";
 import type { Palette } from "./theme.js";
 
@@ -63,6 +62,3 @@ export interface DBContextValue {
 export type DatabaseWorkerRequest = { id: number } & ({ action: 'read' } | { action: 'write'; input: DatabaseWrite });
 
 export type DatabaseWorkerResponse = { id: number; result?: DatabaseSnapshot | null; error?: string };
-
-export interface LegacyArchive { archive: PlannerArchive; previous: PlannerArchive | null }
-export interface LegacyMigrationOptions { databaseName?: string; storage?: CalendarStorage }

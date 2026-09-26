@@ -77,11 +77,9 @@ archivi personali; non è ottimizzato per grandi quantità di serie ed eccezioni
 
 ## Salvataggio e backup
 
-Il calendario è salvato sul dispositivo. Se un salvataggio fallisce, la modifica non
-viene applicata alla UI. Il recupero automatico degli archivi precedenti può bloccarsi
-in presenza di dati non validi; gli originali restano conservati. I piani del vecchio
-prototipo senza date non vengono trasformati automaticamente in appuntamenti e non
-hanno un pannello di recupero nella UI corrente.
+Il calendario è salvato in SQLite sul dispositivo. Alla prima apertura parte vuoto.
+Se un salvataggio fallisce, la modifica non viene applicata alla UI. Per trasferire
+un archivio si usa l’importazione JSON, senza recuperi automatici da altri storage.
 
 In **Impostazioni → Database locale e backup** sono disponibili:
 
@@ -93,7 +91,7 @@ In **Impostazioni → Database locale e backup** sono disponibili:
 L’importazione sostituisce i dati, non li unisce. La palette è una preferenza del
 dispositivo e non è inclusa nel backup. Lo storico conserva le correzioni degli esiti.
 
-Per schema, percorso del database e dettagli della migrazione, vedere
+Per schema, percorso del database e dettagli dell’inizializzazione, vedere
 [Provider, repository e modelli](provider-database-model.md).
 
 ## Svuotamento
@@ -101,7 +99,7 @@ Per schema, percorso del database e dettagli della migrazione, vedere
 `Svuota calendario` richiede conferma, elenca esplicitamente cosa cancella e, se ci sono
 vincoli, richiede anche lo sblocco collettivo tramite checkbox. Cancella gli elementi di
 **tutte** le settimane, serie, eccezioni, note e stati presenti negli elementi. Mantiene
-lo storico degli esiti, il profilo, gli obiettivi, la palette e gli archivi precedenti.
+lo storico degli esiti, il profilo, gli obiettivi, la palette.
 Non ricarica il vecchio piano e non genera nuovi elementi.
 Annullare non modifica nulla. Lo svuotamento è atomico e senza annullamento successivo.
 

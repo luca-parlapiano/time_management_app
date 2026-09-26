@@ -50,13 +50,8 @@ export const requiredRootKeys = [
   "questions",
 ] as const;
 
-// Chiavi degli archivi locali
-export const CALENDAR_STORAGE_KEY = "time-planner.calendar.v2";
-
-export const LEGACY_STORAGE_KEY = "time-planner.local-state.v1";
-
-// Archivio della pianificazione precedente
-export const PLANNER_STORAGE_KEY = LEGACY_STORAGE_KEY;
+// Archivio del prototipo di pianificazione, separato dal calendario SQLite.
+export const PLANNER_STORAGE_KEY = "time-planner.local-state.v1";
 
 // Temi e preferenze
 export const palettes = [

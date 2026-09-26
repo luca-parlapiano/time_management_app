@@ -10,7 +10,7 @@ Rilevazione sul codice del 26 settembre 2026. [Indice documentazione](README.md)
 | Ricorrenze | Settimanali anche per attività flessibili, più giorni collegati, scadenza facoltativa, eccezioni e identità originale degli appuntamenti |
 | Esiti | Superato, non superato, parziale, correzioni e storico mantenuto dopo eliminazione/svuotamento |
 | Statistiche | Riepiloghi settimanali, panoramica annuale giornaliera e vista per attività; regole nel documento dei Provider |
-| Dati | SQLite in worker, transazioni, revisioni, migrazione IndexedDB/localStorage v2, import/export JSON e copia precedente all’importazione |
+| Dati | SQLite in worker, transazioni, revisioni, inizializzazione diretta, import/export JSON e copia precedente all’importazione |
 | Personalizzazione | Profilo e obiettivi facoltativi, palette, icone, colori e copertine |
 
 ## Presente solo nel prototipo o nel laboratorio
@@ -42,24 +42,26 @@ Account, sincronizzazione, mobile e cloud restano esclusi dall’attuale perimet
 - Il controllo conflitti privilegia correttezza su archivi personali; non è una
   validazione delle prestazioni su grandi quantità di serie ed eccezioni.
 - La build compila il progetto, ma mancano script di packaging/installer nel manifest.
-- Il vecchio piano v1, privo di date civili, non ha un assistente di conversione.
 
 Questi punti sono un inventario del lavoro aperto, non nuove funzionalità approvate.
 
 ## Evidenze di verifica
 
-Nella verifica del 26 settembre 2026 sono passati:
+Nella verifica del 26 settembre 2026, dopo la rimozione del recupero automatico da storage browser, sono passati:
 
 - `npm run lint`, senza warning;
 - `npm run typecheck`;
-- `npm test`: 56 test di calendario, archivio, utility e statistiche, 3 SQLite/worker e 5 della configurazione ESLint;
+- `npm test`: 57 test di calendario, archivio, utility, statistiche e inizializzazione del repository, 3 SQLite/worker e 5 della configurazione ESLint;
 - `npm run build`, renderer ed Electron.
 
 Il runtime Node ha emesso un avviso sull’API sperimentale SQLite. Le prove hanno usato
 archivi temporanei, senza aprire il database reale dell’utente.
 
-La verifica non includeva un avvio interattivo Electron, la suite browser dei Provider,
-training/inferenza AI o una nuova verifica dei dati dei concorrenti. Le modalità di esecuzione sono nelle
+La verifica non includeva un avvio interattivo Electron, training/inferenza AI o una
+nuova verifica dei dati dei concorrenti. La suite browser dei Provider è stata aggiornata
+ma non eseguita: l’avvio locale di Vite non è stato autorizzato. I test automatici del
+repository coprono primo avvio, riapertura, archivi non validi e errori di lettura/scrittura.
+Le modalità di esecuzione sono nelle
 [procedure di verifica](code-quality.md#procedure-di-verifica).
 
 ## Priorità e prossime decisioni

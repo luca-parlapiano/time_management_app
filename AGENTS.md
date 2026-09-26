@@ -53,6 +53,6 @@
 - `npm run typecheck`: controlli TypeScript del renderer e di Electron.
 - `npm test`: test di dominio, utility, statistiche e SQLite su dati temporanei.
 - `npm run build`: build renderer ed Electron.
-- Per modifiche ai Provider o alla migrazione, usare anche `/tests/database.browser.html` con Vite: usa dati di prova.
+- Per modifiche ai Provider o alla inizializzazione del database, usare anche `/tests/database.browser.html` con Vite: usa dati di prova.
 - Per modifiche visive, verificare l’interfaccia nel browser e le dimensioni interessate.
 - Eseguire le verifiche pertinenti alla modifica e riportare eventuali limiti. Non aggiungere test che ripetano soltanto l’implementazione.

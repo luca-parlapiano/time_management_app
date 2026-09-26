@@ -40,7 +40,7 @@ le prove browser con dati temporanei. Dopo modifiche a main/preload riavviare El
 - Esiti superato, non superato e parziale, con storico delle correzioni.
 - Statistiche settimanali, panoramica annuale giornaliera e vista “Per attività”.
 - Profilo e obiettivi facoltativi, colori, icone, copertine e palette.
-- SQLite locale, migrazione dagli archivi precedenti e import/export JSON.
+- SQLite locale e import/export JSON.
 - Svuotamento del calendario con conferma, conservando storico, profilo e obiettivi.
 
 ## Struttura

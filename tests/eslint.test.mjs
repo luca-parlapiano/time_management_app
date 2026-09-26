@@ -35,5 +35,5 @@ test('typed lint catches unhandled promises and invalid Hooks', async () => {
 
 test('Node scripts and browser tests have separate globals', async () => {
   assert.deepEqual(await rules('console.log(process.cwd());', 'scripts/test-calendar.mjs'), []);
-  assert.deepEqual(await rules('document.title = "Test";', 'tests/legacyMigration.browser.ts'), []);
+  assert.deepEqual(await rules('document.title = "Test";', 'tests/providers.browser.tsx'), []);
 });

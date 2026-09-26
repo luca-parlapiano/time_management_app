@@ -10,7 +10,7 @@ La configurazione `eslint.config.mjs` usa ESLint 10 e TypeScript ESLint. È stat
 - `npm run lint:fix`: applica le correzioni automatiche disponibili; verificare il diff.
 - `npm run test:lint`: prova la configurazione con esempi ammessi e vietati; è incluso anche in `npm test`.
 - `npm run typecheck`: controlla i tipi del renderer e di Electron.
-- `npm test`: esegue test di calendario, archivio, utility, statistiche, SQLite/worker e configurazione ESLint.
+- `npm test`: esegue test di calendario, archivio, utility, statistiche, inizializzazione del repository, SQLite/worker e configurazione ESLint.
 - `npm run build`: compila renderer ed Electron; non crea un installer.
 
 ## Procedure di verifica
@@ -31,12 +31,12 @@ statistiche, backup, riapertura, revisioni concorrenti, rollback e worker asincr
 Il rilevamento dei conflitti viene anche confrontato con un’espansione esaustiva in
 100 scenari deterministici. Non usare il database reale dell’utente per le prove.
 
-### Provider e migrazione nel browser
+### Provider e inizializzazione del database nel browser
 
 Questa suite è separata da `npm test`. Avviare `npm run dev:renderer` e aprire
 `http://127.0.0.1:5173/tests/database.browser.html` (adattare la porta se Vite ne usa un’altra).
-Verifica Provider, loading, errori e migrazione su archivi temporanei; la UI dimostrativa
-usa un repository in memoria. Usarla anche dopo modifiche ai Provider o alla migrazione.
+Verifica Provider, loading, errori e inizializzazione del database su archivi temporanei; la UI dimostrativa
+usa un repository in memoria. Usarla anche dopo modifiche ai Provider o alla inizializzazione del database.
 
 ### Verifica manuale del calendario
 

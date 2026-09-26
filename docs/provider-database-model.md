@@ -34,11 +34,11 @@ useDB() → DBProvider → RepositoryDB → preload IPC
 - `src/domain/`: funzioni pure e regole del calendario, validazione, ricorrenze, vincoli e backup.
 - `src/providers/LoadingProvider.tsx`: operazioni in corso, conteggio delle richieste simultanee, overlay bloccante e stato consultabile per singola operazione.
 - `src/providers/DBProvider.tsx`: stato condiviso, operazioni applicative, errori, loading e aggiornamento della UI solo dopo la conferma del salvataggio.
-- `src/repository/RepositoryDB.ts`: unico accesso del Provider alla persistenza. Espone Promise e nasconde il trasporto Electron. Legge il precedente archivio solo quando SQLite non è ancora inizializzato.
+- `src/repository/RepositoryDB.ts`: unico accesso del Provider alla persistenza. Espone Promise e nasconde il trasporto Electron. Inizializza un archivio vuoto quando SQLite non contiene ancora uno snapshot.
 - `electron/databaseService.ts`: inoltra le richieste al worker senza bloccare il processo principale.
 - `electron/sqliteStore.ts`: schema SQL, validazione, transazioni e controllo della revisione. Le operazioni SQLite sincrone vengono eseguite esclusivamente nel worker.
 
-I componenti non importano il repository, non accedono a SQLite/IndexedDB e non chiamano `window.plannerDB`. Usano `useDB()` oppure callback applicative ricevute dal componente padre. Il tema resta una preferenza del dispositivo in localStorage, accessibile tramite Provider e repository.
+I componenti non importano il repository, non accedono a SQLite e non chiamano `window.plannerDB`. Usano `useDB()` oppure callback applicative ricevute dal componente padre. Il tema resta una preferenza del dispositivo in localStorage, accessibile tramite Provider e repository.
 
 Il preload espone metodi specifici; la finestra mantiene `contextIsolation: true` e
 `nodeIntegration: false`. Il main verifica il mittente dei canali database; lo store
@@ -86,14 +86,18 @@ try {
 
 Ogni operazione ha un identificatore: la prima operazione che termina non nasconde il loading di quelle ancora attive. `run` rilascia sempre il loading in `finally`, anche in caso di errore.
 
-## SQLite e migrazione
+## SQLite e inizializzazione
 
-Il file `agenda.sqlite` si trova nella directory `app.getPath("userData")` di Electron. Le tabelle sono `activities`, `goals`, `outcome_records` e `metadata`. Gli esiti hanno colonne per data dell’appuntamento, identità dell’occorrenza e momento della registrazione, con indici per data e occorrenza.
+Il file `agenda.sqlite` si trova nella directory `app.getPath("userData")` di Electron.
+Le tabelle sono `activities`, `goals`, `outcome_records` e `metadata`. Gli esiti hanno
+colonne per data dell’appuntamento, identità dell’occorrenza e momento della registrazione,
+con indici per data e occorrenza.
 
-Alla prima apertura il repository recupera, in ordine, l’archivio IndexedDB esistente oppure il vecchio calendario localStorage v2 (`time-planner.calendar.v2`). Copia dati, storico e backup precedente in una transazione SQLite; non cancella né modifica gli archivi di origine. Le successive aperture usano SQLite. Un archivio precedente non valido blocca la migrazione, evitando una sostituzione silenziosa con dati vuoti.
-
-I piani v1 del prototipo (`time-planner.local-state.v1`) senza date civili non vengono convertiti automaticamente in
-appuntamenti; il loro recupero è distinto dalla migrazione del calendario v2.
+RepositoryDB legge sempre SQLite. Se non esiste ancora uno snapshot, salva un calendario
+vuoto con storico vuoto e revisione attesa nulla. Le aperture successive restituiscono
+lo snapshot esistente senza riscriverlo. Un errore di lettura o scrittura viene presentato
+all’utente: non provoca un ripristino silenzioso. Non vengono consultati IndexedDB o
+localStorage per recuperare calendari; l’importazione di dati avviene esplicitamente da JSON.
 
 Il backup JSON resta importabile/esportabile. Ogni importazione sostituisce i dati e conserva una copia del precedente archivio. Gli esiti rimangono nello storico dopo l’eliminazione delle attività; le statistiche contano l’ultimo esito per appuntamento.
 
@@ -120,7 +124,7 @@ Comandi di avvio nel [README](../README.md); convenzioni e criteri di verifica i
 
 ## Verifiche
 
-Per test di dominio, SQLite/worker, Provider e migrazione vedere le
+Per test di dominio, SQLite/worker, Provider e inizializzazione vedere le
 [procedure di verifica](code-quality.md#procedure-di-verifica). I risultati delle
 esecuzioni sono nello [stato del progetto](stato-progetto.md#evidenze-di-verifica).
 

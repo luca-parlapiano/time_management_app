@@ -38,7 +38,7 @@ invarianti sono in [Qualità del codice](code-quality.md#test-per-invarianti-e-s
 | Avvio e sintesi | [README del progetto](../README.md) |
 | Stato, risultati delle verifiche e priorità | [Stato del progetto](stato-progetto.md) |
 | Comportamento utente e backup manuale | [Calendario](calendario-continuo.md) |
-| Architettura, migrazione, persistenza e statistiche | [Provider e repository](provider-database-model.md) |
+| Architettura, inizializzazione del database, persistenza e statistiche | [Provider e repository](provider-database-model.md) |
 | Comandi di verifica, procedure e convenzioni | [Qualità del codice](code-quality.md) |
 | Installazione e configurazione AI desktop | [Runtime AI](architettura-distribuzione-ai.md) |
 | Training e valutazione offline | [AI Lab](../ai-lab/README.md) |

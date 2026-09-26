@@ -1,4 +1,3 @@
-import { runMigrationTests } from "./legacyMigration.browser";
 // Run at /tests/database.browser.html with Vite. Only an in-memory test repository is used.
 import { StrictMode, act } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -82,13 +81,38 @@ try {
  check(db!.state.items.length===0&&db!.archive.history.length===2,'Clearing calendar retains audit');
  await act(async()=>{await db.importBackup(candidate);});
  check(db!.state.items.length===1&&db!.previous?.calendar.items.length===0,'Import restores data and keeps prior archive');
- const bridgeRepository = new RepositoryDB(()=>({read:async()=>saved,write:async()=>{throw new Error('Unexpected migration');}}));
- check((await bridgeRepository.initialize()).revision===saved.revision,'Existing SQLite archive bypasses legacy migration');
+ const bridgeRepository = new RepositoryDB(()=>({read:async()=>saved,write:async()=>{throw new Error('Unexpected initialization write');}}));
+ check((await bridgeRepository.initialize()).revision===saved.revision,'Existing SQLite archive is loaded without rewriting it');
  let missingBridge=false;
  try {await new RepositoryDB(()=>undefined).initialize();}catch(error){missingBridge=String(error).includes('desktop');}
- check(missingBridge,'Missing Electron bridge fails explicitly without IndexedDB fallback');
- results.push(...await runMigrationTests());
- results.push('ALL PROVIDER AND MIGRATION TESTS PASSED');
+ check(missingBridge,'Missing Electron bridge fails explicitly');
+ let initialized: DatabaseSnapshot | null = null;
+ let writes = 0;
+ const freshRepository = new RepositoryDB(() => ({
+  read: async () => initialized,
+  write: async input => {
+   check(input.expectedRevision === null, 'First initialization requires an uninitialized database');
+   writes++;
+   initialized = {archive: structuredClone(input.archive), revision: 0, previous: null};
+   return initialized;
+  },
+ }));
+ const fresh = await freshRepository.initialize();
+ check(JSON.stringify(fresh.archive.calendar) === JSON.stringify(emptyCalendar()) && fresh.archive.history.length === 0 && fresh.previous === null,
+  'First SQLite initialization creates an empty calendar and audit');
+ await freshRepository.initialize();
+ check(writes === 1, 'Reopening the initialized repository does not reset data');
+ let readFailed = false;
+ try {
+  await new RepositoryDB(() => ({read: async () => {throw new Error('Read failure');}, write: async () => {throw new Error('Unexpected write after read failure');}})).initialize();
+ } catch (error) { readFailed = error instanceof Error && error.message === 'Read failure'; }
+ check(readFailed, 'Read failure is surfaced without replacing the archive');
+ let writeFailed = false;
+ try {
+  await new RepositoryDB(() => ({read: async () => null, write: async () => {throw new Error('Write failure');}})).initialize();
+ } catch (error) { writeFailed = error instanceof Error && error.message === 'Write failure'; }
+ check(writeFailed, 'First initialization write failure is surfaced');
+ results.push('ALL PROVIDER AND REPOSITORY TESTS PASSED');
  await act(async()=>{root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><App/></DBProvider></LoadingProvider></StrictMode>);});
 } catch(error) {results.push(`FAIL ${error instanceof Error?error.stack:error}`);}
 finally {document.querySelector('#results')!.textContent=results.join('\n');}
