@@ -1,5 +1,9 @@
 # AI Lab
 
+> **Percorso sperimentale del prototipo.** Il calendario principale non usa la chat
+> né richiede un modello. Queste istruzioni riguardano il laboratorio/runtime storico.
+> Vedi [stato del progetto](../docs/stato-progetto.md) e [indice](../docs/README.md).
+
 Questa cartella contiene solo dataset e strumenti offline per addestrare e valutare
 l'interprete `PlanningIntent`. Non contiene il runtime dell'app: Electron usa direttamente
 `llama-server`, senza Python, PyTorch, Transformers o PEFT in produzione.
@@ -32,13 +36,11 @@ ai-lab/
 ## Modello corrente
 
 - base di training: `Qwen/Qwen3-4B`;
-- runtime desktop: GGUF `Q4_K_M` tramite `llama.cpp`;
 - LoRA: rank 8, alpha 16, dropout 0,05;
 - moduli: `q_proj`, `k_proj`, `v_proj`, `o_proj`.
 
-L'adapter deve essere convertito dal formato PEFT/Safetensors al formato GGUF con gli
-strumenti di `llama.cpp` e salvato come
-`resources/ai/adapters/planning-intent-qwen3-4b.gguf`.
+Conversione dell’adapter e percorsi per l’uso desktop sono descritti nel
+[runtime AI](../docs/architettura-distribuzione-ai.md#lora).
 
 ## Comandi
 

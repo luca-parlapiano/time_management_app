@@ -1,5 +1,11 @@
 # AI, Modello E Personalizzazione Locale
 
+> **Proposta di evoluzione, non comportamento implementato.** La chat è disabilitata
+> nel calendario principale; memoria adattiva e ranking personale descritti qui
+> restano obiettivi da validare. Il runtime sperimentale è descritto separatamente in
+> [architettura AI](architettura-distribuzione-ai.md).
+> [Stato del progetto](stato-progetto.md) · [Indice](README.md).
+
 ## Decisione Di Prodotto
 
 L'app puo' includere un modello AI addestrato da noi, ma non deve addestrare un modello
@@ -50,11 +56,37 @@ L'AI produce una bozza `PlanningIntent` con:
 Il motore slot usa poi questi dati per verificare capacita', conflitti, sonno, buffer e
 priorita'. L'output e' una proposta che l'utente vede, modifica o rifiuta.
 
+Usi ammissibili, solo su richiesta esplicita:
+
+- trasformare un brain dump in bozze di task, routine e sotto-step;
+- proporre una durata o una priorita' dichiarandola come stima;
+- riscrivere una routine in passi piu' piccoli e avviabili;
+- spiegare in linguaggio semplice perche' il motore ha lasciato spazio o buffer;
+- proporre alternative dopo un piano saltato, senza applicarle.
+
+## Parametri da raccogliere solo quando servono
+
+Questa è una proposta per una futura pianificazione assistita, non un nuovo requisito
+per aprire il calendario: il profilo attuale resta facoltativo.
+
+| Area | Informazioni utili alla proposta |
+| --- | --- |
+| Obiettivi | Priorità dichiarate, frequenza o tempo desiderato, orizzonte e date della proposta |
+| Vincoli | Impegni fissi, tempo protetto, sonno/veglia e indisponibilità esplicite |
+| Preferenze | Fasce di energia, durata dei blocchi, granularità, flessibilità e margini desiderati |
+| Contesto facoltativo | Abitudini esistenti, stile di lavoro, difficoltà dichiarate e modalità di feedback |
+
+Riutilizzare i dati già presenti nel calendario e chiedere soltanto ciò che manca per
+la richiesta concreta. Il motore deve calcolare disponibilità residua, saturazione,
+compatibilità degli obiettivi e buffer; il modello non deve inventare questi valori.
+Preferenze osservate e priorità dichiarate devono rimanere distinguibili e correggibili.
+
 ## Cosa L'AI Non Fa
 
 - non modifica automaticamente impegni, routine o obiettivi;
 - non decide quali priorita' sono importanti per una persona;
-- non invia dati personali a un servizio remoto senza consenso esplicito;
+- non accede implicitamente a dati personali o storico;
+- non invia dati personali a un servizio remoto senza consenso chiaro e revocabile;
 - non fa promesse cliniche su ADHD, salute mentale o produttivita';
 - non e' necessaria per aprire, usare, esportare o recuperare i dati locali.
 
@@ -75,19 +107,38 @@ l'app puo' imparare che una persona completa piu' facilmente 25 minuti di studio
 e non proporre una sessione lunga dopo il lavoro. Questa e' una previsione locale,
 controllabile e correggibile; non una conclusione sulla persona.
 
+### Dati di feedback da valutare
+
+Lo storico corrente conserva esiti e correzioni, identità originale dell’occorrenza,
+data dell’appuntamento e momento di registrazione. La personalizzazione proposta
+richiederebbe ulteriori segnali, da progettare prima di estendere lo schema:
+
+- accettazione, modifica o rifiuto di una proposta;
+- spostamento, rinvio o accorciamento, collegati all’appuntamento originale;
+- inizio/fine pianificati e reali, per confrontare stima e durata effettiva;
+- motivo dello skip, nota ed energia prima/dopo, solo se forniti volontariamente.
+
+Questi dati potrebbero servire a stimare riuscita per fascia oraria, errore di durata e
+bisogno di buffer. Non introducono un nuovo punteggio di completamento né modificano
+le [regole statistiche attuali](provider-database-model.md#statistiche-giornaliere).
+
 ## Flusso Sicuro
 
 ```text
-Testo o voce dell'utente
+Richiesta esplicita dell’utente, tramite testo o voce
   -> AI: bozza di PlanningIntent
   -> validazione JSON e schema
   -> motore locale: vincoli, slot, capacita' e buffer
   -> anteprima delle modifiche
   -> conferma dell'utente
-  -> salvataggio locale degli esiti
+  -> salvataggio delle modifiche approvate
+  -> esecuzione e registrazione locale degli esiti
 ```
 
-L'AI non puo' saltare i passaggi di validazione o conferma.
+L'AI non puo' saltare i passaggi di validazione o conferma. Se una proposta viola i
+vincoli, viene rifiutata o riformulata prima dell’anteprima; non viene applicata al
+calendario. La conferma riguarda modifiche concrete e visibili, non una rigenerazione
+implicita dell’intero piano.
 
 ## Architettura Desktop Senza Backend
 
@@ -111,15 +162,11 @@ computer e manutenzione degli aggiornamenti.
 separatamente al modello base. Le licenze del modello base e dell'adapter devono essere
 verificate prima della distribuzione open-source.
 
-## Roadmap Consigliata
+## Percorso di realizzazione
 
-1. Definire gli schemi `PlanningIntent`, `AIProposal` e `ProposalDiff`.
-2. Completare il modello dati locale per piani, modifiche ed esiti reali.
-3. Costruire il motore deterministico per validare slot, vincoli e capacita'.
-4. Provare l'esperienza con un piccolo modello locale non addestrato.
-5. Preparare 50-100 scenari annotati per valutare estrazione, domande mancanti e JSON valido.
-6. Addestrare un primo adapter LoRA per `linguaggio utente -> intento strutturato`.
-7. Introdurre ranking personale locale solo dopo aver raccolto esiti reali.
+La sequenza condizionata alla validazione è mantenuta nello
+[stato del progetto](stato-progetto.md#percorso-ai-condizionato-alla-validazione).
+Questo documento definisce la proposta e i criteri con cui valutarne l’utilità.
 
 ## Metriche Di Validazione
 

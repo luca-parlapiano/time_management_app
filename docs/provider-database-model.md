@@ -1,4 +1,20 @@
-# Provider, repository e modelli
+# Architettura, Provider, repository e modelli
+
+> Stato: implementato. Riferimento al codice: 26 settembre 2026.
+> [Indice documentazione](README.md) · [Stato del progetto](stato-progetto.md).
+
+## Perimetro e stack
+
+L’app è un calendario desktop locale. L’uso ordinario non richiede account, servizi
+remoti, modello AI o generazione iniziale di un piano. Account, backend proprietario,
+sincronizzazione, backup remoto, client mobile e smartwatch restano fuori dal perimetro attuale.
+
+- React e TypeScript per il renderer; Vite per sviluppo e build.
+- Electron per finestra desktop, preload e accesso alle funzionalità native.
+- SQLite tramite `node:sqlite` in un worker asincrono rispetto al main.
+- Chart.js per i grafici; statistiche derivate da uno snapshot confermato.
+
+## Flusso applicativo
 
 L’app desktop usa questa struttura:
 
@@ -22,7 +38,11 @@ useDB() → DBProvider → RepositoryDB → preload IPC
 - `electron/databaseService.ts`: inoltra le richieste al worker senza bloccare il processo principale.
 - `electron/sqliteStore.ts`: schema SQL, validazione, transazioni e controllo della revisione. Le operazioni SQLite sincrone vengono eseguite esclusivamente nel worker.
 
-I componenti non importano il repository, non accedono a SQLite/IndexedDB e non chiamano `window.plannerDB`. Usano `useDB()` oppure callback applicative ricevute dal componente padre. Il tema resta una preferenza del dispositivo, accessibile tramite Provider e repository.
+I componenti non importano il repository, non accedono a SQLite/IndexedDB e non chiamano `window.plannerDB`. Usano `useDB()` oppure callback applicative ricevute dal componente padre. Il tema resta una preferenza del dispositivo in localStorage, accessibile tramite Provider e repository.
+
+Il preload espone metodi specifici; la finestra mantiene `contextIsolation: true` e
+`nodeIntegration: false`. Il main verifica il mittente dei canali database; lo store
+valida dati e revisione prima di applicare le scritture nella transazione.
 
 ## Operazioni della UI
 
@@ -70,18 +90,39 @@ Ogni operazione ha un identificatore: la prima operazione che termina non nascon
 
 Il file `agenda.sqlite` si trova nella directory `app.getPath("userData")` di Electron. Le tabelle sono `activities`, `goals`, `outcome_records` e `metadata`. Gli esiti hanno colonne per data dell’appuntamento, identità dell’occorrenza e momento della registrazione, con indici per data e occorrenza.
 
-Alla prima apertura il repository recupera, in ordine, l’archivio IndexedDB esistente oppure il vecchio calendario localStorage. Copia dati, storico e backup precedente in una transazione SQLite; non cancella né modifica gli archivi di origine. Le successive aperture usano SQLite. Un archivio precedente non valido blocca la migrazione, evitando una sostituzione silenziosa con dati vuoti.
+Alla prima apertura il repository recupera, in ordine, l’archivio IndexedDB esistente oppure il vecchio calendario localStorage v2 (`time-planner.calendar.v2`). Copia dati, storico e backup precedente in una transazione SQLite; non cancella né modifica gli archivi di origine. Le successive aperture usano SQLite. Un archivio precedente non valido blocca la migrazione, evitando una sostituzione silenziosa con dati vuoti.
+
+I piani v1 del prototipo (`time-planner.local-state.v1`) senza date civili non vengono convertiti automaticamente in
+appuntamenti; il loro recupero è distinto dalla migrazione del calendario v2.
 
 Il backup JSON resta importabile/esportabile. Ogni importazione sostituisce i dati e conserva una copia del precedente archivio. Gli esiti rimangono nello storico dopo l’eliminazione delle attività; le statistiche contano l’ultimo esito per appuntamento.
 
 La persistenza reale richiede Electron (`npm run dev`); il solo server Vite non espone il collegamento al database. Dopo modifiche a main/preload è necessario riavviare Electron.
 
+## Percorsi del prototipo
+
+`src/planner/`, `src/simulation/` e i relativi servizi conservano il planner generativo
+precedente. Non alimentano il calendario principale.
+
+La chat è disabilitata nella home, ma bridge IPC e runtime `llama-server` esistono
+ancora. Il runtime può usare un server configurato esternamente ed effettuare richieste
+di rete. Non è necessario per l’uso ordinario. Vedi [runtime storico AI](architettura-distribuzione-ai.md)
+e [limiti aperti](stato-progetto.md).
+
+## Sviluppo e distribuzione
+
+`npm run dev` avvia renderer ed Electron. `npm run build` produce `dist/` e
+`dist-electron/`, ma non crea un installer. Non esiste uno script di packaging/installazione
+in `package.json`; la build non equivale a una release distribuibile.
+
+Comandi di avvio nel [README](../README.md); convenzioni e criteri di verifica in
+[Qualità del codice](code-quality.md).
+
 ## Verifiche
 
-- `npm run typecheck`: controllo dei tipi React ed Electron.
-- `npm test`: test del dominio e del database SQLite, inclusi riapertura, transazioni fallite, revisioni concorrenti, backup e worker asincrono.
-- Con Vite attivo, `/tests/database.browser.html`: test dei Provider, loading, errori e migrazione su archivi temporanei. La UI dimostrativa usa un repository in memoria: non modifica i dati dell’utente.
-- `npm run build`: compilazione renderer e processo Electron.
+Per test di dominio, SQLite/worker, Provider e migrazione vedere le
+[procedure di verifica](code-quality.md#procedure-di-verifica). I risultati delle
+esecuzioni sono nello [stato del progetto](stato-progetto.md#evidenze-di-verifica).
 
 ## Statistiche settimanali per attività
 

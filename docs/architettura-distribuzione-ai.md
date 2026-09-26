@@ -2,7 +2,10 @@
 
 > Aggiornamento calendario continuo: la chat è disabilitata nella home. Il runtime
 > descritto qui resta disponibile nel repository, senza accesso al nuovo archivio.
-> Vedi [calendario continuo](calendario-continuo.md).
+> Bridge IPC e handler AI restano esposti: la disabilitazione riguarda la UI.
+> Questa pagina descrive configurazione e codice del runtime, non certifica modello,
+> adapter o distribuzione già collaudati. Vedi [stato del progetto](stato-progetto.md)
+> e [indice](README.md).
 
 ## Architettura del prototipo precedente
 
@@ -23,11 +26,36 @@ UI React
 Il runtime dell'app non dipende da Python, PyTorch, Transformers o PEFT. Queste librerie
 rimangono eventualmente utilizzabili solo nell'AI Lab offline per addestrare un adapter.
 
+## Installazione
+
+Per il runtime sperimentale installare `llama.cpp` una volta:
+
+```bash
+# macOS
+brew install llama.cpp
+
+# Windows
+winget install llama.cpp
+```
+
+In alternativa, usare un eseguibile locale o un server già avviato tramite la
+[configurazione](#configurazione). Queste operazioni non riattivano la chat nella home.
+
 ## Modello
 
 Il modello predefinito e `Qwen/Qwen3-4B-GGUF:Q4_K_M`, circa 2,5 GB. `llama.cpp` lo
 scarica nella propria cache alla prima esecuzione. Un GGUF gia scaricato puo essere posto
 in `resources/ai/models/qwen3-4b-q4_k_m.gguf` oppure indicato con `PLANNER_AI_MODEL`.
+
+Per scaricare il modello nella directory del progetto, dalla radice eseguire:
+
+```bash
+npm run ai:download-model
+```
+
+Il file viene salvato in `resources/ai/models/qwen3-4b-q4_k_m.gguf`. Un download
+interrotto riparte dal file `.part`. Senza file locale il runtime può usare la cache
+gestita da `llama.cpp`.
 
 Il processo resta attivo per tutta la sessione Electron, quindi il caricamento viene
 pagato una sola volta. Il context e limitato a 2048 token e l'output a 384 token per
@@ -43,8 +71,17 @@ L'app passa `--n-gpu-layers 99` e lascia a `llama.cpp` la selezione del backend 
 
 Si puo includere un eseguibile specifico per piattaforma in
 `resources/ai/bin/<platform>-<arch>/` oppure indicarlo con `PLANNER_LLAMA_SERVER`.
-In sviluppo sono supportate anche le installazioni di sistema (`brew install llama.cpp`
-su macOS e `winget install llama.cpp` su Windows).
+In sviluppo sono supportate anche le installazioni di sistema indicate sopra.
+
+## Configurazione
+
+| Variabile | Uso |
+| --- | --- |
+| `PLANNER_LLAMA_SERVER` | Percorso dell’eseguibile `llama-server` |
+| `PLANNER_LLAMA_URL` | URL di un server già avviato |
+| `PLANNER_LLAMA_API_KEY` | Chiave del server esterno, se configurata |
+| `PLANNER_AI_MODEL` | Percorso di un GGUF diverso dal file predefinito |
+| `PLANNER_AI_LORA` | Percorso di un adapter LoRA GGUF compatibile con il modello |
 
 ## LoRA
 

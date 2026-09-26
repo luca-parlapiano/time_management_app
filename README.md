@@ -1,112 +1,73 @@
 # Time Planner — Calendario locale
 
-Calendario desktop locale basato su Electron, React, Vite e TypeScript. Si usa subito,
-senza creare un piano o compilare un profilo. Nessun account, backend, cloud o sincronizzazione.
+App desktop locale basata su Electron, React, Vite e TypeScript, con SQLite in un
+worker. Si apre sulla settimana corrente senza richiedere un profilo o un piano.
+Nessun account, backend proprietario o sincronizzazione.
 
-## Struttura
+## Documentazione
 
-- `electron/`: processo principale Electron
-- `src/`: interfaccia React e primo planner locale
-- `src/planner/`: contratti e logica prototipo
-- `docs/`: note di prodotto e di motore
+Partire dall’[indice della documentazione](docs/README.md): distingue comportamento
+attuale, direzione di prodotto e materiale del prototipo storico.
 
-## Come gira il progetto
+- [Calendario, ricorrenze ed esiti](docs/calendario-continuo.md).
+- [Architettura, Provider, persistenza e statistiche](docs/provider-database-model.md).
+- [Qualità del codice e verifiche](docs/code-quality.md).
+- [Stato del progetto e lavoro ancora aperto](docs/stato-progetto.md).
 
-Ci sono due compilazioni separate:
-
-1. `vite` compila la UI React nel browser renderer
-2. `tsc` compila `electron/main.ts` e `electron/preload.ts`
-
-Quando lanci `npm run dev`:
-
-- parte il server Vite su `http://127.0.0.1:5173`
-- TypeScript compila i file Electron in `dist-electron/`
-- Electron apre una finestra desktop e carica la UI locale
-
-Quando lanci `npm run build`:
-
-- Vite produce `dist/`
-- TypeScript produce `dist-electron/`
-
-## Comandi
+## Avvio
 
 ```bash
 npm install
 npm run dev
 ```
 
-Per compilare senza aprire il server di sviluppo:
+Usare una versione di Node compatibile con il lockfile e con `node:sqlite`, usato
+anche dai test. Le note sull’ambiente verificato sono in [Qualità del codice](docs/code-quality.md).
+
+`npm run dev` avvia Vite, la compilazione Electron in watch e la finestra desktop.
+Vite compila React; TypeScript compila main, worker e `electron/preload.cts`
+(il preload generato è `preload.cjs`).
+
+La persistenza richiede Electron: il solo server Vite non espone il bridge SQLite.
+Le [procedure di verifica](docs/code-quality.md#procedure-di-verifica) includono
+le prove browser con dati temporanei. Dopo modifiche a main/preload riavviare Electron.
+
+## Funzionalità attuali
+
+- Calendario settimanale con creazione, modifica, spostamento da editor ed eliminazione.
+- Impegni fissi e tempo protetto con sblocco esplicito; conflitti rifiutati.
+- Ricorrenze settimanali, selezione di più giorni ed eccezioni per singola occorrenza.
+- Esiti superato, non superato e parziale, con storico delle correzioni.
+- Statistiche settimanali, panoramica annuale giornaliera e vista “Per attività”.
+- Profilo e obiettivi facoltativi, colori, icone, copertine e palette.
+- SQLite locale, migrazione dagli archivi precedenti e import/export JSON.
+- Svuotamento del calendario con conferma, conservando storico, profilo e obiettivi.
+
+## Struttura
+
+- `src/components/`, `src/App.tsx`: presentazione e interazioni.
+- `src/providers/`, `src/hooks/`: operazioni applicative, stato condiviso e loading.
+- `src/repository/`: persistenza e statistiche derivate.
+- `src/domain/`, `src/model/`, `src/utils/`: regole, tipi condivisi e utility pure.
+- `electron/`: main, preload, servizio database e worker SQLite.
+- `tests/`: test automatici e suite browser su dati di prova.
+- `src/planner/`, `src/simulation/`, `ai-lab/`: prototipo e sperimentazione, fuori dal flusso principale.
+
+## Verifiche e build
 
 ```bash
-npm run build
-```
-
-## Punto di partenza dell'app
-
-L'app si apre sulla settimana corrente, con date reali e navigazione precedente/successiva/Oggi.
-
-- Creazione, modifica, spostamento tramite date/orari ed eliminazione dal calendario.
-- Impegni fissi e tempo protetto con lucchetto e sblocco esplicito.
-- Vincoli singoli o ricorrenti settimanali, con eccezioni per singole date.
-- Attività flessibili con stato da fare, completato o saltato.
-- Note, durata calcolata e collegamenti facoltativi a obiettivi stabili.
-- Profilo facoltativo, senza rigenerazione degli elementi.
-- Persistenza locale e segnalazione dei conflitti e degli errori di salvataggio.
-- Svuotamento di tutte le settimane con conferma, conservando profilo, obiettivi e palette.
-- Selettore di palette (Calma naturale, Studio essenziale, Notte tranquilla).
-- Recupero esportabile dei dati precedenti, conservati senza attribuire date ai vecchi blocchi.
-
-Dettagli del modello, ricorrenze, recupero e limiti: [Calendario continuo](docs/calendario-continuo.md).
-I documenti sul motore originale descrivono il prototipo storico; il nuovo flusso è quello
-indicato in questo documento.
-
-## Verifiche
-
-```bash
-npm test
+npm run lint
 npm run typecheck
+npm test
 npm run build
 ```
 
-## File chiave da leggere per capire Electron
+La build produce `dist/` e `dist-electron/`; non crea un installer desktop.
+Per copertura e procedure complete vedere [Qualità del codice](docs/code-quality.md#procedure-di-verifica).
 
-- `package.json`
-- `electron/main.ts`
-- `src/App.tsx`
-- `src/domain/calendar.ts`
-- `src/infrastructure/localCalendarStorage.ts`
+## AI locale
 
-## AI locale (percorso storico disabilitato nella home)
-
-La chat del prototipo rigenerava il piano ed è stata scollegata dal calendario.
-Non serve installare un modello per usare l'app. Il runtime e i comandi seguenti
-rimangono disponibili nel repository per gli esperimenti precedenti.
-
-Installa `llama.cpp` una volta:
-
-```bash
-# macOS
-brew install llama.cpp
-
-# Windows
-winget install llama.cpp
-```
-
-Scarica il modello da Hugging Face direttamente nella directory dell'app:
-
-```bash
-npm run ai:download-model
-```
-
-Il comando salva Qwen3-4B `Q4_K_M` (circa 2,5 GB) in
-`resources/ai/models/qwen3-4b-q4_k_m.gguf`. Se il download viene interrotto, il lancio
-successivo riparte dal file `.part`. In assenza del file locale, l'app puo ancora usare
-la cache gestita da `llama.cpp`.
-
-Le configurazioni opzionali sono:
-
-- `PLANNER_LLAMA_SERVER`: percorso dell'eseguibile `llama-server`;
-- `PLANNER_LLAMA_URL`: URL di un server gia avviato;
-- `PLANNER_LLAMA_API_KEY`: chiave del server esterno, se configurata;
-- `PLANNER_AI_MODEL`: percorso di un GGUF diverso;
-- `PLANNER_AI_LORA`: percorso di un adapter LoRA GGUF compatibile con il modello.
+La chat del prototipo è scollegata dal calendario e non serve un modello per usare
+l’app. Installazione, download, variabili d’ambiente e adapter sono documentati nel
+[runtime AI](docs/architettura-distribuzione-ai.md). Per training e valutazione offline
+vedere [AI Lab](ai-lab/README.md).

@@ -1,7 +1,8 @@
-# Calendario continuo locale — prima implementazione
+# Calendario continuo locale
 
-Questo documento descrive il comportamento corrente e sostituisce, per l'interfaccia
-principale, il flusso obbligatorio `profilo -> piano settimanale` dei documenti storici.
+Questo documento descrive il comportamento corrente al 26 settembre 2026.
+Il calendario non richiede il flusso `profilo -> piano settimanale` del prototipo.
+[Indice documentazione](README.md) · [Stato del progetto](stato-progetto.md).
 
 ## Uso
 
@@ -12,9 +13,13 @@ modifica, spostamento tramite date/orari e cancellazione con conferma.
 
 Tre tipi distinti:
 
-- attività flessibile, con stato da fare/completato/saltato;
+- attività flessibile;
 - impegno fisso, protetto da lucchetto;
 - tempo protetto, protetto da lucchetto.
+
+Gli appuntamenti possono avere esito superato (`completed`), non superato (`skipped`)
+o parziale (`partial`); l’assenza di esito è distinta da un risultato negativo.
+Registrare un esito non richiede lo sblocco dell’orario di un vincolo.
 
 Titolo, inizio, fine, note e collegamento a un obiettivo appartengono all'elemento.
 La durata è derivata, non memorizzata. Gli obiettivi hanno identificativi stabili;
@@ -30,9 +35,11 @@ un cambio di ora legale. Sono supportati intervalli notturni, con data finale es
 fino a 24 ore. Un elemento che attraversa la mezzanotte compare in entrambi i giorni;
 la fine esattamente a mezzanotte non occupa il giorno seguente.
 
-I vincoli possono essere singoli o settimanali, senza scadenza oppure con ultima data
-inclusiva. Ogni serie riguarda un giorno della settimana; per lunedì–venerdì si creano
-cinque serie. Non sono ancora previste ricorrenze per le attività flessibili.
+Tutti i tipi di elemento, comprese le attività flessibili, possono essere singoli o
+settimanali, senza scadenza oppure con ultima data inclusiva. L’editor permette di
+scegliere più giorni: il dominio crea una serie per giorno, collegata alle altre tramite
+`activityId`. Gli esiti restano indipendenti per appuntamento. Serie esistenti possono
+essere collegate esplicitamente; aspetto e identità condivisa non unificano i loro orari.
 
 L'editor di una ricorrenza distingue esplicitamente:
 
@@ -68,32 +75,34 @@ modello si ripete ogni sette giorni. Una finestra completa intorno a ciascuna va
 copre quindi anche conflitti futuri. Questo algoritmo privilegia la correttezza per
 archivi personali; non è ottimizzato per grandi quantità di serie ed eccezioni.
 
-## Persistenza e recupero
+## Salvataggio e backup
 
-Archivio nuovo: `time-planner.calendar.v2` in `localStorage`, versione 2. Contiene
-`items`, `goals` e `profile`. Ogni operazione è validata e salvata con un'unica scrittura
-sincrona prima di aggiornare la UI. Un errore di quota/accesso non applica la modifica.
-Archivi malformati o di versione sconosciuta non vengono sovrascritti: la UI blocca le
-modifiche, segnala il problema e permette di esportare il testo originale disponibile.
+Il calendario è salvato sul dispositivo. Se un salvataggio fallisce, la modifica non
+viene applicata alla UI. Il recupero automatico degli archivi precedenti può bloccarsi
+in presenza di dati non validi; gli originali restano conservati. I piani del vecchio
+prototipo senza date non vengono trasformati automaticamente in appuntamenti e non
+hanno un pannello di recupero nella UI corrente.
 
-Archivio precedente: `time-planner.local-state.v1`, conservato integralmente e mai
-rimosso dal nuovo flusso. In sua presenza appare `Recupero del prototipo`, con consultazione
-e download del JSON originale, anche se malformato. Include profilo, piano, obiettivi ed
-esiti precedenti. Non viene attribuita alcuna data ai vecchi blocchi `mon`–`sun`.
+In **Impostazioni → Database locale e backup** sono disponibili:
 
-La strategia scelta è il **recupero esplicito**, non una migrazione automatica: l'utente
-può esportare i dati e ricreare gli elementi scegliendo le date corrette. Non è ancora
-presente un importatore JSON o un assistente di conversione dei vecchi piani.
-`Esporta calendario` esporta anche il nuovo archivio per ispezione/backup manuale.
-La posizione dell'archivio resta legata all'origine del renderer e al profilo Electron,
-come nel prototipo; browser di sviluppo ed Electron hanno archivi distinti.
+- esportazione di calendario, profilo, obiettivi e storico in JSON;
+- importazione del backup corrente o di un vecchio calendario v2 (`calendario.json`);
+- anteprima dei conteggi e conferma della sostituzione dei dati;
+- esportazione della copia conservata prima dell’ultima importazione.
+
+L’importazione sostituisce i dati, non li unisce. La palette è una preferenza del
+dispositivo e non è inclusa nel backup. Lo storico conserva le correzioni degli esiti.
+
+Per schema, percorso del database e dettagli della migrazione, vedere
+[Provider, repository e modelli](provider-database-model.md).
 
 ## Svuotamento
 
 `Svuota calendario` richiede conferma, elenca esplicitamente cosa cancella e, se ci sono
 vincoli, richiede anche lo sblocco collettivo tramite checkbox. Cancella gli elementi di
-**tutte** le settimane, serie, eccezioni, note e stati. Mantiene profilo, obiettivi,
-palette e archivio v1. Non ricarica il vecchio piano e non genera nuovi elementi.
+**tutte** le settimane, serie, eccezioni, note e stati presenti negli elementi. Mantiene
+lo storico degli esiti, il profilo, gli obiettivi, la palette e gli archivi precedenti.
+Non ricarica il vecchio piano e non genera nuovi elementi.
 Annullare non modifica nulla. Lo svuotamento è atomico e senza annullamento successivo.
 
 ## Percorsi precedenti e limiti
@@ -105,27 +114,12 @@ come disabilitata fino a un'integrazione compatibile con date, vincoli ed esiti.
 
 Restano fuori: viste giorno/mese, drag-and-drop, ripianificazione automatica, nuove
 funzioni AI, ricorrenze complesse, account, backend e sincronizzazione. Lo spostamento
-manuale avviene nell'editor. Non sono introdotte dipendenze aggiuntive.
+manuale avviene nell'editor. Le statistiche sono accessibili in una sezione separata:
+panoramica annuale e vista “Per attività”. Le formule e la distinzione tra pianificato ed esiti sono descritte in
+[Provider, repository e modelli](provider-database-model.md#statistiche-giornaliere).
 
-## Verifica riproducibile
+## Verifiche
 
-```sh
-npm test
-npm run typecheck
-npm run build
-```
-
-Il runner compila i moduli di dominio e persistenza in una cartella temporanea, esegue
-`node:test` e rimuove soltanto quella cartella. La suite copre settimane distinte,
-identificativi ed esiti stabili, riapertura dello storage, sblocco, protezione da
-motore/AI, conflitti lontani nel futuro, serie finite/infinite, eccezioni spostate e
-cancellate, modifiche di serie, sonno a cavallo di settimane, date civili, dati non validi,
-errori di storage, recupero legacy e svuotamento. Confronta inoltre il rilevamento dei
-conflitti con un'espansione esaustiva in 100 scenari deterministici.
-
-Verifica manuale nel renderer su un'origine di prova separata: creazione senza profilo,
-settimane diverse, stato completato, sblocco, spostamento di una sola occorrenza,
-conflitto manuale rifiutato, serie intatta nella settimana successiva, collegamento a
-obiettivo, persistenza dopo ricaricamento, conferma di svuotamento inizialmente disabilitata,
-abilitazione dopo sblocco e annullamento senza perdita di dati. Nessun dato del normale
-archivio del prototipo viene modificato da queste prove.
+Le [procedure automatiche, browser e manuali](code-quality.md#procedure-di-verifica)
+sono raccolte nel documento sulla qualità. Gli esiti effettivamente rilevati sono
+nello [stato del progetto](stato-progetto.md#evidenze-di-verifica).

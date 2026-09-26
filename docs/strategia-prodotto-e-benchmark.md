@@ -1,5 +1,10 @@
 # Strategia Prodotto E Benchmark
 
+> **Direzione di prodotto e ipotesi da validare.** Questa pagina non è l’elenco delle
+> funzionalità implementate. Vedi [stato del progetto](stato-progetto.md) e [indice](README.md).
+> I dati e le caratteristiche dei concorrenti non sono stati rivalidati nel
+> riallineamento del 26 settembre 2026; non considerarli un benchmark aggiornato.
+
 ## Stato Delle Evidenze
 
 Questo documento usa documentazione ufficiale, store e recensioni pubbliche.
@@ -150,7 +155,7 @@ Questa separazione evita di ridurre l'abitudine a un task ricorrente e rende pos
 
 ## MVP
 
-### Da Costruire Subito
+### Perimetro MVP proposto
 
 - timeline del giorno;
 - inbox per task e idee;
@@ -161,23 +166,8 @@ Questa separazione evita di ridurre l'abitudine a un task ricorrente e rende pos
 - cronologia base e ripianificazione manuale;
 - motore deterministico locale, senza inviare dati a servizi AI.
 
-### Da Validare Prima
-
-- chiarezza del valore di un client desktop Electron locale;
-- timer guidato contro semplice check-off;
-- abitudini come blocchi calendarizzati o checklist flessibile;
-- reminder che aiutano senza generare disattivazione;
-- disponibilita' a pagare in futuro per sync, desktop, AI o backup.
-
-### Da Rimandare
-
-- social, challenge, gamification e coaching wellness;
-- integrazioni salute e automazioni complesse;
-- statistiche avanzate;
-- account, cloud, backup remoto e sincronizzazione tra dispositivi;
-- client mobile e supporto smartwatch;
-- sync bidirezionale con ogni calendario;
-- AI autonoma che modifica il piano senza conferma.
+Le ipotesi da verificare, le esclusioni e l’ordine delle decisioni sono nello
+[stato del progetto](stato-progetto.md#priorità-e-prossime-decisioni).
 
 ## AI: Assistente Opzionale, Non Planner
 
@@ -189,55 +179,25 @@ Se in futuro verra' introdotta, l'AI avra' un solo ruolo: **ridurre il lavoro di
 tra cio' che l'utente scrive e cio' che il motore puo' pianificare**. Non decide per la
 persona, non diventa il proprietario del calendario e non e' la promessa commerciale.
 
-Usi ammissibili, solo su richiesta esplicita:
+Usi consentiti, confini e flusso proposta → validazione → anteprima → conferma
+sono definiti nella [proposta AI](ai-modello-personalizzazione-locale.md#flusso-sicuro).
 
-- trasformare un brain dump in bozze di task, routine e sotto-step;
-- proporre una durata o una priorita' dichiarandola come stima;
-- riscrivere una routine in passi piu' piccoli e avviabili;
-- spiegare in linguaggio semplice perche' il motore ha lasciato spazio o buffer;
-- proporre alternative dopo un piano saltato, senza applicarle.
+L’integrazione resta subordinata alla validazione del bisogno descritta nelle
+[priorità del progetto](stato-progetto.md#priorità-e-prossime-decisioni).
 
-Flusso obbligatorio:
+## Coerenza con l’app corrente
 
-```text
-Richiesta esplicita dell'utente
-  -> proposta AI non ancora salvata
-  -> validazione del motore locale su vincoli, conflitti e capacita'
-  -> anteprima delle modifiche
-  -> conferma dell'utente
-  -> salvataggio locale
-```
+Il calendario attuale copre pianificazione manuale settimanale, ricorrenze, vincoli,
+esiti, statistiche e backup locali. Il precedente onboarding generativo e il simulatore
+rimangono nel repository, scollegati dalla home.
 
-Confini non negoziabili:
+La direzione proposta in questo documento richiede ancora timeline del giorno, inbox,
+routine a step ed esecuzione guidata. Le ricorrenze del calendario non costituiscono da
+sole un modello completo di habit e routine. Prima di estendere AI o simulazione va
+definito quale di questi flussi serva all’utente iniziale.
 
-- nessuna modifica automatica a impegni, routine o obiettivi;
-- nessun accesso implicito a dati personali o storico;
-- nessuna promessa clinica per ADHD, salute mentale o produttivita';
-- nessun invio di dati a un servizio remoto senza consenso chiaro e revocabile;
-- nessun modello AI necessario per aprire, usare, esportare o recuperare i propri dati.
-
-La decisione su modello locale, modello remoto o nessuna AI va presa solo dopo aver dimostrato
-che la pianificazione locale viene usata e che gli utenti chiedono davvero una scorciatoia
-per l'inserimento. Fino a quel momento, investire in routine, ripianificazione manuale,
-import/export e backup locali produce piu' valore e meno rischio.
-
-## Coerenza Con Il Prototipo
-
-Il repository ha gia' un prototipo Electron con onboarding, profilo energia, pianificazione settimanale, vincoli, capacita', simulazione e un contratto AI non attivo.
-
-E' un buon inizio per il motore, ma oggi e' piu' vicino a un **weekly planner** che a un **daily planner con habit tracking**.
-
-Prima di estendere AI o simulazione, introdurre il modello di esecuzione: `habit`, `routine`, `plan block` ed `execution event`.
-
-Il planner settimanale deve supportare il piano quotidiano, non essere l'unico cuore del prodotto.
-
-## Decisioni Da Prendere Adesso
-
-1. Confermare il segmento primario e intervistare cinque persone reali.
-2. Definire la prima giornata d'uso: primo task, primo reminder e primo completamento.
-3. Testare il client desktop locale prima di valutare PWA, mobile o cloud.
-4. Scegliere routine minima: checklist o sequenza a timer.
-5. Definire metriche MVP: primo piano, prima routine completata, ritorno a 7 giorni e reminder azionati.
+Persistenza, storico, import/export e statistiche di base sono già implementati:
+non sono più attività da avviare da zero. Le proposte sopra non sono un backlog interamente aperto.
 
 ## Fonti
 
