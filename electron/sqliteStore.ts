@@ -2,10 +2,11 @@ import { isPalette } from "../src/theme.js";
 import type { Palette } from "../src/model/theme.js";
 import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
 import { DatabaseSync } from 'node:sqlite';
+import { readStoredArchive } from './storedArchive.js';
 import { validateArchive } from '../src/domain/outcomeArchive.js';
 import type { DatabaseSnapshot, DatabaseWrite } from '../src/model/database.js';
 import type { CalendarItem, CalendarGoal, CalendarProfile } from '../src/model/calendar.js';
-import type { OutcomeRecord, PlannerArchive } from '../src/model/outcomeArchive.js';
+import type { OutcomeRecord } from '../src/model/outcomeArchive.js';
 
 export class SQLiteStore {
   private readonly db: DatabaseSync;
@@ -45,10 +46,9 @@ export class SQLiteStore {
     const profile = JSON.parse(this.metadata('profile') ?? 'null') as CalendarProfile | null;
     const history = this.db.prepare(`SELECT id,source_id AS sourceId,activity_id AS activityId,occurrence_date AS occurrenceDate,
       event_date AS eventDate,title,icon,color,outcome,recorded_at AS recordedAt FROM outcome_records ORDER BY sequence`).all().map(row => ({...row})) as unknown as OutcomeRecord[];
-    const archive: PlannerArchive = {format:'time-planner-backup',version:1,calendar:{version:2,items,goals,profile},history};
-    validateArchive(archive);
-    const previous = JSON.parse(this.metadata('previousImport') ?? 'null') as PlannerArchive | null;
-    if (previous) validateArchive(previous);
+    const archive = readStoredArchive({format:'time-planner-backup',version:1,calendar:{version:2,items,goals,profile},history});
+    const storedPrevious: unknown = JSON.parse(this.metadata('previousImport') ?? 'null');
+    const previous = storedPrevious === null ? null : readStoredArchive(storedPrevious);
     const parsedRevision = JSON.parse(revision);
     if (!isNonNegativeSafeInteger(parsedRevision)) throw new Error('Versione archivio non valida.');
     return {archive,revision:parsedRevision,previous};

@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { readStoredArchive } from '../dist-electron/electron/storedArchive.js';
 import { SQLiteStore } from '../dist-electron/electron/sqliteStore.js';
 import { DatabaseService } from '../dist-electron/electron/databaseService.js';
 import { emptyCalendar, occurrences, setOccurrenceOutcome } from '../dist-electron/src/domain/calendar.js';
@@ -94,4 +95,51 @@ test('worker handles concurrent palette and calendar writes without losing eithe
   assert.equal(await service.readPalette(),'studio');
   assert.deepEqual(await service.read(),saved);
  } finally {await service.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('SQLite: legacy saved fields recover on read, retain history and import undo, then persist on save', () => {
+ const dir=mkdtempSync(join(tmpdir(),'agenda-legacy-'));const filename=join(dir,'agenda.sqlite');let store=new SQLiteStore(filename);
+ try {
+  const saved=store.write({archive:initial(),expectedRevision:null});
+  const legacy={...initial(),calendar:{...emptyCalendar(),items:[
+   {...item,status:'completed'},
+   {...item,id:'series',recurrence:{},status:'todo',outcomes:{'2026-09-29':'partial'},completedDates:{'2026-09-22':true,'2026-09-29':true,'2026-10-06':false},exceptions:{
+    '2026-09-29':{...Object.fromEntries(Object.entries(item).filter(([key])=>!['id','exceptions'].includes(key))),date:'2026-09-30',endDate:'2026-09-30',status:'skipped'},
+    '2026-10-13':null,
+   }},
+  ]}};
+  const historical={id:'audit',sourceId:'series',activityId:'series',occurrenceDate:'2026-09-29',eventDate:'2026-09-30',title:'Titolo storico',icon:'sport',color:'green',outcome:'partial',recordedAt:null};
+  legacy.history=[historical];
+  const db=new DatabaseSync(filename);
+  db.exec('DELETE FROM activities');
+  for(const [index,entry] of legacy.calendar.items.entries()) db.prepare('INSERT INTO activities VALUES (?,?,?)').run(entry.id,index,JSON.stringify(entry));
+  db.prepare('INSERT INTO outcome_records VALUES (?,?,?,?,?,?,?,?,?,?,?)').run('audit',0,'series','series','2026-09-29','2026-09-30','Titolo storico','sport','green','partial',null);
+  db.prepare('UPDATE metadata SET value=? WHERE key=?').run(JSON.stringify(legacy),'previousImport');db.close();
+  store.close();store=new SQLiteStore(filename);
+  const recovered=store.read();
+  assert.equal(recovered.revision,saved.revision);
+  assert.deepEqual(recovered.archive.calendar.items[0].outcomes,{'2026-09-22':'completed'});
+  assert.deepEqual(recovered.archive.calendar.items[1].outcomes,{'2026-09-22':'completed','2026-09-29':'partial'});
+  assert.deepEqual(recovered.archive.history[0],historical);
+  assert.equal(recovered.archive.history.length,3);
+  assert.deepEqual(recovered.previous,recovered.archive);
+  assert.deepEqual(store.read(),recovered);
+  assert.deepEqual(parseArchive(exportArchive(recovered.archive)),recovered.archive);
+  const next=store.write({archive:recovered.archive,expectedRevision:recovered.revision});
+  store.close();store=new SQLiteStore(filename);assert.deepEqual(store.read(),next);
+  assert.throws(()=>store.write({archive:legacy,expectedRevision:next.revision}),/campo non previsto/);
+ } finally {store.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('SQLite: invalid legacy values and unrelated fields are rejected without changing input', () => {
+ for(const fields of [{status:'unknown'}, {completedDates:{'2026-09-23':true}}, {completedDates:{'2026-09-22':'yes'}}, {unexpected:true}]) {
+  const archive=initial();archive.calendar.items=[{...item,...fields}];
+  const original=structuredClone(archive);
+  assert.throws(()=>readStoredArchive(archive));
+  assert.deepEqual(archive,original);
+ }
+ const archive=initial();archive.calendar.items=[{...item,status:'todo'}];
+ const original=structuredClone(archive);
+ assert.deepEqual(readStoredArchive(archive),initial());
+ assert.deepEqual(archive,original);
 });

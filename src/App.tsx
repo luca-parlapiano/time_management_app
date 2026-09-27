@@ -11,13 +11,33 @@ import { CalendarStatistics } from "./components/CalendarStatistics";
 import { EventIcon } from "./icons/EventIcon";
 import { PalettePicker } from "./components/PalettePicker";
 import { WeeklyCalendar } from "./components/WeeklyCalendar";
-import { addDays, displayDate, eventAppearance, eventColors, today, weekStart } from "./domain/calendar";
+import {
+  addDays,
+  displayDate,
+  eventAppearance,
+  eventColors,
+  today,
+  weekStart,
+} from "./domain/calendar";
 import { useDB } from "./hooks/useDB";
 import { useLoading } from "./hooks/useLoading";
 import type { AppTab, CalendarEditorState } from "./model/App.js";
 import type { Occurrence } from "./model/calendar.js";
 function AppContent() {
-  const { getWeeklyActivities, palette, paletteError: paletteSaveError, changePalette, state, archive, saving, recordOutcome, saveItem, deleteItem: removeItem, savePreferences, clearCalendar: clearAll } = useDB();
+  const {
+    getWeeklyActivities,
+    palette,
+    paletteError: paletteSaveError,
+    changePalette,
+    state,
+    archive,
+    saving,
+    recordOutcome,
+    saveItem,
+    deleteItem: removeItem,
+    savePreferences,
+    clearCalendar: clearAll,
+  } = useDB();
   const { isLoading } = useLoading();
   const [sidebarExpanded, setSidebarExpanded] = useState(
     () => window.matchMedia("(min-width: 721px)").matches,
@@ -31,7 +51,9 @@ function AppContent() {
   const [clearing, setClearing] = useState(false);
   const [clearUnlocked, setClearUnlocked] = useState(false);
   const [error, setError] = useState("");
-  useLayoutEffect(() => { document.documentElement.dataset.palette = palette; }, [palette]);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.palette = palette;
+  }, [palette]);
   const hasConstraints = state.items.some((item) => item.kind !== "flexible");
   const disabled = saving;
   const activities = getWeeklyActivities(week);
@@ -57,7 +79,10 @@ function AppContent() {
           }
           onClick={() => setSidebarExpanded((value) => !value)}
         >
-          <AppIcon name={sidebarExpanded ? "sidebar-close" : "sidebar-open"} size={24} />
+          <AppIcon
+            name={sidebarExpanded ? "sidebar-close" : "sidebar-open"}
+            size={24}
+          />
         </button>
         <div className="sidebar-intro" hidden={!sidebarExpanded}>
           <p className="eyebrow">Il tuo tempo, in locale</p>
@@ -119,14 +144,16 @@ function AppContent() {
           >
             Le tue statistiche settimanali
           </h2>
-          <p className="sidebar-weekly-range" hidden={!sidebarExpanded}>{displayDate(week)} – {displayDate(addDays(week, 6))}</p>
+          <p className="sidebar-weekly-range" hidden={!sidebarExpanded}>
+            {displayDate(week)} – {displayDate(addDays(week, 6))}
+          </p>
           {activities.length === 0 ? (
             <p className="summary-empty-copy" hidden={!sidebarExpanded}>
               Nessuna attività creata. Usa + per aggiungerne una.
             </p>
           ) : (
             <ul className="sidebar-activity-list">
-              {activities.map(({event: item, statistics}) => {
+              {activities.map(({ event: item, statistics }) => {
                 const appearance = eventAppearance(item);
                 return (
                   <li
@@ -149,9 +176,13 @@ function AppContent() {
                       }
                     >
                       {item.title}
-
                     </span>
-                    {sidebarExpanded && <WeeklyDoughnut title={item.title} statistics={statistics} />}
+                    {sidebarExpanded && (
+                      <WeeklyDoughnut
+                        title={item.title}
+                        statistics={statistics}
+                      />
+                    )}
                   </li>
                 );
               })}
@@ -258,7 +289,11 @@ function AppContent() {
             </nav>
           )}
         </header>
-        {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
+        {saving && isLoading() && (
+          <p role="status" className="database-save-status">
+            Salvataggio…
+          </p>
+        )}
         {error && !clearing && (
           <p role="alert" className="capacity-warning">
             {error}
@@ -332,12 +367,19 @@ function AppContent() {
             setEditor({ date: eventMenu.date, occurrence: eventMenu });
             setEventMenu(null);
           }}
-          onOutcome={async outcome => {
+          onOutcome={async (outcome) => {
             await recordOutcome(eventMenu, outcome);
             setEventMenu(null);
           }}
           onDelete={async () => {
-            await removeItem({sourceId:eventMenu.sourceId, occurrenceDate:eventMenu.occurrenceDate, scope:"occurrence"}, true);
+            await removeItem(
+              {
+                sourceId: eventMenu.sourceId,
+                occurrenceDate: eventMenu.occurrenceDate,
+                scope: "occurrence",
+              },
+              true,
+            );
             setEventMenu(null);
           }}
         />
@@ -380,8 +422,9 @@ function AppContent() {
             stati di completamento o salto.
           </p>
           <p>
-            Restano lo storico degli esiti, il profilo, gli obiettivi e la palette. Questa operazione non è annullabile; puoi prima
-            esportare il calendario.
+            Restano lo storico degli esiti, il profilo, gli obiettivi e la
+            palette. Questa operazione non è annullabile; puoi prima esportare
+            il calendario.
           </p>
           {hasConstraints && (
             <label className="clear-unlock">
@@ -406,7 +449,7 @@ function AppContent() {
               Annulla
             </button>
             <button
-              disabled={saving || hasConstraints && !clearUnlocked}
+              disabled={saving || (hasConstraints && !clearUnlocked)}
               className="primary-button"
               onClick={async () => {
                 try {
@@ -427,6 +470,19 @@ function AppContent() {
 }
 export default function App() {
   const { ready, error, retry } = useDB();
-  if (!ready) return <main className="database-loading"><h1>Agenda</h1>{error && <><p role="alert">{error}</p><button className="secondary-button" onClick={() => void retry()}>Riprova</button></>}</main>;
+  if (!ready)
+    return (
+      <main className="database-loading">
+        <h1>Agenda</h1>
+        {error && (
+          <>
+            <p role="alert">{error}</p>
+            <button className="secondary-button" onClick={() => void retry()}>
+              Riprova
+            </button>
+          </>
+        )}
+      </main>
+    );
   return <AppContent />;
 }
