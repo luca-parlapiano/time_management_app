@@ -52,3 +52,20 @@ test('repository surfaces first-write failure and can initialize successfully on
   fail = false;
   assert.deepEqual((await repository.initialize()).archive, emptyArchive());
 });
+
+test('repository forwards palette operations and surfaces failed writes', async () => {
+  let palette='natural';
+  const repository=new RepositoryDB(()=>({
+    readPalette:async()=>palette,
+    writePalette:async value=>{
+      if(value==='night') throw new Error('Disk failure');
+      palette=value;
+      return palette;
+    },
+  }));
+  assert.equal(await repository.loadPalette(),'natural');
+  await repository.savePalette('studio');
+  assert.equal(await repository.loadPalette(),'studio');
+  await assert.rejects(repository.savePalette('night'),/Disk failure/);
+  assert.equal(await repository.loadPalette(),'studio');
+});

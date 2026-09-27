@@ -380,8 +380,7 @@ function AppContent() {
             stati di completamento o salto.
           </p>
           <p>
-            Restano lo storico degli esiti, il profilo, gli obiettivi, la palette e l’archivio del
-            vecchio prototipo. Questa operazione non è annullabile; puoi prima
+            Restano lo storico degli esiti, il profilo, gli obiettivi e la palette. Questa operazione non è annullabile; puoi prima
             esportare il calendario.
           </p>
           {hasConstraints && (

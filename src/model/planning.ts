@@ -45,7 +45,7 @@ export interface RawAnswers {
   focusMinutes: number;
   flexibilityMode: FlexibilityMode;
   energyProfile: Record<"morning" | "afternoon" | "evening", EnergyLevel>;
-  // I campi opzionali mantengono compatibili il pannello profilo esistente e i dati legacy.
+  // Parametri facoltativi del profilo del prototipo.
   planningHorizon?: PlanningHorizon;
   fixedCommitments?: FixedCommitment[];
   protectedTime?: FixedCommitment[];

@@ -3,7 +3,6 @@ import { emptyCalendar } from "../domain/calendar";
 import type { DatabaseBridge, DatabaseWrite, DBRepository } from "../model/database.js";
 import type { PlannerArchive } from "../model/outcomeArchive.js";
 import type { Palette } from "../model/theme.js";
-import { loadPalette, PALETTE_STORAGE_KEY } from "../theme";
 
 export class RepositoryDB implements DBRepository {
   constructor(
@@ -14,8 +13,10 @@ export class RepositoryDB implements DBRepository {
     if (!bridge) throw new Error('Apri l’app desktop per utilizzare il database SQLite. Il browser non dispone del collegamento a Electron.');
     return bridge;
   }
-  async loadPalette() { return loadPalette(); }
-  async savePalette(value: Palette) { localStorage.setItem(PALETTE_STORAGE_KEY, value); }
+  /** Legge la preferenza del dispositivo da SQLite tramite il worker. */
+  async loadPalette() { return this.connection().readPalette(); }
+  /** Salva solo la preferenza, senza riscrivere calendario e storico. */
+  async savePalette(value: Palette) { await this.connection().writePalette(value); }
   /**
    * Legge lo snapshot SQLite esistente o inizializza un archivio vuoto alla prima apertura.
    * Non consulta storage alternativi. Errori di lettura o scrittura vengono propagati:

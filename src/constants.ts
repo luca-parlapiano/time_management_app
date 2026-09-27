@@ -1,7 +1,7 @@
 /** Valori e configurazioni statiche dell’app, condivisi da renderer ed Electron.
  * Non contiene istanze di servizi, stato React o dati calcolati durante l’esecuzione.
  */
-import type { ItemOutcome, ItemKind, ItemStatus, EventIcon as IconName } from "./model/calendar.js";
+import type { ItemOutcome, ItemKind, EventIcon as IconName } from "./model/calendar.js";
 import type { RawAnswers, Weekday } from "./model/planning.js";
 import type { SimulationScenario } from "./model/scenarios.js";
 import type { NewUserWizardStep } from "./model/newUserWizardSteps.js";
@@ -33,9 +33,7 @@ export const kindLabels: Record<ItemKind, string> = {
   fixed: "Impegno fisso", protected: "Tempo protetto", flexible: "Attività flessibile",
 };
 
-export const statusLabels: Record<ItemStatus, string> = {
-  todo: "Da fare", completed: "Completato", skipped: "Saltato",
-};
+
 
 // Esiti delle attività
 export const statisticsOutcomeLabels: Record<ItemOutcome, string> = { completed: "Superata", skipped: "Non superata", partial: "Parziale" };
@@ -50,9 +48,6 @@ export const requiredRootKeys = [
   "questions",
 ] as const;
 
-// Archivio del prototipo di pianificazione, separato dal calendario SQLite.
-export const PLANNER_STORAGE_KEY = "time-planner.local-state.v1";
-
 // Temi e preferenze
 export const palettes = [
   { id: "natural", label: "Calma naturale", description: "Crema, verde e terracotta" },
@@ -60,7 +55,6 @@ export const palettes = [
   { id: "night", label: "Notte tranquilla", description: "Grafite e lavanda" },
 ] as const;
 
-export const PALETTE_STORAGE_KEY = "time-planner.palette.v1";
 
 // Valori iniziali della pianificazione
 export const weekdayLabels: { key: Weekday; label: string }[] = [

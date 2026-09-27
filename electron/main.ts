@@ -1,3 +1,4 @@
+import { isPalette } from "../src/theme.js";
 import { DatabaseService } from "./databaseService.js";
 import type { DatabaseWrite } from "../src/model/database.js";
 import { app, BrowserWindow, ipcMain } from "electron";
@@ -75,6 +76,12 @@ app.whenReady().then(() => {
   };
   ipcMain.handle("planner-db:read", event => { trusted(event); return database!.read(); });
   ipcMain.handle("planner-db:write", (event, input: DatabaseWrite) => { trusted(event); return database!.write(input); });
+  ipcMain.handle("planner-db:read-palette", event => { trusted(event); return database!.readPalette(); });
+  ipcMain.handle("planner-db:write-palette", (event, value: unknown) => {
+    trusted(event);
+    if (!isPalette(value)) throw new Error("Palette non valida.");
+    return database!.writePalette(value);
+  });
   createMainWindow();
 
   app.on("activate", () => {

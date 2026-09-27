@@ -2,8 +2,6 @@ export type ItemKind = "fixed" | "protected" | "flexible";
 
 export type ItemOutcome = "completed" | "skipped" | "partial";
 
-export type ItemStatus = "todo" | "completed" | "skipped";
-
 export type EventIcon = "activity" | "work" | "study" | "sport" | "rest" | "meal" | "people" | "heart";
 
 export type EventColor = "blue" | "green" | "purple" | "orange" | "pink" | "teal";
@@ -18,7 +16,6 @@ export interface ItemData {
   start: string;
   end: string;
   kind: ItemKind;
-  status?: ItemStatus;
   notes: string;
   goalId?: string;
 }
@@ -26,7 +23,6 @@ export interface ItemData {
 export interface CalendarItem extends ItemData {
   id: string;
   activityId?: string;
-  completedDates?: Record<string, boolean>;
   outcomes?: Record<string, ItemOutcome>;
   // Weekly on the weekday of date, inclusive until; no end means indefinite.
   recurrence?: { until?: string };

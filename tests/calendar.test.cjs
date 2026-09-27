@@ -11,8 +11,8 @@ const roundTripCalendar = state => {
 const user = { actor: 'user' };
 const unlocked = { actor: 'user', unlocked: true };
 const engine = { actor: 'engine', unlocked: true };
-const item = (id, patch = {}) => ({ id, title: id, date: '2026-09-14', endDate: '2026-09-14', start: '09:00', end: '10:00', kind: 'flexible', status: 'todo', notes: '', exceptions: {}, ...patch });
-const fixed = (id, patch = {}) => item(id, { kind: 'fixed', status: undefined, ...patch });
+const item = (id, patch = {}) => ({ id, title: id, date: '2026-09-14', endDate: '2026-09-14', start: '09:00', end: '10:00', kind: 'flexible', notes: '', exceptions: {}, ...patch });
+const fixed = (id, patch = {}) => item(id, { kind: 'fixed', ...patch });
 const series = (id, patch = {}) => fixed(id, { recurrence: {}, ...patch });
 const target = (sourceId, occurrenceDate = '2026-09-14', scope = 'occurrence') => ({ sourceId, occurrenceDate, scope });
 const put = (state, value, access = user, where) => c.putItem(state, value, access, where);
@@ -28,13 +28,15 @@ test('calendar works without profile or plan across weeks and serialization', ()
   assert.deepEqual(c.occurrences(reloaded.items, '2026-10-05', '2026-10-11').map(x => x.id), ['second']);
 });
 test('editing and moving only changes selected item; stable ID and other outcomes survive', () => {
-  let state = put(c.emptyCalendar(), item('done', { status: 'completed' }));
-  state = put(state, item('move', { start: '11:00', end: '12:00', status: 'skipped' }));
+  let state = put(c.emptyCalendar(), item('done'));
+  state = c.setOccurrenceOutcome(state, 'done', '2026-09-14', 'completed');
+  state = put(state, item('move', { start: '11:00', end: '12:00' }));
+  state = c.setOccurrenceOutcome(state, 'move', '2026-09-14', 'skipped');
   const original = structuredClone(state);
-  state = put(state, item('ignored-new-id', { title: 'Moved', date: '2026-10-05', endDate: '2026-10-05', status: 'skipped' }), user, target('move'));
+  state = put(state, item('ignored-new-id', { title: 'Moved', date: '2026-10-05', endDate: '2026-10-05' }), user, target('move'));
   assert.deepEqual(state.items[0], original.items[0]);
   assert.equal(state.items[1].id, 'move');
-  assert.equal(state.items[1].status, 'skipped');
+  assert.equal(state.items[1].outcomes['2026-10-05'], 'skipped');
   assert.equal(original.items[1].date, '2026-09-14');
   state = c.deleteItem(state, target('move'), user);
   assert.deepEqual(state.items, [original.items[0]]);
@@ -125,7 +127,7 @@ test('civil dates are stable across leap days, year boundaries, and daylight sav
   assert.equal(c.durationMinutes(item('dst', { date: '2026-03-29', endDate: '2026-03-29', start: '01:00', end: '04:00' })), 180);
 });
 test('invalid dates, times, durations, recurrence and goal references are rejected', () => {
-  for (const patch of [{ date: '2026-02-30' }, { end: '24:00' }, { end: '08:00' }, { title: '  ' }, { status: undefined }, { recurrence: [] }, { goalId: 'missing' }, { endDate: '2026-09-16' }]) {
+  for (const patch of [{ date: '2026-02-30' }, { end: '24:00' }, { end: '08:00' }, { title: '  ' }, { recurrence: [] }, { goalId: 'missing' }, { endDate: '2026-09-16' }]) {
     assert.throws(() => put(c.emptyCalendar(), item('bad', patch)));
   }
   assert.throws(() => put(c.emptyCalendar(), series('bad', { recurrence: { until: '2026-09-13' } })));
@@ -133,7 +135,7 @@ test('invalid dates, times, durations, recurrence and goal references are reject
 });
 test('clear removes all weeks and series while retaining goals and profile', () => {
   let state = { ...c.emptyCalendar(), goals: [{ id: 'g', name: 'Study' }], profile: { name: 'Me', notes: 'Evenings' } };
-  state = put(state, item('done', { goalId: 'g', status: 'completed' }));
+  state = put(state, item('done', { goalId: 'g' }));
   state = put(state, series('weekly', { start: '12:00', end: '13:00', exceptions: { '2026-09-21': null } }));
   const cleared = c.clearCalendar(state);
   assert.deepEqual(roundTripCalendar(cleared), { ...state, items: [] });
@@ -223,7 +225,7 @@ test('one activity creates Monday Wednesday Friday appointments, with independen
   const week = c.occurrences(state.items, '2026-09-14', '2026-09-20');
   assert.deepEqual(week.map(x => x.date), ['2026-09-14', '2026-09-16', '2026-09-18']);
   assert.equal(new Set(state.items.map(x => x.activityId)).size, 1);
-  state = c.setOccurrenceCompleted(state, week[0].sourceId, week[0].occurrenceDate, true);
+  state = c.setOccurrenceOutcome(state, week[0].sourceId, week[0].occurrenceDate, 'completed');
   assert.deepEqual(c.occurrences(state.items, '2026-09-14', '2026-09-20').map(x => x.completed), [true, false, false]);
   assert.ok(c.occurrences(state.items, '2026-09-21', '2026-09-27').every(x => !x.completed));
   state = roundTripCalendar(state);
@@ -244,7 +246,7 @@ test('existing independent series can be linked explicitly without changing date
   state = put(state, series('wed', { title: 'Palestra', date: '2026-09-16', endDate: '2026-09-16', start: '15:00', end: '16:00' }));
   state = put(state, series('fri', { title: 'Palestra', date: '2026-09-18', endDate: '2026-09-18' }));
   state = put(state, series('unrelated', { title: 'Palestra', start: '17:00', end: '18:00' }));
-  state = c.setOccurrenceCompleted(state, 'wed', '2026-09-16', true);
+  state = c.setOccurrenceOutcome(state, 'wed', '2026-09-16', 'completed');
   state = c.deleteItem(state, target('fri', '2026-09-25'), unlocked);
   const before = c.occurrences(state.items, '2026-09-14', '2026-09-27');
   state = put(state, { ...state.items[0], icon: 'sport', color: 'orange' }, unlocked,
@@ -268,28 +270,26 @@ test('new weekly activity creation is atomic on conflicts and validates days', (
 
 test('completion follows a moved appointment and does not affect recurrence exceptions or locked schedules', () => {
   let state = put(c.emptyCalendar(), series('gym'));
-  state = c.setOccurrenceCompleted(state, 'gym', '2026-09-21', true);
+  state = c.setOccurrenceOutcome(state, 'gym', '2026-09-21', 'completed');
   const occurrence = c.occurrences(state.items, '2026-09-21', '2026-09-27')[0];
   state = put(state, { ...state.items[0], ...occurrence, date: '2026-09-22', endDate: '2026-09-22' }, unlocked, target('gym', '2026-09-21'));
   assert.equal(c.occurrences(state.items, '2026-09-21', '2026-09-27')[0].completed, true);
-  state = c.setOccurrenceCompleted(state, 'gym', '2026-09-21', false);
+  state = c.setOccurrenceOutcome(state, 'gym', '2026-09-21', 'skipped');
   assert.equal(c.occurrences(state.items, '2026-09-21', '2026-09-27')[0].completed, false);
-  assert.throws(() => c.setOccurrenceCompleted(state, 'gym', '2026-09-22', true), /Appuntamento/);
+  assert.throws(() => c.setOccurrenceOutcome(state, 'gym', '2026-09-22', 'completed'), /Appuntamento/);
   assert.throws(() => put(state, { ...state.items[0], icon: 'sport' }, user, target('gym')), /bloccato/);
 });
 
-test('completion remains consistent with flexible status and follows a rescheduled one-off constraint', () => {
-  let state = put(c.emptyCalendar(), item('task'));
-  state = c.setOccurrenceCompleted(state, 'task', '2026-09-14', true);
-  assert.equal(state.items[0].status, 'completed');
-  state = put(state, { ...state.items[0], status: 'todo' }, user, target('task'));
-  assert.equal(c.occurrences(state.items, '2026-09-14', '2026-09-20')[0].completed, false);
-  state = put(c.emptyCalendar(), fixed('visit'));
-  state = c.setOccurrenceCompleted(state, 'visit', '2026-09-14', true);
-  state = put(state, { ...state.items[0], date: '2026-09-15', endDate: '2026-09-15' }, unlocked, target('visit'));
-  assert.equal(c.occurrences(state.items, '2026-09-14', '2026-09-20')[0].completed, true);
+test('an explicit outcome follows a rescheduled one-off activity or constraint', () => {
+  for (const create of [item, fixed]) {
+    let state = put(c.emptyCalendar(), create('visit'));
+    state = c.setOccurrenceOutcome(state, 'visit', '2026-09-14', 'completed');
+    state = put(state, { ...state.items[0], date: '2026-09-15', endDate: '2026-09-15' }, unlocked, target('visit'));
+    const moved = c.occurrences(state.items, '2026-09-14', '2026-09-20')[0];
+    assert.equal(moved.outcome, 'completed');
+    assert.deepEqual(state.items[0].outcomes, {'2026-09-15': 'completed'});
+  }
 });
-
 
 test('flexible activities repeat on selected days, persist, and allow editing one occurrence', () => {
   let state = c.putWeeklyActivity(c.emptyCalendar(), item('gym', { recurrence: {} }), [0, 2, 4], user);
@@ -403,18 +403,6 @@ test('cover photo choice persists and updates linked series and exceptions witho
 });
 
 const archives = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/outcomeArchive.js'));
-test('outcome migration uses original occurrence identity and actual moved date, with no invented timestamps', () => {
-  let state = put(c.emptyCalendar(), series('history'));
-  const original = c.occurrences(state.items, '2026-09-21', '2026-09-21')[0];
-  state = put(state, { ...state.items[0], ...original, date: '2026-09-22', endDate: '2026-09-22' }, unlocked, target('history', '2026-09-21'));
-  state = c.setOccurrenceOutcome(state, 'history', '2026-09-21', 'partial');
-  const migrated = archives.migrateOutcomeHistory(state);
-  assert.equal(migrated.length, 1);
-  assert.equal(migrated[0].eventDate, '2026-09-22');
-  assert.equal(migrated[0].occurrenceDate, '2026-09-21');
-  assert.equal(migrated[0].recordedAt, null);
-  assert.equal(migrated[0].outcome, 'partial');
-});
 test('corrections preserve an audit trail but count each appointment once, independent of deletion', () => {
   let state = put(c.emptyCalendar(), item('history'));
   const occurrence = c.occurrences(state.items, '2026-09-14', '2026-09-14')[0];
@@ -427,15 +415,27 @@ test('corrections preserve an audit trail but count each appointment once, indep
   const archive = { format: 'time-planner-backup', version: 1, calendar: state, history };
   assert.deepEqual(archives.parseArchive(archives.exportArchive(archive)).history, history);
 });
-test('import validates backup version, duplicate IDs, dates and outcomes before accepting data', () => {
-  const state = put(c.emptyCalendar(), item('history', { status: 'completed' }));
-  const legacy = archives.parseArchive(JSON.stringify(state));
-  assert.equal(legacy.history.length, 1);
-  assert.equal(legacy.history[0].recordedAt, null);
+test('import accepts only the current backup and rejects foreign formats and unknown fields', () => {
+  const state = put(c.emptyCalendar(), item('history'));
+  const occurrence = c.occurrences(state.items, '2026-09-14', '2026-09-14')[0];
+  const record = archives.outcomeRecord(state, occurrence, 'completed');
+  const backup = { format: 'time-planner-backup', version: 1, calendar: state, history: [record] };
+  assert.deepEqual(archives.parseArchive(archives.exportArchive(backup)), JSON.parse(JSON.stringify(backup)));
+  for (const value of [state, { answers: {}, plannerResult: {} }, { ...backup, version: 9 }, null, []]) {
+    assert.throws(() => archives.parseArchive(JSON.stringify(value)));
+  }
   assert.throws(() => archives.parseArchive('{broken'));
-  assert.throws(() => archives.parseArchive(JSON.stringify({ ...legacy, version: 9 })), /Formato/);
-  assert.throws(() => archives.validateArchive({ ...legacy, history: [legacy.history[0], legacy.history[0]] }), /Storico/);
+  for (const value of [
+    {...backup, extra: true},
+    {...backup, calendar: {...state, other: 1}},
+    {...backup, calendar: {...state, items: [{...state.items[0], arbitrary: true}]}},
+    {...backup, calendar: {...state, items: [{...state.items[0], status: 'completed'}]}},
+    {...backup, calendar: {...state, items: [{...state.items[0], completedDates: {'2026-09-14': true}}]}},
+    {...backup, calendar: {...state, items: [{...state.items[0], recurrence: {daily: true}}]}},
+    {...backup, history: [{...record, imported: true}]},
+  ]) assert.throws(() => archives.parseArchive(JSON.stringify(value)), /campo non previsto/);
+  assert.throws(() => archives.validateArchive({ ...backup, history: [record, record] }), /Storico/);
   for (const patch of [{ outcome: 'wrong' }, { eventDate: '2026-02-30' }, { recordedAt: 'yesterday' }]) {
-    assert.throws(() => archives.validateArchive({ ...legacy, history: [{ ...legacy.history[0], ...patch }] }), /Storico/);
+    assert.throws(() => archives.validateArchive({ ...backup, history: [{ ...record, ...patch }] }), /Storico/);
   }
 });

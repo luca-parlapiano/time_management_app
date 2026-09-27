@@ -1,5 +1,5 @@
 import type { PalettePickerProps } from "../model/PalettePicker.js";
-import { palettes } from "../theme";
+import { palettes } from "../constants";
 
 export function PalettePicker({ value, onChange, saveError }: PalettePickerProps) {
   return (
@@ -27,7 +27,7 @@ export function PalettePicker({ value, onChange, saveError }: PalettePickerProps
       </div>
       <p className="palette-note" role="status">
         {saveError
-          ? "Palette applicata. Non riesco a salvarla per il prossimo avvio."
+          ? "Non riesco a salvare la palette. La scelta precedente resta attiva."
           : "La scelta viene salvata su questo dispositivo."}
       </p>
     </fieldset>

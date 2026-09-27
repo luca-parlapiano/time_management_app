@@ -48,7 +48,7 @@ export function ArchiveSettings() {
     {candidate && <CalendarDialog title="Importa backup" onClose={() => { if (!busy) setCandidate(null); }}>
       <p>Il file contiene {candidate.calendar.items.length} elementi del calendario e {latestOutcomes(candidate.history).length} appuntamenti con esito ({candidate.history.length} registrazioni nello storico).</p>
       <p>Il backup sostituirà calendario, profilo, obiettivi e storico attuali. Una copia dei dati attuali sarà conservata automaticamente e potrai esportarla dalle Impostazioni.</p>
-      <p>Puoi importare anche i vecchi file calendario.json: gli esiti presenti verranno recuperati.</p>
+      <p>Sono accettati solo backup esportati dall’app nel formato corrente.</p>
       {error && <p role="alert" className="capacity-warning">{error}</p>}
       <div className="modal-actions"><button type="button" className="secondary-button" disabled={busy} onClick={() => setCandidate(null)}>Annulla</button><button type="button" className="primary-button" disabled={busy || disabled} onClick={async () => {
         setBusy(true); setError("");

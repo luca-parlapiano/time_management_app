@@ -5,12 +5,12 @@
  * Date e orari rappresentano giorni civili e minuti di orologio, non istanti locali.
  */
 import { DAY, outcomeLabels, eventIcons, eventColors } from "../constants.js";
-export { outcomeLabels, eventIcons, eventColors, kindLabels, statusLabels } from "../constants.js";
+export { outcomeLabels, eventIcons, eventColors, kindLabels } from "../constants.js";
 import { toMinutes as minute } from "../utils/time.js";
 import { addDays, dateNumber, displayDate, validDate, weekStart } from "../utils/dates.js";
 import { isIntegerInRange, isPositiveNumber } from "../utils/numbers.js";
 import type { CalendarItem, CalendarState, EditAccess, EditTarget, ItemData, ItemOutcome, Occurrence } from "../model/calendar.js";
-export type { CalendarGoal,CalendarItem,CalendarProfile,CalendarState,EditAccess,EditTarget,EventColor,EventIcon,ItemData,ItemKind,ItemOutcome,ItemStatus,Occurrence } from "../model/calendar.js";
+export type { CalendarGoal,CalendarItem,CalendarProfile,CalendarState,EditAccess,EditTarget,EventColor,EventIcon,ItemData,ItemKind,ItemOutcome,Occurrence } from "../model/calendar.js";
 
 /**
  * Restituisce icona e colore dell’elemento, usando i valori predefiniti del tipo
@@ -49,7 +49,7 @@ function endMinute(item: ItemData): number { return dateNumber(item.endDate) / 6
 /**
  * Valida i campi di un appuntamento o di un’eccezione; non controlla ID o ricorrenze.
  * Solleva un errore presentabile all’utente per dati non validi, durata non positiva
- * o superiore a 24 ore. Il vecchio campo status è ammesso solo per attività flessibili.
+ * o superiore a 24 ore.
  */
 export function validateData(data: ItemData): void {
   if (data.coverImage !== undefined && typeof data.coverImage !== "boolean") throw new Error("Immagine non valida.");
@@ -61,7 +61,6 @@ export function validateData(data: ItemData): void {
   const duration = durationMinutes(data);
   if (!isPositiveNumber(duration) || duration > 1440) throw new Error("La fine deve seguire l’inizio. Durata massima: 24 ore; per il sonno scegli la data del giorno successivo.");
   if (!["fixed", "protected", "flexible"].includes(data.kind)) throw new Error("Tipo non valido.");
-  if (data.kind === "flexible" ? !["todo", "completed", "skipped"].includes(data.status ?? "") : data.status !== undefined) throw new Error("Stato non valido per questo tipo.");
   if (typeof data.notes !== "string" || (data.goalId !== undefined && typeof data.goalId !== "string")) throw new Error("Note o obiettivo non validi.");
 }
 /**
@@ -85,12 +84,6 @@ export function validateItem(item: CalendarItem): void {
     if (!item.outcomes || typeof item.outcomes !== "object" || Array.isArray(item.outcomes)) throw new Error("Esiti non validi.");
     for (const [date, outcome] of Object.entries(item.outcomes)) {
       if (!validDate(date) || !Object.hasOwn(outcomeLabels, outcome) || (item.recurrence ? !isOccurrenceDate(item, date) : date !== item.date)) throw new Error("Esito non valido.");
-    }
-  }
-  if (item.completedDates !== undefined) {
-    if (!item.completedDates || typeof item.completedDates !== "object" || Array.isArray(item.completedDates)) throw new Error("Completamenti non validi.");
-    for (const [date, completed] of Object.entries(item.completedDates)) {
-      if (!validDate(date) || typeof completed !== "boolean" || (item.recurrence ? !isOccurrenceDate(item, date) : date !== item.date)) throw new Error("Data di completamento non valida.");
     }
   }
   if (typeof item.id !== "string" || !item.id || !item.exceptions || typeof item.exceptions !== "object" || Array.isArray(item.exceptions)) throw new Error("Elemento non valido.");
@@ -136,7 +129,7 @@ export function validateCalendar(state: CalendarState): void {
  */
 function dataOf(item: ItemData): ItemData {
   return { ...(item.coverImage !== undefined ? { coverImage: item.coverImage } : {}), ...(item.icon !== undefined ? { icon: item.icon } : {}), ...(item.color !== undefined ? { color: item.color } : {}), title: item.title, date: item.date, endDate: item.endDate,
-    start: item.start, end: item.end, kind: item.kind, status: item.status, notes: item.notes, goalId: item.goalId };
+    start: item.start, end: item.end, kind: item.kind, notes: item.notes, goalId: item.goalId };
 }
 /**
  * Costruisce i dati di una ricorrenza sulla data richiesta, senza applicare eccezioni.
@@ -155,8 +148,7 @@ export function occurrences(items: CalendarItem[], from: string, through: string
   const result: Occurrence[] = [];
   function include(item: CalendarItem, original: string, data: ItemData, exception: boolean) {
     if (data.date <= through && (data.endDate > from || (data.endDate === from && data.end > "00:00"))) {
-      // Precedenza: esito esplicito, completamento legacy, infine stato dell’appuntamento.
-      const outcome = item.outcomes?.[original] ?? (item.completedDates?.[original] === true ? "completed" : item.completedDates?.[original] === false ? undefined : data.status === "completed" || data.status === "skipped" ? data.status : undefined);
+      const outcome = item.outcomes?.[original];
       result.push({ ...data, id: item.recurrence ? `${item.id}@${original}` : item.id,
         sourceId: item.id, occurrenceDate: original, completed: outcome === "completed", outcome, recurring: Boolean(item.recurrence), exception });
     }
@@ -231,13 +223,10 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
       replacement = { ...existing, exceptions: { ...existing.exceptions, [target.occurrenceDate]: data } };
     } else {
       if (existing.recurrence && (replacement.date !== existing.date || !replacement.recurrence)) throw new Error("La data di inizio e la frequenza della serie sono stabili. Modifica una singola occorrenza per spostarla.");
-      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, outcomes: existing.outcomes, completedDates: existing.completedDates, exceptions: existing.exceptions };
+      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, outcomes: existing.outcomes, exceptions: existing.exceptions };
       // Negli eventi singoli la data stessa è la chiave dell’esito e segue lo spostamento.
       if (!existing.recurrence && existing.outcomes && replacement.date !== existing.date) {
         replacement.outcomes = existing.outcomes[existing.date] === undefined ? {} : { [replacement.date]: existing.outcomes[existing.date] };
-      }
-      if (!existing.recurrence && existing.completedDates && replacement.date !== existing.date) {
-        replacement.completedDates = existing.completedDates[existing.date] === undefined ? {} : { [replacement.date]: existing.completedDates[existing.date] };
       }
     }
     if (existing.recurrence && (target?.applyAppearanceToSeries ||
@@ -336,43 +325,21 @@ export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, 
     const id = existing && index === 0 ? existing.id : `${proposed.id}-${day}`;
     const exceptions: CalendarItem["exceptions"] = {};
     const outcomes: NonNullable<CalendarItem["outcomes"]> = {};
-    const completedDates: NonNullable<CalendarItem["completedDates"]> = {};
     for (const previous of matches[index]) {
       if (previous.recurrence) Object.assign(exceptions, previous.exceptions);
       else exceptions[previous.date] = dataOf(previous);
       Object.assign(outcomes, previous.outcomes);
-      Object.assign(completedDates, previous.completedDates);
     }
     if (existing && index === 0) {
       if (existing.outcomes?.[existing.date]) outcomes[date] = existing.outcomes[existing.date];
-      if (existing.completedDates?.[existing.date] !== undefined) completedDates[date] = existing.completedDates[existing.date];
-      else if (existing.status === "completed" || existing.status === "skipped") outcomes[date] = existing.status;
     }
-    next = putItem(next, { ...proposed, id, date, endDate: addDays(date, span), status: proposed.kind === "flexible" ? "todo" : undefined, exceptions }, access);
-    next = { ...next, items: next.items.map(item => item.id === id ? { ...item, outcomes, completedDates } : item) };
+    next = putItem(next, { ...proposed, id, date, endDate: addDays(date, span), exceptions }, access);
+    next = { ...next, items: next.items.map(item => item.id === id ? { ...item, outcomes } : item) };
     ids.add(id);
   }
   const reusedGroups = new Set(reused.map(item => item.activityId).filter(Boolean));
   next = { ...next, items: next.items.map(item => ids.has(item.id) || item.activityId && reusedGroups.has(item.activityId)
     ? { ...item, activityId: proposed.id } : item) };
-  validateCalendar(next);
-  return next;
-}
-
-/**
- * Aggiorna il completamento booleano del formato precedente usando la data originale.
- * Per attività flessibili singole aggiorna status; negli altri casi completedDates.
- * Restituisce un nuovo calendario e rifiuta appuntamenti assenti o eliminati.
- * Non sovrascrive outcomes: se presente, l’esito esplicito ha precedenza nella vista.
- */
-export function setOccurrenceCompleted(state: CalendarState, sourceId: string, date: string, completed: boolean): CalendarState {
-  const item = state.items.find(item => item.id === sourceId);
-  if (!item || !validDate(date) || (item.recurrence ? !isOccurrenceDate(item, date) || item.exceptions[date] === null : item.date !== date)) throw new Error("Appuntamento non trovato.");
-  const next = { ...state, items: state.items.map(entry => {
-    if (entry.id !== sourceId) return entry;
-    if (entry.kind === "flexible" && !entry.recurrence) return { ...entry, status: completed ? "completed" as const : "todo" as const };
-    return { ...entry, completedDates: { ...entry.completedDates, [date]: completed } };
-  }) };
   validateCalendar(next);
   return next;
 }

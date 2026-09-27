@@ -16,11 +16,12 @@ export interface DatabaseWrite {
   archive: PlannerArchive;
   expectedRevision: number | null;
   replace?: boolean;
-  previous?: PlannerArchive | null;
 }
 
 export interface DatabaseBridge {
   read(): Promise<DatabaseSnapshot | null>;
+  readPalette(): Promise<Palette>;
+  writePalette(value: Palette): Promise<Palette>;
   write(input: DatabaseWrite): Promise<DatabaseSnapshot>;
 }
 
@@ -59,6 +60,11 @@ export interface DBContextValue {
   exportBackup(previous?: boolean): Promise<string>;
 }
 
-export type DatabaseWorkerRequest = { id: number } & ({ action: 'read' } | { action: 'write'; input: DatabaseWrite });
+export type DatabaseWorkerOperation =
+  | { action: 'read' }
+  | { action: 'write'; input: DatabaseWrite }
+  | { action: 'readPalette' }
+  | { action: 'writePalette'; input: Palette };
+export type DatabaseWorkerRequest = { id: number } & DatabaseWorkerOperation;
 
-export type DatabaseWorkerResponse = { id: number; result?: DatabaseSnapshot | null; error?: string };
+export type DatabaseWorkerResponse = { id: number; result?: DatabaseSnapshot | Palette | null; error?: string };

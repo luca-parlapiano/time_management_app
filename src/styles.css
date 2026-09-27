@@ -1823,8 +1823,6 @@ h1 {
 .editor-hint { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .clear-unlock { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; }
-.legacy-details { margin-top: 16px; }
-.legacy-details pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; font-size: 12px; }
 @media (max-width: 720px) {
   .continuous-calendar { grid-template-columns: repeat(7, minmax(230px, 82vw)); scroll-snap-type: x proximity; }
   .continuous-calendar .day-column { scroll-snap-align: start; }

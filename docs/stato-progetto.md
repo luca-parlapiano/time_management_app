@@ -1,6 +1,6 @@
 # Stato del progetto
 
-Rilevazione sul codice del 26 settembre 2026. [Indice documentazione](README.md).
+Rilevazione sul codice del 27 settembre 2026. [Indice documentazione](README.md).
 
 ## Implementato nel flusso principale
 
@@ -10,8 +10,8 @@ Rilevazione sul codice del 26 settembre 2026. [Indice documentazione](README.md)
 | Ricorrenze | Settimanali anche per attività flessibili, più giorni collegati, scadenza facoltativa, eccezioni e identità originale degli appuntamenti |
 | Esiti | Superato, non superato, parziale, correzioni e storico mantenuto dopo eliminazione/svuotamento |
 | Statistiche | Riepiloghi settimanali, panoramica annuale giornaliera e vista per attività; regole nel documento dei Provider |
-| Dati | SQLite in worker, transazioni, revisioni, inizializzazione diretta, import/export JSON e copia precedente all’importazione |
-| Personalizzazione | Profilo e obiettivi facoltativi, palette, icone, colori e copertine |
+| Dati | SQLite in worker, transazioni, revisioni, inizializzazione diretta, import/export del solo backup corrente e copia precedente all’importazione |
+| Personalizzazione | Profilo e obiettivi facoltativi, palette persistita in SQLite, icone, colori e copertine |
 
 ## Presente solo nel prototipo o nel laboratorio
 
@@ -47,11 +47,11 @@ Questi punti sono un inventario del lavoro aperto, non nuove funzionalità appro
 
 ## Evidenze di verifica
 
-Nella verifica del 26 settembre 2026, dopo la rimozione del recupero automatico da storage browser, sono passati:
+Nella verifica del 27 settembre 2026, dopo la pulizia dei formati di importazione e il salvataggio della palette in SQLite, sono passati:
 
 - `npm run lint`, senza warning;
 - `npm run typecheck`;
-- `npm test`: 57 test di calendario, archivio, utility, statistiche e inizializzazione del repository, 3 SQLite/worker e 5 della configurazione ESLint;
+- `npm test`: 57 test di calendario, archivio, utility, statistiche e inizializzazione del repository, 5 SQLite/worker e 5 della configurazione ESLint;
 - `npm run build`, renderer ed Electron.
 
 Il runtime Node ha emesso un avviso sull’API sperimentale SQLite. Le prove hanno usato
@@ -60,7 +60,7 @@ archivi temporanei, senza aprire il database reale dell’utente.
 La verifica non includeva un avvio interattivo Electron, training/inferenza AI o una
 nuova verifica dei dati dei concorrenti. La suite browser dei Provider è stata aggiornata
 ma non eseguita: l’avvio locale di Vite non è stato autorizzato. I test automatici del
-repository coprono primo avvio, riapertura, archivi non validi e errori di lettura/scrittura.
+repository coprono primo avvio, riapertura, archivi non validi, preferenze e errori di lettura/scrittura. I test SQLite verificano anche persistenza della palette, input non validi e scritture concorrenti con il calendario.
 Le modalità di esecuzione sono nelle
 [procedure di verifica](code-quality.md#procedure-di-verifica).
 

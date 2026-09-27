@@ -1,3 +1,5 @@
+import { isPalette } from "../src/theme.js";
+import type { Palette } from "../src/model/theme.js";
 import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
 import { DatabaseSync } from 'node:sqlite';
 import { validateArchive } from '../src/domain/outcomeArchive.js';
@@ -54,13 +56,12 @@ export class SQLiteStore {
   write(input: DatabaseWrite): DatabaseSnapshot {
     if (!input || (input.expectedRevision !== null && (!isNonNegativeSafeInteger(input.expectedRevision)))) throw new Error('Richiesta database non valida.');
     validateArchive(input.archive);
-    if (input.previous) validateArchive(input.previous);
     this.db.exec('BEGIN IMMEDIATE');
     try {
       const existing = this.readSnapshot();
       if ((existing?.revision ?? null) !== input.expectedRevision) throw new Error('Dati aggiornati in un’altra finestra. Riapri l’app prima di continuare.');
       const {archive} = input;
-      const previous = input.replace && existing ? existing.archive : existing?.previous ?? input.previous ?? null;
+      const previous = input.replace && existing ? existing.archive : existing?.previous ?? null;
       this.db.exec('DELETE FROM activities; DELETE FROM goals; DELETE FROM outcome_records;');
       const activityInsert = this.db.prepare('INSERT INTO activities(id,position,data) VALUES (?,?,?)');
       archive.calendar.items.forEach((item,index) => activityInsert.run(item.id,index,JSON.stringify(item)));
@@ -75,6 +76,20 @@ export class SQLiteStore {
       this.db.exec('COMMIT');
       return {archive,revision,previous};
     } catch(error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+  /** Legge il tema del dispositivo; un database senza preferenza usa la palette iniziale. */
+  readPalette(): Palette {
+    const stored = this.metadata('palette');
+    if (stored === undefined) return 'natural';
+    const value: unknown = JSON.parse(stored);
+    if (!isPalette(value)) throw new Error('Palette salvata non valida.');
+    return value;
+  }
+  /** Aggiorna un solo metadato, indipendente da revisioni e importazioni del calendario. */
+  writePalette(value: unknown): Palette {
+    if (!isPalette(value)) throw new Error('Palette non valida.');
+    this.putMetadata('palette', value);
+    return value;
   }
   close() { this.db.close(); }
 }

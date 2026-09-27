@@ -1,6 +1,6 @@
 # Calendario continuo locale
 
-Questo documento descrive il comportamento corrente al 26 settembre 2026.
+Questo documento descrive il comportamento corrente al 27 settembre 2026.
 Il calendario non richiede il flusso `profilo -> piano settimanale` del prototipo.
 [Indice documentazione](README.md) · [Stato del progetto](stato-progetto.md).
 
@@ -84,7 +84,7 @@ un archivio si usa l’importazione JSON, senza recuperi automatici da altri sto
 In **Impostazioni → Database locale e backup** sono disponibili:
 
 - esportazione di calendario, profilo, obiettivi e storico in JSON;
-- importazione del backup corrente o di un vecchio calendario v2 (`calendario.json`);
+- importazione del solo backup corrente, con calendario e storico;
 - anteprima dei conteggi e conferma della sostituzione dei dati;
 - esportazione della copia conservata prima dell’ultima importazione.
 

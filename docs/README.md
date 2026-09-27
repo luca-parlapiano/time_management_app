@@ -1,6 +1,6 @@
 # Documentazione del progetto
 
-Ultimo riallineamento al codice: 26 settembre 2026.
+Ultimo riallineamento al codice: 27 settembre 2026.
 
 ## Percorso di lettura
 

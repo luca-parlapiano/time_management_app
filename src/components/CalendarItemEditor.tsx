@@ -17,7 +17,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
   const [scope, setScope] = useState<"occurrence" | "series">("occurrence");
   const initial: CalendarItem = item && occurrence
     ? { ...item, ...occurrence, id: item.id }
-    : { id: crypto.randomUUID(), title: "", date, endDate: date, start: "09:00", end: "10:00", kind: "flexible", status: "todo", notes: "", exceptions: {} };
+    : { id: crypto.randomUUID(), title: "", date, endDate: date, start: "09:00", end: "10:00", kind: "flexible", notes: "", exceptions: {} };
   const [draft, setDraft] = useState(initial);
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
@@ -103,7 +103,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
           <div className="item-kind-options">
             {(Object.keys(kindLabels) as ItemKind[]).map(kind => <label className="item-kind-option" key={kind} title={kindLabels[kind]}>
               <input type="radio" name="item-kind" aria-label={kindLabels[kind]} value={kind} checked={draft.kind === kind} onChange={() => {
-                change({ kind, status: kind === "flexible" ? "todo" : undefined });
+                change({ kind });
               }} />
               <span>{{ fixed: "Fisso", protected: "Protetto", flexible: "Flessibile" }[kind]}</span>
             </label>)}

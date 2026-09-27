@@ -38,7 +38,7 @@ useDB() → DBProvider → RepositoryDB → preload IPC
 - `electron/databaseService.ts`: inoltra le richieste al worker senza bloccare il processo principale.
 - `electron/sqliteStore.ts`: schema SQL, validazione, transazioni e controllo della revisione. Le operazioni SQLite sincrone vengono eseguite esclusivamente nel worker.
 
-I componenti non importano il repository, non accedono a SQLite e non chiamano `window.plannerDB`. Usano `useDB()` oppure callback applicative ricevute dal componente padre. Il tema resta una preferenza del dispositivo in localStorage, accessibile tramite Provider e repository.
+I componenti non importano il repository, non accedono a SQLite e non chiamano `window.plannerDB`. Usano `useDB()` oppure callback applicative ricevute dal componente padre. Il tema è una preferenza del dispositivo salvata nella tabella SQLite `metadata`, tramite Provider, repository e worker. Il salvataggio della palette non riscrive il calendario né modifica la sua revisione.
 
 Il preload espone metodi specifici; la finestra mantiene `contextIsolation: true` e
 `nodeIntegration: false`. Il main verifica il mittente dei canali database; lo store
@@ -96,8 +96,7 @@ con indici per data e occorrenza.
 RepositoryDB legge sempre SQLite. Se non esiste ancora uno snapshot, salva un calendario
 vuoto con storico vuoto e revisione attesa nulla. Le aperture successive restituiscono
 lo snapshot esistente senza riscriverlo. Un errore di lettura o scrittura viene presentato
-all’utente: non provoca un ripristino silenzioso. Non vengono consultati IndexedDB o
-localStorage per recuperare calendari; l’importazione di dati avviene esplicitamente da JSON.
+all’utente: non provoca un ripristino silenzioso. L’importazione accetta esclusivamente backup JSON `time-planner-backup` v1, con calendario v2 e storico. Campi estranei e formati diversi vengono rifiutati, senza conversioni automatiche. Gli esiti correnti sono rappresentati soltanto da `outcomes`.
 
 Il backup JSON resta importabile/esportabile. Ogni importazione sostituisce i dati e conserva una copia del precedente archivio. Gli esiti rimangono nello storico dopo l’eliminazione delle attività; le statistiche contano l’ultimo esito per appuntamento.
 

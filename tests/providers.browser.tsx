@@ -8,7 +8,7 @@ import { useLoading } from '../src/hooks/useLoading';
 import { emptyCalendar, occurrences, today } from '../src/domain/calendar';
 import { exportArchive, parseArchive } from '../src/domain/outcomeArchive';
 import { RepositoryDB } from '../src/repository/RepositoryDB';
-import type { DBContextValue, DBRepository, DatabaseSnapshot, DatabaseWrite } from '../src/model/database';
+import type { DBContextValue, DBRepository, DatabaseBridge, DatabaseSnapshot, DatabaseWrite } from '../src/model/database';
 import type { LoadingContextValue } from '../src/model/loading';
 import type { CalendarItem } from '../src/model/calendar';
 import type { Palette } from '../src/model/theme';
@@ -17,6 +17,9 @@ import '../src/styles.css';
 import '../src/themes.css';
 
 (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+const testBridge = (bridge: Pick<DatabaseBridge, 'read' | 'write'>): DatabaseBridge => ({
+ ...bridge, readPalette: async () => 'natural', writePalette: async value => value,
+});
 let db: DBContextValue;
 let loading: LoadingContextValue;
 let initializeCount=0;
@@ -24,7 +27,7 @@ let gate: Promise<void> | null=null;
 let rejectGate: ((error: Error)=>void) | null=null;
 let failInitialization=true;
 const date=today();
-const item: CalendarItem={id:'test-activity',title:'Attività di prova',date,endDate:date,start:'09:00',end:'11:00',kind:'flexible',status:'todo',notes:'Solo dati di test',exceptions:{},icon:'sport',color:'green'};
+const item: CalendarItem={id:'test-activity',title:'Attività di prova',date,endDate:date,start:'09:00',end:'11:00',kind:'flexible',notes:'Solo dati di test',exceptions:{},icon:'sport',color:'green'};
 let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},history:[]},revision:0,previous:null};
 const repository: DBRepository={
  initialize:async()=>{initializeCount++;if(failInitialization)throw new Error('Simulated open failure');return structuredClone(saved);},
@@ -81,14 +84,14 @@ try {
  check(db!.state.items.length===0&&db!.archive.history.length===2,'Clearing calendar retains audit');
  await act(async()=>{await db.importBackup(candidate);});
  check(db!.state.items.length===1&&db!.previous?.calendar.items.length===0,'Import restores data and keeps prior archive');
- const bridgeRepository = new RepositoryDB(()=>({read:async()=>saved,write:async()=>{throw new Error('Unexpected initialization write');}}));
+ const bridgeRepository = new RepositoryDB(()=>testBridge({read:async()=>saved,write:async()=>{throw new Error('Unexpected initialization write');}}));
  check((await bridgeRepository.initialize()).revision===saved.revision,'Existing SQLite archive is loaded without rewriting it');
  let missingBridge=false;
  try {await new RepositoryDB(()=>undefined).initialize();}catch(error){missingBridge=String(error).includes('desktop');}
  check(missingBridge,'Missing Electron bridge fails explicitly');
  let initialized: DatabaseSnapshot | null = null;
  let writes = 0;
- const freshRepository = new RepositoryDB(() => ({
+ const freshRepository = new RepositoryDB(() => testBridge({
   read: async () => initialized,
   write: async input => {
    check(input.expectedRevision === null, 'First initialization requires an uninitialized database');
@@ -104,12 +107,12 @@ try {
  check(writes === 1, 'Reopening the initialized repository does not reset data');
  let readFailed = false;
  try {
-  await new RepositoryDB(() => ({read: async () => {throw new Error('Read failure');}, write: async () => {throw new Error('Unexpected write after read failure');}})).initialize();
+  await new RepositoryDB(() => testBridge({read: async () => {throw new Error('Read failure');}, write: async () => {throw new Error('Unexpected write after read failure');}})).initialize();
  } catch (error) { readFailed = error instanceof Error && error.message === 'Read failure'; }
  check(readFailed, 'Read failure is surfaced without replacing the archive');
  let writeFailed = false;
  try {
-  await new RepositoryDB(() => ({read: async () => null, write: async () => {throw new Error('Write failure');}})).initialize();
+  await new RepositoryDB(() => testBridge({read: async () => null, write: async () => {throw new Error('Write failure');}})).initialize();
  } catch (error) { writeFailed = error instanceof Error && error.message === 'Write failure'; }
  check(writeFailed, 'First initialization write failure is surfaced');
  results.push('ALL PROVIDER AND REPOSITORY TESTS PASSED');
