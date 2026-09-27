@@ -16,11 +16,11 @@ Il prodotto e' composto da tre elementi distinti:
 ```text
 Modello linguistico addestrato da noi
   + memoria locale e preferenze dell'utente
-  + motore deterministico per slot, vincoli e capacita'
+  + regole deterministiche del calendario per date, vincoli e conflitti
 ```
 
-Il modello interpreta il linguaggio naturale e prepara proposte. Il motore verifica se sono
-realistiche. L'utente decide sempre se salvarle.
+Il modello interpreta il linguaggio naturale e prepara modifiche circoscritte. Le regole
+del calendario verificano che siano valide. L'utente decide sempre se salvarle.
 
 ## Cosa Significa "Modello Nostro"
 
@@ -45,7 +45,7 @@ Esempio:
 > "Lavoro fino alle 18, devo preparare un esame, voglio riprendere palestra tre volte ma
 > la sera sono scarico."
 
-L'AI produce una bozza `PlanningIntent` con:
+Una futura AI potrebbe produrre una proposta strutturata con:
 
 - obiettivi e priorita' dichiarate;
 - abitudini, frequenze e durate da confermare;
@@ -53,8 +53,8 @@ L'AI produce una bozza `PlanningIntent` con:
 - preferenze, come bassa energia serale;
 - domande ancora necessarie per pianificare.
 
-Il motore slot usa poi questi dati per verificare capacita', conflitti, sonno, buffer e
-priorita'. L'output e' una proposta che l'utente vede, modifica o rifiuta.
+Il calendario usa poi questi dati per verificare date, conflitti e vincoli. L'output e'
+una modifica concreta che l'utente vede, modifica o rifiuta, senza rigenerare la settimana.
 
 Usi ammissibili, solo su richiesta esplicita:
 
@@ -77,8 +77,8 @@ per aprire il calendario: il profilo attuale resta facoltativo.
 | Contesto facoltativo | Abitudini esistenti, stile di lavoro, difficoltà dichiarate e modalità di feedback |
 
 Riutilizzare i dati già presenti nel calendario e chiedere soltanto ciò che manca per
-la richiesta concreta. Il motore deve calcolare disponibilità residua, saturazione,
-compatibilità degli obiettivi e buffer; il modello non deve inventare questi valori.
+la richiesta concreta. Le regole applicative devono calcolare disponibilità e conflitti;
+il modello non deve inventare questi valori.
 Preferenze osservate e priorità dichiarate devono rimanere distinguibili e correggibili.
 
 ## Cosa L'AI Non Fa
@@ -126,9 +126,9 @@ le [regole statistiche attuali](provider-database-model.md#statistiche-giornalie
 
 ```text
 Richiesta esplicita dell’utente, tramite testo o voce
-  -> AI: bozza di PlanningIntent
+  -> AI: proposta circoscritta
   -> validazione JSON e schema
-  -> motore locale: vincoli, slot, capacita' e buffer
+  -> dominio locale: date, vincoli e conflitti
   -> anteprima delle modifiche
   -> conferma dell'utente
   -> salvataggio delle modifiche approvate
@@ -150,7 +150,7 @@ UI Electron/React
   -> runtime LLM locale
   -> modello base + adapter LoRA
   -> JSON strutturato
-  -> planner locale
+  -> validazione del dominio
   -> storage locale
 ```
 

@@ -2,8 +2,6 @@
  * Non contiene istanze di servizi, stato React o dati calcolati durante l’esecuzione.
  */
 import type { ItemOutcome, ItemKind, EventIcon as IconName } from "./model/calendar.js";
-import type { RawAnswers, Weekday } from "./model/planning.js";
-import type { SimulationScenario } from "./model/scenarios.js";
 
 // Tempo
 /** Millisecondi in un giorno, per l’aritmetica delle date in UTC. */
@@ -30,20 +28,8 @@ export const kindLabels: Record<ItemKind, string> = {
   fixed: "Impegno fisso", protected: "Tempo protetto", flexible: "Attività flessibile",
 };
 
-
-
 // Esiti delle attività
 export const statisticsOutcomeLabels: Record<ItemOutcome, string> = { completed: "Superata", skipped: "Non superata", partial: "Parziale" };
-
-// Schema degli intenti di pianificazione
-export const requiredRootKeys = [
-  "goals",
-  "tasks",
-  "habits",
-  "constraints",
-  "preferences",
-  "questions",
-] as const;
 
 // Temi e preferenze
 export const palettes = [
@@ -52,130 +38,16 @@ export const palettes = [
   { id: "night", label: "Notte tranquilla", description: "Grafite e lavanda" },
 ] as const;
 
-
-// Valori iniziali della pianificazione
-export const weekdayLabels: { key: Weekday; label: string }[] = [
+// Etichette dei giorni usate nelle viste statistiche
+export const weekdayLabels = [
   { key: "mon", label: "Lun" },
   { key: "tue", label: "Mar" },
   { key: "wed", label: "Mer" },
   { key: "thu", label: "Gio" },
   { key: "fri", label: "Ven" },
   { key: "sat", label: "Sab" },
-  { key: "sun", label: "Dom" }
-];
-
-export const goalPriorityOptions = [1, 2, 3, 4, 5];
-
-export const weeklyGoalDurationOptions = Array.from(
-  { length: 20 },
-  (_, index) => (index + 1) * 30
-);
-
-export const defaultAnswers: RawAnswers = {
-  goals: [
-    { name: "Studio AI", priority: 5, desiredWeeklyMinutes: 300 },
-    { name: "Fitness", priority: 3, desiredWeeklyMinutes: 180 },
-    { name: "Deep work", priority: 4, desiredWeeklyMinutes: 240 }
-  ],
-  workStart: "09:00",
-  workEnd: "18:00",
-  workDays: ["mon", "tue", "wed", "thu", "fri"],
-  wake: "07:00",
-  sleep: "23:30",
-  focusMinutes: 60,
-  flexibilityMode: "mixed",
-  energyProfile: {
-    morning: "high",
-    afternoon: "medium",
-    evening: "low"
-  }
-};
-
-// Ordine dei giorni della settimana
-export const weekdays: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-
-// Scenari di simulazione
-export const simulationScenarios: SimulationScenario[] = [
-  {
-    id: "balanced-default",
-    name: "Profilo bilanciato",
-    description: "Settimana standard con carico sostenibile e focus al mattino.",
-    answers: defaultAnswers
-  },
-  {
-    id: "overloaded-builder",
-    name: "Carico eccessivo",
-    description: "Troppe ore richieste per vedere warning e saturazione del motore.",
-    answers: {
-      goals: [
-        { name: "Startup", priority: 5, desiredWeeklyMinutes: 600 },
-        { name: "Studio AI", priority: 5, desiredWeeklyMinutes: 420 },
-        { name: "Fitness", priority: 4, desiredWeeklyMinutes: 240 },
-        { name: "Lingua", priority: 3, desiredWeeklyMinutes: 240 }
-      ],
-      workStart: "09:00",
-      workEnd: "19:00",
-      workDays: ["mon", "tue", "wed", "thu", "fri"],
-      wake: "06:45",
-      sleep: "23:45",
-      focusMinutes: 90,
-      flexibilityMode: "rigid",
-      energyProfile: {
-        morning: "medium",
-        afternoon: "high",
-        evening: "low"
-      }
-    }
-  },
-  {
-    id: "evening-creative",
-    name: "Creativo serale",
-    description: "Profilo che rende l'energia serale dominante e sposta i blocchi focus.",
-    answers: {
-      goals: [
-        { name: "Design portfolio", priority: 5, desiredWeeklyMinutes: 300 },
-        { name: "Workout breve", priority: 3, desiredWeeklyMinutes: 120 },
-        { name: "Lettura", priority: 2, desiredWeeklyMinutes: 90 }
-      ],
-      workStart: "10:00",
-      workEnd: "18:30",
-      workDays: ["mon", "tue", "wed", "thu", "fri"],
-      wake: "08:00",
-      sleep: "01:00",
-      focusMinutes: 60,
-      flexibilityMode: "flexible",
-      energyProfile: {
-        morning: "low",
-        afternoon: "medium",
-        evening: "high"
-      }
-    }
-  },
-  {
-    id: "part-time-reset",
-    name: "Part-time strategico",
-    description: "Meno giorni di lavoro e blocchi piu' lunghi per vedere redistribuzione.",
-    answers: {
-      goals: [
-        { name: "Prodotto", priority: 5, desiredWeeklyMinutes: 360 },
-        { name: "Amministrazione", priority: 2, desiredWeeklyMinutes: 120 },
-        { name: "Recupero", priority: 4, desiredWeeklyMinutes: 180 }
-      ],
-      workStart: "08:30",
-      workEnd: "14:00",
-      workDays: ["mon", "wed", "fri"],
-      wake: "06:30",
-      sleep: "22:30",
-      focusMinutes: 120,
-      flexibilityMode: "mixed",
-      energyProfile: {
-        morning: "high",
-        afternoon: "medium",
-        evening: "medium"
-      }
-    }
-  }
-];
+  { key: "sun", label: "Dom" },
+] as const;
 
 // Tracciati SVG delle icone
 export const eventIconPaths: Record<IconName, string> = {
@@ -193,17 +65,6 @@ export const eventIconPaths: Record<IconName, string> = {
 export const weeklyOutcomeLabels = ['Superate', 'Non superate', 'Parziali', 'Senza esito'];
 
 export const weeklyOutcomeColors = ['#3b9f7c', '#dc6b77', '#e3ad4f', '#8994a7'];
-
-// Pesi giornalieri della simulazione
-export const simulationDayScores: Record<Weekday, number> = {
-  mon: 0.96,
-  tue: 1,
-  wed: 0.93,
-  thu: 0.9,
-  fri: 0.84,
-  sat: 0.9,
-  sun: 0.86
-};
 
 // Runtime AI locale: indirizzo, modello e timeout
 export const DEFAULT_SERVER_URL = "http://127.0.0.1:39281";

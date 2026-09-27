@@ -15,8 +15,9 @@ Il prompt e lo schema usati dall'app sono le copie canoniche in:
 - `resources/ai/planning-intent.txt`
 - `resources/ai/planning-intent.schema.json`
 
-Il modello estrae goal, task, habit, vincoli e preferenze. Il calendario viene sempre
-generato dal planner deterministico TypeScript dopo la validazione dell'output.
+Il modello estrae goal, task, habit, vincoli e preferenze. Questo contratto appartiene
+al prototipo storico: il planner TypeScript che ne generava la settimana è stato rimosso
+e l'output non viene applicato al calendario corrente.
 
 ## Struttura
 

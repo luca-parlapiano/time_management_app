@@ -13,11 +13,12 @@ Rilevazione sul codice del 27 settembre 2026. [Indice documentazione](README.md)
 | Dati | SQLite in worker, transazioni, revisioni, inizializzazione diretta, import/export del solo backup corrente e copia precedente all’importazione |
 | Personalizzazione | Profilo e obiettivi facoltativi, palette persistita in SQLite, icone, colori e copertine |
 
-## Presente solo nel prototipo o nel laboratorio
+## Presente solo nel laboratorio
 
-Onboarding generativo, planner deterministico settimanale, simulatore, chat e runtime
-LLM rimangono nel repository, ma non sono collegati al calendario principale. Gli
-strumenti AI Lab non dimostrano da soli che esista un adapter addestrato e validato.
+Il planner deterministico settimanale, il simulatore, la chat e i relativi flussi di
+onboarding sono stati rimossi. Rimangono il runtime LLM sperimentale e gli strumenti
+AI Lab, scollegati dal calendario principale; la loro presenza non dimostra che esista
+un adapter addestrato e validato.
 
 ## Funzionalità proposte, non disponibili nel flusso principale
 
@@ -51,16 +52,16 @@ Nella verifica del 27 settembre 2026, dopo la pulizia dei formati di importazion
 
 - `npm run lint`, senza warning;
 - `npm run typecheck`;
-- `npm test`: 57 test di calendario, archivio, utility, statistiche e inizializzazione del repository, 5 SQLite/worker e 5 della configurazione ESLint;
+- `npm test`: 57 test di calendario, archivio, utility, statistiche e inizializzazione del repository, 7 SQLite/worker e 5 della configurazione ESLint;
 - `npm run build`, renderer ed Electron.
 
 Il runtime Node ha emesso un avviso sull’API sperimentale SQLite. Le prove hanno usato
 archivi temporanei, senza aprire il database reale dell’utente.
 
 La verifica non includeva un avvio interattivo Electron, training/inferenza AI o una
-nuova verifica dei dati dei concorrenti. La suite browser dei Provider è stata aggiornata
-ma non eseguita: l’avvio locale di Vite non è stato autorizzato. I test automatici del
-repository coprono primo avvio, riapertura, archivi non validi, preferenze e errori di lettura/scrittura. I test SQLite verificano anche persistenza della palette, input non validi e scritture concorrenti con il calendario.
+nuova verifica dei dati dei concorrenti. La suite browser dei Provider è stata eseguita
+con dati di prova e ha superato tutti i controlli. I test automatici del repository
+coprono primo avvio, riapertura, archivi non validi, preferenze e errori di lettura/scrittura. I test SQLite verificano anche persistenza della palette, input non validi e scritture concorrenti con il calendario.
 Le modalità di esecuzione sono nelle
 [procedure di verifica](code-quality.md#procedure-di-verifica).
 
@@ -78,7 +79,7 @@ costituisce approvazione delle funzionalità future.
 4. Definire le misure MVP: primo piano, prima routine completata, ritorno a sette giorni
    e reminder azionati, quando queste funzioni saranno disponibili.
 5. Valutare la disponibilità a pagare per sync, desktop, AI o backup prima di estendere
-   il perimetro. Riattivare planner o AI solo dopo aver verificato il bisogno.
+   il perimetro. Valutare funzioni AI solo dopo aver verificato il bisogno.
 
 Restano da rimandare social, challenge, gamification, coaching wellness, integrazioni
 salute, automazioni complesse, ulteriori statistiche avanzate, sync bidirezionale,
@@ -89,8 +90,8 @@ senza conferma resta esclusa, non una funzionalità rinviata.
 
 Se viene confermata l’utilità dell’inserimento assistito:
 
-1. Adattare `PlanningIntent` del prototipo al calendario corrente e definire
-   `AIProposal` e `ProposalDiff` per anteprime verificabili.
+1. Definire un nuovo contratto `AIProposal` con `ProposalDiff`, coerente con il
+   calendario corrente e adatto ad anteprime verificabili.
 2. Estendere il modello dati per proposte, modifiche e feedback mancanti, riutilizzando
    persistenza e storico già implementati.
 3. Integrare la validazione deterministica di slot, vincoli, capacità e buffer;

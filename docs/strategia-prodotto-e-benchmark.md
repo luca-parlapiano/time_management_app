@@ -188,8 +188,8 @@ L’integrazione resta subordinata alla validazione del bisogno descritta nelle
 ## Coerenza con l’app corrente
 
 Il calendario attuale copre pianificazione manuale settimanale, ricorrenze, vincoli,
-esiti, statistiche e backup locali. Il precedente onboarding generativo e il simulatore
-rimangono nel repository, scollegati dalla home.
+esiti, statistiche e backup locali. Il precedente onboarding generativo, il planner
+settimanale e il simulatore sono stati rimossi.
 
 La direzione proposta in questo documento richiede ancora timeline del giorno, inbox,
 routine a step ed esecuzione guidata. Le ricorrenze del calendario non costituiscono da

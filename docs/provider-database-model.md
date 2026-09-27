@@ -102,14 +102,12 @@ Il backup JSON resta importabile/esportabile. Ogni importazione sostituisce i da
 
 La persistenza reale richiede Electron (`npm run dev`); il solo server Vite non espone il collegamento al database. Dopo modifiche a main/preload è necessario riavviare Electron.
 
-## Percorsi del prototipo
+## Runtime sperimentale
 
-`src/planner/`, `src/simulation/` e i relativi servizi conservano il planner generativo
-precedente. Non alimentano il calendario principale.
-
-La chat è disabilitata nella home, ma bridge IPC e runtime `llama-server` esistono
-ancora. Il runtime può usare un server configurato esternamente ed effettuare richieste
-di rete. Non è necessario per l’uso ordinario. Vedi [runtime storico AI](architettura-distribuzione-ai.md)
+Il planner deterministico settimanale, il simulatore e i relativi servizi renderer
+sono stati rimossi. Bridge IPC e runtime `llama-server` esistono ancora per esperimenti
+separati dalla UI. Il runtime può usare un server configurato esternamente ed effettuare richieste
+di rete. Non è necessario per l’uso ordinario. Vedi [runtime sperimentale AI](architettura-distribuzione-ai.md)
 e [limiti aperti](stato-progetto.md).
 
 ## Sviluppo e distribuzione

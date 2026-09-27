@@ -51,7 +51,7 @@ le prove browser con dati temporanei. Dopo modifiche a main/preload riavviare El
 - `src/domain/`, `src/model/`, `src/utils/`: regole, tipi condivisi e utility pure.
 - `electron/`: main, preload, servizio database e worker SQLite.
 - `tests/`: test automatici e suite browser su dati di prova.
-- `src/planner/`, `src/simulation/`, `ai-lab/`: prototipo e sperimentazione, fuori dal flusso principale.
+- `ai-lab/`: dati e strumenti sperimentali per valutazioni AI offline.
 
 ## Verifiche e build
 
@@ -67,7 +67,8 @@ Per copertura e procedure complete vedere [Qualità del codice](docs/code-qualit
 
 ## AI locale
 
-La chat del prototipo è scollegata dal calendario e non serve un modello per usare
-l’app. Installazione, download, variabili d’ambiente e adapter sono documentati nel
+Il vecchio planner settimanale e la relativa UI sono stati rimossi. Non serve un modello
+per usare l’app; il runtime LLM sperimentale resta scollegato dal calendario. Installazione,
+download, variabili d’ambiente e adapter sono documentati nel
 [runtime AI](docs/architettura-distribuzione-ai.md). Per training e valutazione offline
 vedere [AI Lab](ai-lab/README.md).

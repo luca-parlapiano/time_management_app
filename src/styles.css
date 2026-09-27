@@ -501,9 +501,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .drawer-layout .week-navigation button { padding: 9px 12px; font-size: 13px; }
 .drawer-layout [role="tabpanel"] { min-height: 0; overflow: auto; }
 .drawer-layout #panel-calendar:not([hidden]) { display: flex; flex-direction: column; flex: 1; gap: 8px; }
-.calendar-planning-note { flex-shrink: 0; font-size: 12px; color: var(--text-secondary); }
-.calendar-planning-note summary { cursor: pointer; }
-.calendar-planning-note p { margin: 8px 0 0; max-width: 800px; }
 .continuous-calendar.hourly-calendar { flex: 1; min-height: 280px; max-height: none; grid-template-columns: 48px repeat(7, minmax(0, 1fr)); gap: 6px; padding: 3px; align-items: stretch; }
 .hourly-calendar .day-column, .hourly-calendar .calendar-time-column { height: 100%; min-width: 0; border-radius: 14px; }
 .hourly-calendar .day-header { height: 66px; padding: 8px 4px; border-radius: 14px 14px 0 0; font-size: 12px; }

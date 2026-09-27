@@ -105,10 +105,9 @@ Annullare non modifica nulla. Lo svuotamento è atomico e senza annullamento suc
 
 ## Percorsi precedenti e limiti
 
-La home non monta più wizard, onboarding generativo, simulatore, dashboard del vecchio
-piano o chat. Il vecchio codice del motore e il runtime LLM rimangono nel repository
-per gli esperimenti, ma non scrivono nel nuovo archivio. La chat è esplicitamente indicata
-come disabilitata fino a un'integrazione compatibile con date, vincoli ed esiti.
+Wizard, onboarding generativo, simulatore, dashboard, chat e motore del vecchio piano
+sono stati rimossi. Il runtime LLM rimane nel repository per esperimenti separati, ma
+non è collegato alla UI e non scrive nel nuovo archivio.
 
 Restano fuori: viste giorno/mese, drag-and-drop, ripianificazione automatica, nuove
 funzioni AI, ricorrenze complesse, account, backend e sincronizzazione. Lo spostamento

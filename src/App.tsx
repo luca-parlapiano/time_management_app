@@ -321,18 +321,6 @@ function AppContent() {
             }}
             onOutcome={recordOutcome}
           />
-          <details
-            className="calendar-planning-note"
-            aria-label="Pianificazione"
-          >
-            <summary>Pianificazione e AI</summary>
-            <p className="summary-empty-copy">
-              La chat del prototipo è temporaneamente disabilitata: rigenerava
-              l’intero piano. Puoi organizzare gli elementi direttamente nel
-              calendario; i futuri suggerimenti dovranno rispettare date,
-              vincoli ed esiti.
-            </p>
-          </details>
         </section>
         <section
           id="panel-statistics"

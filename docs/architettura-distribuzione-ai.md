@@ -7,20 +7,19 @@
 > adapter o distribuzione già collaudati. Vedi [stato del progetto](stato-progetto.md)
 > e [indice](README.md).
 
-## Architettura del prototipo precedente
+## Runtime sperimentale conservato
 
-La chat desktop usa Qwen3-4B `Q4_K_M` attraverso `llama-server`. Il processo Electron
+Il runtime può usare Qwen3-4B `Q4_K_M` attraverso `llama-server`. Il processo Electron
 avvia il server una sola volta, attende `/health`, applica il template chat del GGUF e
-richiede JSON vincolato dallo schema `PlanningIntent`.
+restituisce una risposta JSON. La vecchia UI, la validazione `PlanningIntent` e il
+planner deterministico TypeScript sono stati rimossi.
 
 ```text
-UI React
-  -> IPC Electron
+client sperimentale
+  -> IPC Electron esistente
   -> LlamaPlanningRuntime
   -> llama-server
   -> Qwen3-4B Q4_K_M (+ LoRA GGUF opzionale)
-  -> validazione PlanningIntent
-  -> planner deterministico TypeScript
 ```
 
 Il runtime dell'app non dipende da Python, PyTorch, Transformers o PEFT. Queste librerie
