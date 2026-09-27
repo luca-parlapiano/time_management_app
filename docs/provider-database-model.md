@@ -30,7 +30,7 @@ useDB() → DBProvider → RepositoryDB → preload IPC
 
 ## Responsabilità
 
-- `src/model/`: definizioni TypeScript condivise, contratti delle operazioni e props dei componenti. I modelli del calendario sono in `calendar.ts`, archivio e storico in `outcomeArchive.ts`, contratti di persistenza in `database.ts`, loading in `loading.ts`. I vecchi moduli possono riesportare i tipi per compatibilità; le definizioni sono qui.
+- `src/model/`: definizioni TypeScript condivise tra più livelli. I modelli del calendario sono in `calendar.ts`, archivio e storico in `outcomeArchive.ts`, statistiche in `statistics.ts`, persistenza in `database.ts` e loading in `loading.ts`. Le props usate da un solo componente restano nel relativo file `.tsx`.
 - `src/domain/`: funzioni pure e regole del calendario, validazione, ricorrenze, vincoli e backup.
 - `src/providers/LoadingProvider.tsx`: operazioni in corso, conteggio delle richieste simultanee, overlay bloccante e stato consultabile per singola operazione.
 - `src/providers/DBProvider.tsx`: stato condiviso, operazioni applicative, errori, loading e aggiornamento della UI solo dopo la conferma del salvataggio.
@@ -141,11 +141,11 @@ La data è una data civile `YYYY-MM-DD`. La settimana va dal lunedì alla domeni
 
 Il raggruppamento mantiene una card per attività con identità condivisa o titolo normalizzato, come nella barra laterale. L’ultimo esito per identità dell’occorrenza prevale sulle registrazioni precedenti. Si usa la data dell’appuntamento salvata nell’esito, non il giorno in cui viene premuto il pulsante; i dati storici restano validi anche dopo l’eliminazione dell’appuntamento. Gli appuntamenti notturni vengono contati una sola volta nel giorno di inizio. Le card mostrano le attività attualmente presenti nel calendario; le settimane senza appuntamenti mostrano zero.
 
-I modelli sono in `src/model/weeklyStatistics.ts`; i test delle regole in `tests/weekly-statistics.test.cjs`.
+I modelli sono in `src/model/statistics.ts`; i test delle regole in `tests/weekly-statistics.test.cjs`.
 
 ## Statistiche giornaliere
 
-`useDB().getDailyStatistics("2026-09-23")` espone il nuovo metodo del middleware. Restituisce totale pianificato, conteggi per esito, `recorded`, `completionPercent` e segmenti `activities` con titolo, icona, colore, numero di appuntamenti, `completed` e `contributionPercent`. I modelli sono in `src/model/dailyStatistics.ts`.
+`useDB().getDailyStatistics("2026-09-23")` espone il nuovo metodo del middleware. Restituisce totale pianificato, conteggi per esito, `recorded`, `completionPercent` e segmenti `activities` con titolo, icona, colore, numero di appuntamenti, `completed` e `contributionPercent`. I modelli sono in `src/model/statistics.ts`.
 
 Il grafico giornaliero rappresenta la composizione della giornata: conta una volta ogni appuntamento che occupa quella data, comprese le continuazioni dal giorno precedente; una fine a mezzanotte non occupa il giorno successivo. Il completamento è `completed / total * 100`; il contributo di ogni segmento è il numero di appuntamenti superati di quella attività diviso per tutti gli appuntamenti pianificati nella giornata. La quota non completata resta grigia: parziali, non superati e senza esito non valgono come superati. Non si usano pesi basati sulla durata né percentuali arbitrarie per gli esiti parziali. Titoli normalizzati uguali con lo stesso colore e icona condividono un segmento; colori diversi restano distinti.
 

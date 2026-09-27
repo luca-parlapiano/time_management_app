@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { displayDate, outcomeLabels } from "../domain/calendar";
-import type { ItemOutcome } from "../model/calendar.js";
-import type { CalendarEventMenuProps } from "../model/CalendarEventMenu.js";
+import type { ItemOutcome, Occurrence } from "../model/calendar.js";
 import { CalendarDialog } from "./CalendarDialog";
+
+interface CalendarEventMenuProps {
+  item: Occurrence;
+  initialConfirmDelete?: boolean;
+  onClose: () => void;
+  onEdit: () => void;
+  onOutcome: (outcome: ItemOutcome) => Promise<void>;
+  onDelete: () => Promise<void>;
+}
 
 export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, initialConfirmDelete = false }: CalendarEventMenuProps) {
   const [confirmDelete, setConfirmDelete] = useState(initialConfirmDelete);

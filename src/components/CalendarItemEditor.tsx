@@ -3,10 +3,19 @@ import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { activityCovers } from "../activityCovers";
 import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventIcons, kindLabels, validDate, validateData, weekStart } from "../domain/calendar";
-import type { CalendarItem, EventColor, EventIcon as IconName, ItemKind } from "../model/calendar.js";
-import type { CalendarItemEditorProps } from "../model/CalendarItemEditor.js";
+import type { CalendarItem, EditTarget, EventColor, EventIcon as IconName, ItemKind, Occurrence } from "../model/calendar.js";
 import { CalendarDialog } from "./CalendarDialog";
 import { EventIcon } from "../icons/EventIcon";
+
+interface CalendarItemEditorProps {
+  date: string;
+  item?: CalendarItem;
+  occurrence?: Occurrence;
+  items: CalendarItem[];
+  onClose: () => void;
+  onSave: (item: CalendarItem, unlocked: boolean, target?: EditTarget, weekdays?: number[]) => Promise<void>;
+  onDelete: (target: EditTarget, unlocked: boolean) => Promise<void>;
+}
 
 export function CalendarItemEditor({ date, item, occurrence, items, onClose, onSave, onDelete }: CalendarItemEditorProps) {
   const dayLabels = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];

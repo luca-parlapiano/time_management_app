@@ -3,9 +3,11 @@ import type { CSSProperties } from 'react';
 import { useDB } from '../hooks/useDB';
 import { eventColors, weekdayLabels } from '../constants';
 import { dateNumber, displayDate, today } from '../utils/dates';
-import type { ActivityDayStatistics, ActivityHeatmapProps } from '../model/activityStatistics';
+import type { ActivityDayStatistics } from '../model/statistics.js';
 import { EventIcon } from '../icons/EventIcon';
 import { CalendarDialog } from './CalendarDialog';
+
+interface ActivityHeatmapProps { year: number }
 
 /** Descrive la cella senza affidare il significato al solo colore. */
 function dayDescription(day: ActivityDayStatistics): string {

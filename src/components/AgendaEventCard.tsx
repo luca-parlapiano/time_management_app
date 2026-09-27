@@ -4,9 +4,19 @@ import { useState } from "react";
 import { activityCovers } from "../activityCovers";
 import { eventAppearance, eventColors, outcomeLabels } from "../domain/calendar";
 import { useLoading } from "../hooks/useLoading";
-import type { AgendaEventCardProps } from "../model/AgendaEventCard.js";
-import type { ItemOutcome } from "../model/calendar.js";
+import type { ItemOutcome, Occurrence } from "../model/calendar.js";
 import { EventIcon } from "../icons/EventIcon";
+
+interface AgendaEventCardProps {
+  item: Occurrence;
+  date: string;
+  top: string;
+  height: string;
+  disabled?: boolean;
+  onOpen: (item: Occurrence) => void;
+  onDelete: (item: Occurrence) => void;
+  onOutcome: (item: Occurrence, outcome: ItemOutcome) => Promise<void>;
+}
 
 export function AgendaEventCard({ item, date, top, height, disabled, onOpen, onDelete, onOutcome }: AgendaEventCardProps) {
   const { isLoading } = useLoading();

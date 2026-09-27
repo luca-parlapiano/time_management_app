@@ -2,8 +2,18 @@ import { percentage } from "../utils/math.js";
 import { toMinutes as minutes } from "../utils/time.js";
 import type { CSSProperties } from "react";
 import { addDays, displayDate, occurrences, today } from "../domain/calendar";
-import type { WeeklyCalendarProps } from "../model/WeeklyCalendar.js";
+import type { CalendarState, ItemOutcome, Occurrence } from "../model/calendar.js";
 import { AgendaEventCard } from "./AgendaEventCard";
+
+interface WeeklyCalendarProps {
+  state: CalendarState;
+  week: string;
+  disabled?: boolean;
+  onAdd: (date: string) => void;
+  onEdit: (item: Occurrence) => void;
+  onDelete: (item: Occurrence) => void;
+  onOutcome: (item: Occurrence, outcome: ItemOutcome) => Promise<void>;
+}
 
 export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit, onDelete, onOutcome }: WeeklyCalendarProps) {
   const visible = occurrences(state.items, week, addDays(week, 6));

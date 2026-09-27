@@ -1,6 +1,12 @@
 import { useState } from "react";
-import type { CalendarPreferencesProps } from "../model/CalendarPreferences.js";
+import type { CalendarGoal, CalendarProfile, CalendarState } from "../model/calendar.js";
 import { CalendarDialog } from "./CalendarDialog";
+
+interface CalendarPreferencesProps {
+  state: CalendarState;
+  onSave: (profile: CalendarProfile, goals: CalendarGoal[]) => Promise<void>;
+  onClose: () => void;
+}
 
 export function CalendarPreferences({ state, onSave, onClose }: CalendarPreferencesProps) {
   const [profile, setProfile] = useState(state.profile ?? { name: "", notes: "" });

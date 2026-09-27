@@ -2,7 +2,9 @@ import { percentage } from "../utils/math.js";
 import { ArcElement, Chart, DoughnutController, Tooltip } from 'chart.js';
 import { useEffect, useRef } from 'react';
 import { eventColors } from '../domain/calendar';
-import type { DailyDoughnutProps } from '../model/dailyStatistics';
+import type { DailyStatistics } from '../model/statistics.js';
+
+interface DailyDoughnutProps { statistics: DailyStatistics; compact?: boolean }
 
 Chart.register(DoughnutController, ArcElement, Tooltip);
 export function DailyDoughnut({statistics, compact = false}: DailyDoughnutProps) {

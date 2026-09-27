@@ -1,6 +1,9 @@
 import { createContext, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { LoadingContextValue, LoadingEntry, LoadingOptions } from "../model/loading.js";
-import type { LoadingOverlayProps, LoadingProviderProps } from "../model/LoadingProvider.js";
+
+interface LoadingProviderProps { children: ReactNode }
+interface LoadingOverlayProps { message: string }
 
 export const LoadingContext = createContext<LoadingContextValue | null>(null);
 function LoadingOverlay({message}: LoadingOverlayProps) {

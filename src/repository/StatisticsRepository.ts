@@ -1,14 +1,12 @@
 import { ACTIVITY_PARTIAL_WEIGHT } from "../constants.js";
-import type { StatisticsActivity, ActivityYearStatistics, ActivityDayStatistics } from "../model/activityStatistics.js";
+import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry, StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary, WeeklyDayStatistics } from "../model/statistics.js";
 import { isIntegerInRange } from "../utils/numbers.js";
 import { today } from "../utils/dates.js";
 import { percentage } from "../utils/math.js";
-import type { DailyActivitySegment, DailyStatistics, DailyStatisticsEntry } from "../model/dailyStatistics.js";
 import { addDays, eventAppearance, occurrences, validDate, weekStart } from '../domain/calendar.js';
 import { latestOutcomes } from '../domain/outcomeArchive.js';
 import type { CalendarItem } from '../model/calendar.js';
 import type { PlannerArchive } from '../model/outcomeArchive.js';
-import type { StatisticsEntry, StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary, WeeklyDayStatistics } from '../model/weeklyStatistics.js';
 
 const normalizedTitle = (title: string) => title.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('it');
 const occurrenceKey = (sourceId: string, date: string) => JSON.stringify([sourceId, date]);

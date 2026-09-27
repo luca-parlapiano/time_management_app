@@ -1,5 +1,11 @@
-import type { PalettePickerProps } from "../model/PalettePicker.js";
+import type { Palette } from "../model/theme.js";
 import { palettes } from "../constants";
+
+interface PalettePickerProps {
+  value: Palette;
+  onChange: (palette: Palette) => void;
+  saveError: boolean;
+}
 
 export function PalettePicker({ value, onChange, saveError }: PalettePickerProps) {
   return (

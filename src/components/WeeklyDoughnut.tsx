@@ -2,7 +2,12 @@ import { weeklyOutcomeLabels as labels, weeklyOutcomeColors as colors } from "..
 import { percentage } from "../utils/math.js";
 import { ArcElement, Chart, DoughnutController, Tooltip } from 'chart.js';
 import { useEffect, useRef } from 'react';
-import type { WeeklyDoughnutProps } from '../model/WeeklyDoughnut';
+import type { WeeklyActivityStatistics } from '../model/statistics.js';
+
+interface WeeklyDoughnutProps {
+  title: string;
+  statistics: WeeklyActivityStatistics;
+}
 
 Chart.register(DoughnutController, ArcElement, Tooltip);
 

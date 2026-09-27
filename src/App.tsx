@@ -21,8 +21,11 @@ import {
 } from "./domain/calendar";
 import { useDB } from "./hooks/useDB";
 import { useLoading } from "./hooks/useLoading";
-import type { AppTab, CalendarEditorState } from "./model/App.js";
 import type { Occurrence } from "./model/calendar.js";
+
+type AppTab = "calendar" | "statistics" | "settings";
+interface CalendarEditorState { date: string; occurrence?: Occurrence }
+
 function AppContent() {
   const {
     getWeeklyActivities,

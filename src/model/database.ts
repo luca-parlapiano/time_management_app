@@ -1,6 +1,4 @@
-import type { StatisticsActivity, ActivityYearStatistics } from "./activityStatistics.js";
-import type { DailyStatistics } from "./dailyStatistics.js";
-import type { StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary } from "./weeklyStatistics.js";
+import type { ActivityYearStatistics, DailyStatistics, StatisticsActivity, StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary } from "./statistics.js";
 import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTarget, ItemOutcome, Occurrence } from "./calendar.js";
 import type { LoadingOptions } from "./loading.js";
 import type { PlannerArchive } from "./outcomeArchive.js";

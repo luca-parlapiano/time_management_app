@@ -1,15 +1,17 @@
 import { StatisticsRepository } from "../repository/StatisticsRepository";
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { clearCalendar, deleteItem, emptyCalendar, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
 import { outcomeRecord } from "../domain/outcomeArchive";
 import { useLoading } from "../hooks/useLoading";
 import type { ItemData } from "../model/calendar.js";
-import type { DBContextValue, DatabaseSnapshot } from "../model/database.js";
-import type { DBProviderProps } from "../model/DBProvider.js";
+import type { DBContextValue, DatabaseSnapshot, DBRepository } from "../model/database.js";
 import type { LoadingOptions } from "../model/loading.js";
 import type { PlannerArchive } from "../model/outcomeArchive.js";
 import type { Palette } from "../model/theme.js";
 import { repositoryDB } from "../repository/RepositoryDB";
+
+interface DBProviderProps { children: ReactNode; repository?: DBRepository }
 
 export const DBContext = createContext<DBContextValue | null>(null);
 const emptyArchive: PlannerArchive = { format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), history: [] };

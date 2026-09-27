@@ -1,4 +1,9 @@
-import type { AppIconProps } from '../model/AppIcon.js';
+type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'calendar' | 'statistics' | 'settings';
+
+interface AppIconProps {
+  name: AppIconName;
+  size?: number;
+}
 
 /** Icone decorative dell’interfaccia; il nome accessibile resta sul pulsante. */
 export function AppIcon({ name, size = 22 }: AppIconProps) {

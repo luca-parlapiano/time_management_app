@@ -1,5 +1,12 @@
 import { useEffect, useRef } from "react";
-import type { CalendarDialogProps } from "../model/CalendarDialog.js";
+import type { ReactNode } from "react";
+
+interface CalendarDialogProps {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  compact?: boolean;
+}
 
 export function CalendarDialog({ title, onClose, children, compact = false }: CalendarDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);

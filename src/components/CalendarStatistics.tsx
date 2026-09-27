@@ -5,10 +5,12 @@ import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { addDays, displayDate, eventAppearance, eventColors, occurrences, outcomeLabels, today } from "../domain/calendar";
 import { latestOutcomes, statisticsOutcomeLabels } from "../domain/outcomeArchive";
-import type { Occurrence } from "../model/calendar.js";
-import type { CalendarStatisticsProps } from "../model/CalendarStatistics.js";
+import type { CalendarState, Occurrence } from "../model/calendar.js";
+import type { OutcomeRecord } from "../model/outcomeArchive.js";
 import { CalendarDialog } from "./CalendarDialog";
 import { EventIcon } from "../icons/EventIcon";
+
+interface CalendarStatisticsProps { state: CalendarState; history: OutcomeRecord[] }
 
 export function CalendarStatistics({ state, history }: CalendarStatisticsProps) {
   const { getDailyStatistics } = useDB();

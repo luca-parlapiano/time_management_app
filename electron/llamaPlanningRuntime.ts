@@ -1,5 +1,5 @@
 import { DEFAULT_SERVER_URL, DEFAULT_MODEL_REPOSITORY, STARTUP_TIMEOUT_MS, REQUEST_TIMEOUT_MS } from "../src/constants.js";
-import type { PlanningIntentRuntimeResponse, ApplyTemplateResponse, CompletionResponse } from "../src/model/aiRuntime.js";
+import type { ApplyTemplateResponse, CompletionResponse, PlanningAIResponse } from "../src/model/aiRuntime.js";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -13,7 +13,7 @@ export class LlamaPlanningRuntime {
 
   constructor(private readonly resourceRoot: string) {}
 
-  async request(text: string): Promise<PlanningIntentRuntimeResponse> {
+  async request(text: string): Promise<PlanningAIResponse> {
     await this.ensureReady();
 
     const prompt = readFileSync(

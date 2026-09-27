@@ -1,5 +1,5 @@
 import type { DatabaseBridge } from "./model/database.js";
-import type { PlanningAIResponse } from "./model/electron.js";
+import type { PlanningAIResponse } from "./model/aiRuntime.js";
 
 declare global {
   interface Window {
