@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { displayDate, outcomeLabels } from "../../domain/calendar";
 import type { ItemOutcome, Occurrence } from "../../model/calendar.js";
-import { StandardButton } from "../ui/StandardButton";
-import { CalendarDialog } from "../ui/CalendarDialog";
+import { StandardButton } from "../../components/ui/StandardButton";
+import { CalendarDialog } from "../../components/ui/CalendarDialog";
 
 interface CalendarEventMenuProps {
   item: Occurrence;

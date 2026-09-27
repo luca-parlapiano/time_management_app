@@ -4,14 +4,14 @@ import { ArcElement, Chart, DoughnutController, Tooltip } from 'chart.js';
 import { useEffect, useRef } from 'react';
 import type { WeeklyActivityStatistics } from '../../model/statistics.js';
 
-interface WeeklyDoughnutProps {
+interface SidebarWeeklyDoughnutProps {
   title: string;
   statistics: WeeklyActivityStatistics;
 }
 
 Chart.register(DoughnutController, ArcElement, Tooltip);
 
-export function WeeklyDoughnut({ title, statistics }: WeeklyDoughnutProps) {
+export function SidebarWeeklyDoughnut({ title, statistics }: SidebarWeeklyDoughnutProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const { completed, skipped, partial, pending, total, recorded } = statistics;
   useEffect(() => {

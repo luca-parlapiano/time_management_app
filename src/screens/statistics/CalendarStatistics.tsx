@@ -7,8 +7,8 @@ import { addDays, displayDate, eventAppearance, eventColors, occurrences, outcom
 import { latestOutcomes, statisticsOutcomeLabels } from "../../domain/outcomeArchive";
 import type { CalendarState, Occurrence } from "../../model/calendar.js";
 import type { OutcomeRecord } from "../../model/outcomeArchive.js";
-import { StandardButton } from "../ui/StandardButton";
-import { CalendarDialog } from "../ui/CalendarDialog";
+import { StandardButton } from "../../components/ui/StandardButton";
+import { CalendarDialog } from "../../components/ui/CalendarDialog";
 import { EventIcon } from "../../icons/EventIcon";
 
 interface CalendarStatisticsProps { state: CalendarState; history: OutcomeRecord[] }

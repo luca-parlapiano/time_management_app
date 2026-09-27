@@ -5,7 +5,7 @@ import { eventColors, weekdayLabels } from '../../constants';
 import { dateNumber, displayDate, today } from '../../utils/dates';
 import type { ActivityDayStatistics } from '../../model/statistics.js';
 import { EventIcon } from '../../icons/EventIcon';
-import { CalendarDialog } from '../ui/CalendarDialog';
+import { CalendarDialog } from '../../components/ui/CalendarDialog';
 
 interface ActivityHeatmapProps { year: number }
 

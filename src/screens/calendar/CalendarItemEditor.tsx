@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { activityCovers } from "../../activityCovers";
 import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventIcons, kindLabels, validDate, validateData, weekStart } from "../../domain/calendar";
 import type { CalendarItem, EditTarget, EventColor, EventIcon as IconName, ItemKind, Occurrence } from "../../model/calendar.js";
-import { StandardButton } from "../ui/StandardButton";
-import { CalendarDialog } from "../ui/CalendarDialog";
+import { StandardButton } from "../../components/ui/StandardButton";
+import { CalendarDialog } from "../../components/ui/CalendarDialog";
 import { EventIcon } from "../../icons/EventIcon";
 
 interface CalendarItemEditorProps {

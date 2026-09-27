@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { addDays, displayDate, occurrences, today } from "../../domain/calendar";
 import type { CalendarState, ItemOutcome, Occurrence } from "../../model/calendar.js";
 import { AgendaEventCard } from "./AgendaEventCard";
-import { StandardButton } from "../ui/StandardButton";
+import { StandardButton } from "../../components/ui/StandardButton";
 
 interface WeeklyCalendarProps {
   state: CalendarState;

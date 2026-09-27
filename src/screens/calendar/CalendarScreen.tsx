@@ -1,0 +1,45 @@
+import { StandardButton } from "../../components/ui/StandardButton";
+import { addDays, displayDate, today, weekStart } from "../../domain/calendar";
+import { useDB } from "../../hooks/useDB";
+import type { Occurrence } from "../../model/calendar.js";
+import { WeeklyCalendar } from "./WeeklyCalendar";
+
+interface CalendarScreenProps {
+  active: boolean;
+  week: string;
+  onWeekChange: (week: string) => void;
+  onOpenEditor: (date: string, occurrence?: Occurrence) => void;
+  onOpenEvent: (item: Occurrence, confirmDelete: boolean) => void;
+}
+
+/** Schermata settimanale del calendario e relativi comandi di navigazione. */
+export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent }: CalendarScreenProps) {
+  const { state, saving, recordOutcome } = useDB();
+  return (
+    <section id="panel-calendar" className="app-screen" role="tabpanel" aria-labelledby="tab-calendar" tabIndex={0} hidden={!active}>
+      <header className="calendar-header">
+        <div>
+          <p className="eyebrow">Vista settimanale</p>
+          <h2>Calendario</h2>
+          <p aria-live="polite">{displayDate(week, { year: "numeric" })} – {displayDate(addDays(week, 6), { year: "numeric" })}</p>
+        </div>
+        <nav className="week-navigation" aria-label="Navigazione settimane">
+          <StandardButton variant="secondary" aria-label="Settimana precedente" onClick={() => onWeekChange(addDays(week, -7))}>← Precedente</StandardButton>
+          <StandardButton variant="secondary" onClick={() => onWeekChange(weekStart(today()))}>Oggi</StandardButton>
+          <StandardButton variant="secondary" aria-label="Settimana successiva" onClick={() => onWeekChange(addDays(week, 7))}>Successiva →</StandardButton>
+        </nav>
+      </header>
+      <div className="screen-content calendar-screen-content">
+        <WeeklyCalendar
+          state={state}
+          week={week}
+          disabled={saving}
+          onAdd={(date) => onOpenEditor(date)}
+          onEdit={(item) => onOpenEvent(item, false)}
+          onDelete={(item) => onOpenEvent(item, true)}
+          onOutcome={recordOutcome}
+        />
+      </div>
+    </section>
+  );
+}

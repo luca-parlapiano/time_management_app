@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CalendarGoal, CalendarProfile, CalendarState } from "../../model/calendar.js";
-import { StandardButton } from "../ui/StandardButton";
-import { CalendarDialog } from "../ui/CalendarDialog";
+import { StandardButton } from "../../components/ui/StandardButton";
+import { CalendarDialog } from "../../components/ui/CalendarDialog";
 
 interface CalendarPreferencesProps {
   state: CalendarState;

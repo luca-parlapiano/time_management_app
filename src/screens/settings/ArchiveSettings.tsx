@@ -3,8 +3,8 @@ import { latestOutcomes } from "../../domain/outcomeArchive";
 import { useDB } from "../../hooks/useDB";
 import { useLoading } from "../../hooks/useLoading";
 import type { PlannerArchive } from "../../model/outcomeArchive.js";
-import { StandardButton } from "../ui/StandardButton";
-import { CalendarDialog } from "../ui/CalendarDialog";
+import { StandardButton } from "../../components/ui/StandardButton";
+import { CalendarDialog } from "../../components/ui/CalendarDialog";
 
 function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
