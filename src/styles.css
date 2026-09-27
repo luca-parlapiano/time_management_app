@@ -467,6 +467,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .hourly-calendar .day-add { margin-top: 10px; }
 .hourly-calendar .day-timeline { position: relative; display: block; height: var(--timeline-height); padding: 0; background: repeating-linear-gradient(to bottom, rgba(var(--ink-rgb), 0.12) 0, rgba(var(--ink-rgb), 0.12) 1px, transparent 1px, transparent var(--hour-height)); }
 .hourly-calendar .day-empty { position: absolute; top: 16px; left: 0; right: 0; margin: 0; }
+.current-time-indicator { position: absolute; left: -3px; right: 0; z-index: 6; height: 2px; background: rgb(var(--accent-rgb)); pointer-events: none; transition: top 180ms linear; }
+.current-time-indicator::before { content: ""; position: absolute; left: 0; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--accent-rgb)); transform: translateY(-50%); }
+.current-time-label { position: absolute; right: 3px; top: 50%; padding: 1px 4px; border-radius: 999px; background: rgb(var(--accent-rgb)); color: rgb(var(--on-primary-rgb)); font-size: 9px; font-variant-numeric: tabular-nums; line-height: 1.3; transform: translateY(-50%); }
 .hourly-calendar .timeline-item { position: absolute; left: 5px; width: calc(100% - 10px); min-height: 0; overflow: hidden; }
 .hourly-calendar .timeline-item-compact { padding: 0 6px; border-radius: 6px; background: color-mix(in srgb, var(--event-color) 25%, #fff); border-left: 3px solid var(--event-color); }
 .timeline-item-compact .event-icon { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 6px; }
