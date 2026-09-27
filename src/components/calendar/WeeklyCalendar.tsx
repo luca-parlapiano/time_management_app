@@ -1,9 +1,10 @@
-import { percentage } from "../utils/math.js";
-import { toMinutes as minutes } from "../utils/time.js";
+import { percentage } from "../../utils/math.js";
+import { toMinutes as minutes } from "../../utils/time.js";
 import type { CSSProperties } from "react";
-import { addDays, displayDate, occurrences, today } from "../domain/calendar";
-import type { CalendarState, ItemOutcome, Occurrence } from "../model/calendar.js";
+import { addDays, displayDate, occurrences, today } from "../../domain/calendar";
+import type { CalendarState, ItemOutcome, Occurrence } from "../../model/calendar.js";
 import { AgendaEventCard } from "./AgendaEventCard";
+import { StandardButton } from "../ui/StandardButton";
 
 interface WeeklyCalendarProps {
   state: CalendarState;
@@ -38,7 +39,7 @@ export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit, onDelete,
       const entries = dayEntries[dayIndex];
       return <article key={date} className={`day-column ${date === today() ? "day-today" : ""}`}>
         <header className="day-header"><time dateTime={date}>{displayDate(date, { weekday: "short", day: "numeric", month: undefined })}</time><small>{date === today() ? "Oggi" : "\u00a0"}</small>
-          <button disabled={disabled} type="button" className="day-add ghost-button" aria-label={`Aggiungi attività il ${date}`} onClick={() => onAdd(date)} title="Aggiungi attività">+</button>
+          <StandardButton variant="ghost" disabled={disabled} type="button" className="day-add" aria-label={`Aggiungi attività il ${date}`} onClick={() => onAdd(date)} title="Aggiungi attività">+</StandardButton>
         </header>
         <div className="day-blocks day-timeline">
           {entries.length === 0 && <p className="day-empty">Nessun elemento</p>}

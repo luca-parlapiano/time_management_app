@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { displayDate, outcomeLabels } from "../domain/calendar";
-import type { ItemOutcome, Occurrence } from "../model/calendar.js";
-import { CalendarDialog } from "./CalendarDialog";
+import { displayDate, outcomeLabels } from "../../domain/calendar";
+import type { ItemOutcome, Occurrence } from "../../model/calendar.js";
+import { StandardButton } from "../ui/StandardButton";
+import { CalendarDialog } from "../ui/CalendarDialog";
 
 interface CalendarEventMenuProps {
   item: Occurrence;
@@ -22,14 +23,14 @@ export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, 
     <p className="editor-hint">{displayDate(item.date, { weekday: "long" })} · {item.start}–{item.end}</p>
     {!confirmDelete && <fieldset className="event-outcome-options">
       <legend>Com’è andata?</legend>
-      <div>{(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <button type="button" key={outcome} className="secondary-button" aria-pressed={item.outcome === outcome} onClick={() => run(() => onOutcome(outcome))}>{outcomeLabels[outcome]}</button>)}</div>
+      <div>{(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <StandardButton variant="secondary" type="button" key={outcome} aria-pressed={item.outcome === outcome} onClick={() => run(() => onOutcome(outcome))}>{outcomeLabels[outcome]}</StandardButton>)}</div>
     </fieldset>}
     <div className="event-menu-actions">
-      {!confirmDelete && <button type="button" className="secondary-button" onClick={onEdit}>Modifica</button>}
-      {!confirmDelete ? <button type="button" className="ghost-button" onClick={() => setConfirmDelete(true)}>Elimina</button> : <div className="event-delete-confirmation">
+      {!confirmDelete && <StandardButton variant="secondary" type="button" onClick={onEdit}>Modifica</StandardButton>}
+      {!confirmDelete ? <StandardButton variant="ghost" type="button" onClick={() => setConfirmDelete(true)}>Elimina</StandardButton> : <div className="event-delete-confirmation">
         <p>Eliminare questo appuntamento?{item.recurring ? " Gli altri giorni e le ripetizioni successive restano nel calendario." : ""}</p>
-        <button type="button" className="ghost-button" onClick={() => setConfirmDelete(false)}>Annulla</button>
-        <button type="button" className="primary-button" onClick={() => run(onDelete)}>{item.kind === "flexible" ? "Conferma eliminazione" : "Sblocca ed elimina"}</button>
+        <StandardButton variant="ghost" type="button" onClick={() => setConfirmDelete(false)}>Annulla</StandardButton>
+        <StandardButton variant="primary" type="button" onClick={() => run(onDelete)}>{item.kind === "flexible" ? "Conferma eliminazione" : "Sblocca ed elimina"}</StandardButton>
       </div>}
     </div>
     {error && <p role="alert" className="capacity-warning">{error}</p>}

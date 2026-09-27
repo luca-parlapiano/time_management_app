@@ -1,4 +1,4 @@
-type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'calendar' | 'statistics' | 'settings';
+export type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'calendar' | 'statistics' | 'settings';
 
 interface AppIconProps {
   name: AppIconName;

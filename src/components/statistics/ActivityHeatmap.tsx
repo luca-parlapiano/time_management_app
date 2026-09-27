@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { useDB } from '../hooks/useDB';
-import { eventColors, weekdayLabels } from '../constants';
-import { dateNumber, displayDate, today } from '../utils/dates';
-import type { ActivityDayStatistics } from '../model/statistics.js';
-import { EventIcon } from '../icons/EventIcon';
-import { CalendarDialog } from './CalendarDialog';
+import { useDB } from '../../hooks/useDB';
+import { eventColors, weekdayLabels } from '../../constants';
+import { dateNumber, displayDate, today } from '../../utils/dates';
+import type { ActivityDayStatistics } from '../../model/statistics.js';
+import { EventIcon } from '../../icons/EventIcon';
+import { CalendarDialog } from '../ui/CalendarDialog';
 
 interface ActivityHeatmapProps { year: number }
 

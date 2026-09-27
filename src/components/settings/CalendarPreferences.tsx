@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { CalendarGoal, CalendarProfile, CalendarState } from "../model/calendar.js";
-import { CalendarDialog } from "./CalendarDialog";
+import type { CalendarGoal, CalendarProfile, CalendarState } from "../../model/calendar.js";
+import { StandardButton } from "../ui/StandardButton";
+import { CalendarDialog } from "../ui/CalendarDialog";
 
 interface CalendarPreferencesProps {
   state: CalendarState;
@@ -28,13 +29,13 @@ export function CalendarPreferences({ state, onSave, onClose }: CalendarPreferen
           {goals.length === 0 && <p className="editor-hint">Non hai ancora aggiunto obiettivi.</p>}
           {goals.map((goal, index) => <div className="profile-goal-row" key={goal.id}>
             <label>Obiettivo {index + 1}<input required value={goal.name} onChange={e => setGoals(goals.map(entry => entry.id === goal.id ? { ...entry, name: e.target.value } : entry))} /></label>
-            <button type="button" className="ghost-button" aria-label={`Elimina obiettivo ${goal.name.trim() || index + 1}`} onClick={() => setGoals(current => current.filter(entry => entry.id !== goal.id))}>Elimina</button>
+            <StandardButton variant="ghost" type="button" aria-label={`Elimina obiettivo ${goal.name.trim() || index + 1}`} onClick={() => setGoals(current => current.filter(entry => entry.id !== goal.id))}>Elimina</StandardButton>
           </div>)}
           {state.goals.some(goal => !goals.some(entry => entry.id === goal.id)) && <p className="editor-hint" role="status">Gli obiettivi rimossi saranno eliminati quando salvi il profilo. Le attività collegate restano nel calendario.</p>}
-          <button type="button" className="secondary-button" onClick={() => setGoals([...goals, { id: crypto.randomUUID(), name: "" }])}>Aggiungi obiettivo</button>
+          <StandardButton variant="secondary" type="button" onClick={() => setGoals([...goals, { id: crypto.randomUUID(), name: "" }])}>Aggiungi obiettivo</StandardButton>
       </div>
       {error && <p role="alert" className="capacity-warning">{error}</p>}
-      <div className="modal-actions"><button className="primary-button" type="submit">Salva profilo</button></div>
+      <div className="modal-actions"><StandardButton variant="primary" type="submit">Salva profilo</StandardButton></div>
     </form>
   </CalendarDialog>;
 }

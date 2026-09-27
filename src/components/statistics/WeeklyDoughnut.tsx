@@ -1,8 +1,8 @@
-import { weeklyOutcomeLabels as labels, weeklyOutcomeColors as colors } from "../constants.js";
-import { percentage } from "../utils/math.js";
+import { weeklyOutcomeLabels as labels, weeklyOutcomeColors as colors } from "../../constants.js";
+import { percentage } from "../../utils/math.js";
 import { ArcElement, Chart, DoughnutController, Tooltip } from 'chart.js';
 import { useEffect, useRef } from 'react';
-import type { WeeklyActivityStatistics } from '../model/statistics.js';
+import type { WeeklyActivityStatistics } from '../../model/statistics.js';
 
 interface WeeklyDoughnutProps {
   title: string;

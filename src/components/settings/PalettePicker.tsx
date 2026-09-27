@@ -1,5 +1,5 @@
-import type { Palette } from "../model/theme.js";
-import { palettes } from "../constants";
+import type { Palette } from "../../model/theme.js";
+import { palettes } from "../../constants";
 
 interface PalettePickerProps {
   value: Palette;

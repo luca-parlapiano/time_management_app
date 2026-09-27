@@ -1,11 +1,11 @@
-import { AppIcon } from "../icons/AppIcon";
+import { AppIcon } from "../../icons/AppIcon";
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import { activityCovers } from "../activityCovers";
-import { eventAppearance, eventColors, outcomeLabels } from "../domain/calendar";
-import { useLoading } from "../hooks/useLoading";
-import type { ItemOutcome, Occurrence } from "../model/calendar.js";
-import { EventIcon } from "../icons/EventIcon";
+import { activityCovers } from "../../activityCovers";
+import { eventAppearance, eventColors, outcomeLabels } from "../../domain/calendar";
+import { useLoading } from "../../hooks/useLoading";
+import type { ItemOutcome, Occurrence } from "../../model/calendar.js";
+import { EventIcon } from "../../icons/EventIcon";
 
 interface AgendaEventCardProps {
   item: Occurrence;

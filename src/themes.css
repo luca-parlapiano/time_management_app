@@ -90,91 +90,11 @@
   --backdrop-rgb: 0, 0, 0;
 }
 
-.palette-picker {
-  min-width: 0;
-  margin: 0 0 28px;
-  padding: 0;
-  border: 0;
+:root {
+  --focus-ring: rgb(var(--accent-rgb));
+  --button-primary-bg: var(--text);
+  --button-primary-text: rgb(var(--on-primary-rgb));
+  --button-secondary-bg: rgba(var(--card-rgb), 0.64);
+  --button-secondary-border: rgba(var(--ink-rgb), 0.12);
+  --button-ghost-bg: rgba(var(--ink-rgb), 0.08);
 }
-
-.palette-picker legend {
-  padding: 0;
-  margin-bottom: 12px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.palette-options {
-  display: grid;
-  gap: 8px;
-}
-
-.palette-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  min-height: 58px;
-  border: 1px solid rgba(var(--ink-rgb), 0.16);
-  border-radius: 14px;
-  background: rgba(var(--card-rgb), 0.64);
-  cursor: pointer;
-}
-
-.palette-option:has(input:checked) {
-  border-color: rgb(var(--accent-rgb));
-  background: rgba(var(--accent-rgb), 0.1);
-}
-
-.palette-option input {
-  margin: 0;
-  flex: 0 0 auto;
-}
-
-.palette-option-copy {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.palette-option-copy strong {
-  font-size: 14px;
-}
-
-.palette-option-copy small,
-.palette-note {
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.palette-note {
-  margin: 10px 0 0;
-}
-
-.palette-swatches {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 3px;
-}
-
-.palette-swatches span {
-  width: 12px;
-  height: 24px;
-  border-radius: 4px;
-  background: var(--page);
-  border: 1px solid rgba(var(--ink-rgb), 0.2);
-}
-
-.palette-swatches span:nth-child(2) { background: var(--text); }
-.palette-swatches span:nth-child(3) { background: rgb(var(--accent-rgb)); }
-
-.plan-block {
-  --block-rgb: var(--commitment-rgb);
-  border-color: rgb(var(--block-rgb));
-  background: rgba(var(--block-rgb), 0.12);
-}
-
-.plan-block-focus { --block-rgb: var(--accent-rgb); }
-.plan-block-buffer { --block-rgb: var(--info-rgb); }
-.plan-block-recovery { --block-rgb: var(--support-rgb); }

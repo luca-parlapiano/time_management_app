@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { latestOutcomes } from "../domain/outcomeArchive";
-import { useDB } from "../hooks/useDB";
-import { useLoading } from "../hooks/useLoading";
-import type { PlannerArchive } from "../model/outcomeArchive.js";
-import { CalendarDialog } from "./CalendarDialog";
+import { latestOutcomes } from "../../domain/outcomeArchive";
+import { useDB } from "../../hooks/useDB";
+import { useLoading } from "../../hooks/useLoading";
+import type { PlannerArchive } from "../../model/outcomeArchive.js";
+import { StandardButton } from "../ui/StandardButton";
+import { CalendarDialog } from "../ui/CalendarDialog";
 
 function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
@@ -29,9 +30,9 @@ export function ArchiveSettings() {
     <h3>Database locale e backup</h3>
     <p>Calendario, profilo, obiettivi e storico degli esiti sono salvati su questo dispositivo. Esporta un backup per conservarli o trasferirli.</p>
     <div className="hero-actions">
-      <button type="button" className="primary-button" disabled={disabled || busy} onClick={() => void exportFile()}>Esporta</button>
-      <button type="button" className="secondary-button" disabled={disabled || busy} onClick={() => input.current?.click()}>Importa</button>
-      {previous && <button type="button" className="ghost-button" disabled={disabled || busy} onClick={() => void exportFile(true)}>Esporta copia precedente</button>}
+      <StandardButton variant="primary" type="button" disabled={disabled || busy} onClick={() => void exportFile()}>Esporta</StandardButton>
+      <StandardButton variant="secondary" type="button" disabled={disabled || busy} onClick={() => input.current?.click()}>Importa</StandardButton>
+      {previous && <StandardButton variant="ghost" type="button" disabled={disabled || busy} onClick={() => void exportFile(true)}>Esporta copia precedente</StandardButton>}
     </div>
     <input ref={input} type="file" accept=".json,application/json" hidden onChange={async event => {
       const file = event.target.files?.[0]; event.target.value = "";
@@ -50,12 +51,12 @@ export function ArchiveSettings() {
       <p>Il backup sostituirà calendario, profilo, obiettivi e storico attuali. Una copia dei dati attuali sarà conservata automaticamente e potrai esportarla dalle Impostazioni.</p>
       <p>Sono accettati solo backup esportati dall’app nel formato corrente.</p>
       {error && <p role="alert" className="capacity-warning">{error}</p>}
-      <div className="modal-actions"><button type="button" className="secondary-button" disabled={busy} onClick={() => setCandidate(null)}>Annulla</button><button type="button" className="primary-button" disabled={busy || disabled} onClick={async () => {
+      <div className="modal-actions"><StandardButton variant="secondary" type="button" disabled={busy} onClick={() => setCandidate(null)}>Annulla</StandardButton><StandardButton variant="primary" type="button" disabled={busy || disabled} onClick={async () => {
         setBusy(true); setError("");
         try { await onImport(candidate); setCandidate(null); setMessage("Backup importato. La copia precedente è disponibile per l’esportazione."); }
         catch (cause) { setError((cause as Error).message); }
         finally { setBusy(false); }
-      }}>{busy ? "Importazione…" : "Conferma: sostituisci i dati"}</button></div>
+      }}>{busy ? "Importazione…" : "Conferma: sostituisci i dati"}</StandardButton></div>
     </CalendarDialog>}
   </div>;
 }

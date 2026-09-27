@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { StandardButton } from "./StandardButton";
 
 interface CalendarDialogProps {
   title: string;
@@ -18,7 +19,7 @@ export function CalendarDialog({ title, onClose, children, compact = false }: Ca
   return <dialog ref={ref} className={`calendar-dialog modal-card${compact ? " compact-event-menu" : ""}`} aria-labelledby="dialog-title" onCancel={onClose}>
     <div className="modal-header">
       <h3 id="dialog-title">{title}</h3>
-      <button type="button" className="ghost-button" aria-label="Chiudi" onClick={onClose}>{compact ? "×" : "Chiudi"}</button>
+      <StandardButton variant="ghost" type="button" aria-label="Chiudi" onClick={onClose}>{compact ? "×" : "Chiudi"}</StandardButton>
     </div>
     {children}
   </dialog>;

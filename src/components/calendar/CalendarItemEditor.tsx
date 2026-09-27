@@ -1,11 +1,12 @@
-import { isPositiveNumber } from "../utils/numbers.js";
+import { isPositiveNumber } from "../../utils/numbers.js";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
-import { activityCovers } from "../activityCovers";
-import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventIcons, kindLabels, validDate, validateData, weekStart } from "../domain/calendar";
-import type { CalendarItem, EditTarget, EventColor, EventIcon as IconName, ItemKind, Occurrence } from "../model/calendar.js";
-import { CalendarDialog } from "./CalendarDialog";
-import { EventIcon } from "../icons/EventIcon";
+import { activityCovers } from "../../activityCovers";
+import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventIcons, kindLabels, validDate, validateData, weekStart } from "../../domain/calendar";
+import type { CalendarItem, EditTarget, EventColor, EventIcon as IconName, ItemKind, Occurrence } from "../../model/calendar.js";
+import { StandardButton } from "../ui/StandardButton";
+import { CalendarDialog } from "../ui/CalendarDialog";
+import { EventIcon } from "../../icons/EventIcon";
 
 interface CalendarItemEditorProps {
   date: string;
@@ -71,7 +72,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
       </div>}
       {locked && <div className="capacity-warning">
         <p>🔒 Questo vincolo è protetto. Per modificarlo, spostarlo o eliminarlo devi sbloccare {seriesEdit ? "l’intera serie" : "questo elemento"}.</p>
-        <button type="button" className="secondary-button" onClick={() => setUnlocked(true)}>Sblocca {seriesEdit ? "serie" : "per modificare"}</button>
+        <StandardButton variant="secondary" type="button" onClick={() => setUnlocked(true)}>Sblocca {seriesEdit ? "serie" : "per modificare"}</StandardButton>
       </div>}
       {unlocked && <p role="status">🔓 Sbloccato per questa modifica. Tornerà protetto dopo il salvataggio.</p>}
       <fieldset disabled={locked} className="editor-fields form-grid">
@@ -148,14 +149,14 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
         {draft.recurrence && (!item?.recurrence || seriesEdit) && <label>Ultima data della serie
           <input type="date" min={draft.date} value={draft.recurrence.until ?? ""} onChange={e => change({ recurrence: e.target.value ? { until: e.target.value } : {} })} />
         </label>}
-            <button type="button" className="secondary-button" onClick={() => {
+            <StandardButton variant="secondary" type="button" onClick={() => {
               try {
                 validateData({ ...draft, title: draft.title.trim() || "Attività" });
                 if (draft.recurrence && !item?.recurrence && !weekdays.length) throw new Error("Scegli almeno un giorno della settimana.");
                 if (draft.recurrence?.until && (!validDate(draft.recurrence.until) || draft.recurrence.until < draft.date)) throw new Error("Controlla la fine della ripetizione.");
                 setError(""); setScheduleOpen(false);
               } catch (cause) { setError((cause as Error).message); }
-            }}>Conferma date e ripetizione</button>
+            }}>Conferma date e ripetizione</StandardButton>
           </div>}
         </div>
         <label>Descrizione<textarea rows={3} value={draft.notes} onChange={e => change({ notes: e.target.value })} /></label>
@@ -164,11 +165,11 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
       {error && <p ref={errorRef} tabIndex={-1} role="alert" className="capacity-warning editor-save-error">{error}</p>}
       {confirmDelete && <p role="alert">Eliminare {item?.recurrence && scope === "series" ? "l’intera serie, comprese tutte le eccezioni" : "solo questo elemento"}? L’operazione non è annullabile.</p>}
       <div className="modal-actions">
-        {target && <button type="button" className="ghost-button" disabled={locked} onClick={async () => {
+        {target && <StandardButton variant="ghost" type="button" disabled={locked} onClick={async () => {
           if (!confirmDelete) { setConfirmDelete(true); return; }
           try { await onDelete(target, unlocked); } catch (cause) { setError((cause as Error).message); }
-        }}>{confirmDelete ? "Conferma eliminazione" : "Elimina"}</button>}
-        <button type="submit" className="primary-button" disabled={locked}>Salva {seriesEdit ? "serie" : "elemento"}</button>
+        }}>{confirmDelete ? "Conferma eliminazione" : "Elimina"}</StandardButton>}
+        <StandardButton variant="primary" type="submit" disabled={locked}>Salva {seriesEdit ? "serie" : "elemento"}</StandardButton>
       </div>
       </div>
     </form>

@@ -1,14 +1,15 @@
 import { ActivityHeatmap } from "./ActivityHeatmap";
-import { useDB } from "../hooks/useDB";
+import { useDB } from "../../hooks/useDB";
 import { DailyDoughnut } from "./DailyDoughnut";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
-import { addDays, displayDate, eventAppearance, eventColors, occurrences, outcomeLabels, today } from "../domain/calendar";
-import { latestOutcomes, statisticsOutcomeLabels } from "../domain/outcomeArchive";
-import type { CalendarState, Occurrence } from "../model/calendar.js";
-import type { OutcomeRecord } from "../model/outcomeArchive.js";
-import { CalendarDialog } from "./CalendarDialog";
-import { EventIcon } from "../icons/EventIcon";
+import { addDays, displayDate, eventAppearance, eventColors, occurrences, outcomeLabels, today } from "../../domain/calendar";
+import { latestOutcomes, statisticsOutcomeLabels } from "../../domain/outcomeArchive";
+import type { CalendarState, Occurrence } from "../../model/calendar.js";
+import type { OutcomeRecord } from "../../model/outcomeArchive.js";
+import { StandardButton } from "../ui/StandardButton";
+import { CalendarDialog } from "../ui/CalendarDialog";
+import { EventIcon } from "../../icons/EventIcon";
 
 interface CalendarStatisticsProps { state: CalendarState; history: OutcomeRecord[] }
 
@@ -41,21 +42,21 @@ export function CalendarStatistics({ state, history }: CalendarStatisticsProps) 
 
   return <div className="annual-statistics">
     <div className="statistics-views" role="group" aria-label="Vista statistiche">
-      <button type="button" className="secondary-button" aria-pressed={view === "overview"} onClick={() => setView("overview")}>Panoramica</button>
-      <button type="button" className="secondary-button" aria-pressed={view === "activity"} onClick={() => setView("activity")}>Per attività</button>
+      <StandardButton variant="secondary" type="button" aria-pressed={view === "overview"} onClick={() => setView("overview")}>Panoramica</StandardButton>
+      <StandardButton variant="secondary" type="button" aria-pressed={view === "activity"} onClick={() => setView("activity")}>Per attività</StandardButton>
     </div>
     <div className="annual-toolbar">
       <nav className="annual-navigation" aria-label="Navigazione anni">
-        <button type="button" className="secondary-button" aria-label="Anno precedente" disabled={year <= 1900} onClick={() => setYear(value => value - 1)}>←</button>
+        <StandardButton variant="secondary" type="button" aria-label="Anno precedente" disabled={year <= 1900} onClick={() => setYear(value => value - 1)}>←</StandardButton>
         <strong aria-live="polite">{year}</strong>
-        <button type="button" className="secondary-button" aria-label="Anno successivo" disabled={year >= 9998} onClick={() => setYear(value => value + 1)}>→</button>
-        <button type="button" className="ghost-button" onClick={() => setYear(Number(today().slice(0, 4)))}>Anno attuale</button>
+        <StandardButton variant="secondary" type="button" aria-label="Anno successivo" disabled={year >= 9998} onClick={() => setYear(value => value + 1)}>→</StandardButton>
+        <StandardButton variant="ghost" type="button" onClick={() => setYear(Number(today().slice(0, 4)))}>Anno attuale</StandardButton>
       </nav>
       {view === "overview" && <div className="outcome-summary" aria-live="polite">
         <span>{yearOutcomes.filter(record => record.outcome === "completed").length} superate</span>
         <span>{yearOutcomes.filter(record => record.outcome === "skipped").length} non superate</span>
         <span>{yearOutcomes.filter(record => record.outcome === "partial").length} parziali</span>
-        <button className="secondary-button" type="button" onClick={() => { setHistoryLimit(50); setShowHistory(true); }}>Registro esiti</button>
+        <StandardButton variant="secondary" type="button" onClick={() => { setHistoryLimit(50); setShowHistory(true); }}>Registro esiti</StandardButton>
       </div>}
     </div>
     {view === "activity" ? <ActivityHeatmap year={year} /> : <>
@@ -98,7 +99,7 @@ export function CalendarStatistics({ state, history }: CalendarStatisticsProps) 
       <p>Data attività ed esito vengono conservati a ogni registrazione. Le correzioni sono mostrate separatamente.</p>
       {yearHistory.length === 0 ? <p>Nessun esito registrato in questo anno.</p> : <><div className="outcome-register"><table><thead><tr><th>Attività</th><th>Data attività</th><th>Esito</th><th>Registrato il</th></tr></thead><tbody>
         {yearHistory.slice(0, historyLimit).map(record => <tr key={record.id}><td>{record.title}</td><td>{displayDate(record.eventDate, { year: "numeric" })}</td><td>{statisticsOutcomeLabels[record.outcome]}</td><td>{record.recordedAt ? new Date(record.recordedAt).toLocaleString("it-IT") : "Recuperato: ora originale non disponibile"}</td></tr>)}
-      </tbody></table></div>{yearHistory.length > historyLimit && <button className="secondary-button" onClick={() => setHistoryLimit(value => value + 50)}>Mostra altre registrazioni</button>}</>}
+      </tbody></table></div>{yearHistory.length > historyLimit && <StandardButton variant="secondary" onClick={() => setHistoryLimit(value => value + 50)}>Mostra altre registrazioni</StandardButton>}</>}
     </CalendarDialog>}
     {selectedDate && <CalendarDialog title={displayDate(selectedDate, { weekday: "long", year: "numeric" })} onClose={() => setSelectedDate(null)}>
       <DailyDoughnut statistics={getDailyStatistics(selectedDate)} />

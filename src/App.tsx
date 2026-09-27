@@ -1,16 +1,18 @@
 import { AppIcon } from "./icons/AppIcon";
-import { WeeklyDoughnut } from "./components/WeeklyDoughnut";
+import { WeeklyDoughnut } from "./components/statistics/WeeklyDoughnut";
+import { RoundButton } from "./components/ui/RoundButton";
+import { StandardButton } from "./components/ui/StandardButton";
 import type { CSSProperties } from "react";
 import { useLayoutEffect, useState } from "react";
-import { ArchiveSettings } from "./components/ArchiveSettings";
-import { CalendarDialog } from "./components/CalendarDialog";
-import { CalendarEventMenu } from "./components/CalendarEventMenu";
-import { CalendarItemEditor } from "./components/CalendarItemEditor";
-import { CalendarPreferences } from "./components/CalendarPreferences";
-import { CalendarStatistics } from "./components/CalendarStatistics";
+import { ArchiveSettings } from "./components/settings/ArchiveSettings";
+import { CalendarDialog } from "./components/ui/CalendarDialog";
+import { CalendarEventMenu } from "./components/calendar/CalendarEventMenu";
+import { CalendarItemEditor } from "./components/calendar/CalendarItemEditor";
+import { CalendarPreferences } from "./components/settings/CalendarPreferences";
+import { CalendarStatistics } from "./components/statistics/CalendarStatistics";
 import { EventIcon } from "./icons/EventIcon";
-import { PalettePicker } from "./components/PalettePicker";
-import { WeeklyCalendar } from "./components/WeeklyCalendar";
+import { PalettePicker } from "./components/settings/PalettePicker";
+import { WeeklyCalendar } from "./components/calendar/WeeklyCalendar";
 import {
   addDays,
   displayDate,
@@ -69,24 +71,16 @@ function AppContent() {
         className="hero-panel"
         aria-label="Barra laterale"
       >
-        <button
-          type="button"
-          className="secondary-button sidebar-toggle"
+        <RoundButton
+          variant="secondary"
+          className="sidebar-toggle"
+          icon={sidebarExpanded ? "sidebar-close" : "sidebar-open"}
+          iconSize={24}
+          label={sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"}
           aria-expanded={sidebarExpanded}
           aria-controls="sidebar-drawer"
-          aria-label={
-            sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"
-          }
-          title={
-            sidebarExpanded ? "Riduci barra laterale" : "Espandi barra laterale"
-          }
           onClick={() => setSidebarExpanded((value) => !value)}
-        >
-          <AppIcon
-            name={sidebarExpanded ? "sidebar-close" : "sidebar-open"}
-            size={24}
-          />
-        </button>
+        />
         <div className="sidebar-intro" hidden={!sidebarExpanded}>
           <p className="eyebrow">Il tuo tempo, in locale</p>
           <h1>Spazio alle tue giornate.</h1>
@@ -100,42 +94,34 @@ function AppContent() {
           role="group"
           aria-label="Azioni calendario"
         >
-          <button
-            type="button"
-            aria-label="Aggiungi attività"
-            title="Aggiungi attività"
+          <RoundButton
+            variant="primary"
+            icon="add"
+            iconSize={26}
+            label="Aggiungi attività"
             disabled={disabled}
-            className="primary-button hero-icon-button"
             onClick={() =>
               setEditor({ date: week === weekStart(today()) ? today() : week })
             }
-          >
-            <AppIcon name="add" size={26} />
-          </button>
-          <button
-            type="button"
-            aria-label="Profilo"
-            title="Profilo"
+          />
+          <RoundButton
+            variant="secondary"
+            icon="profile"
+            label="Profilo"
             disabled={disabled}
-            className="secondary-button hero-icon-button"
             onClick={() => setPreferences(true)}
-          >
-            <AppIcon name="profile" size={24} />
-          </button>
-          <button
-            type="button"
-            aria-label="Svuota calendario"
-            title="Svuota calendario"
+          />
+          <RoundButton
+            variant="ghost"
+            icon="trash"
+            label="Svuota calendario"
             disabled={disabled || state.items.length === 0}
-            className="ghost-button hero-icon-button"
             onClick={() => {
               setClearUnlocked(false);
               setError("");
               setClearing(true);
             }}
-          >
-            <AppIcon name="trash" size={24} />
-          </button>
+          />
         </div>
         <section
           className="sidebar-activities"
@@ -269,26 +255,26 @@ function AppContent() {
           </div>
           {activeTab === "calendar" && (
             <nav className="week-navigation" aria-label="Navigazione settimane">
-              <button
-                className="secondary-button"
+              <StandardButton
+                variant="secondary"
                 aria-label="Settimana precedente"
                 onClick={() => setWeek(addDays(week, -7))}
               >
                 ← Precedente
-              </button>
-              <button
-                className="secondary-button"
+              </StandardButton>
+              <StandardButton
+                variant="secondary"
                 onClick={() => setWeek(weekStart(today()))}
               >
                 Oggi
-              </button>
-              <button
-                className="secondary-button"
+              </StandardButton>
+              <StandardButton
+                variant="secondary"
                 aria-label="Settimana successiva"
                 onClick={() => setWeek(addDays(week, 7))}
               >
                 Successiva →
-              </button>
+              </StandardButton>
             </nav>
           )}
         </header>
@@ -433,15 +419,15 @@ function AppContent() {
             </p>
           )}
           <div className="modal-actions">
-            <button
-              className="secondary-button"
+            <StandardButton
+              variant="secondary"
               onClick={() => setClearing(false)}
             >
               Annulla
-            </button>
-            <button
+            </StandardButton>
+            <StandardButton
+              variant="primary"
               disabled={saving || (hasConstraints && !clearUnlocked)}
-              className="primary-button"
               onClick={async () => {
                 try {
                   await clearAll();
@@ -452,7 +438,7 @@ function AppContent() {
               }}
             >
               Conferma: svuota tutte le settimane
-            </button>
+            </StandardButton>
           </div>
         </CalendarDialog>
       )}
@@ -468,9 +454,9 @@ export default function App() {
         {error && (
           <>
             <p role="alert">{error}</p>
-            <button className="secondary-button" onClick={() => void retry()}>
+            <StandardButton variant="secondary" onClick={() => void retry()}>
               Riprova
-            </button>
+            </StandardButton>
           </>
         )}
       </main>

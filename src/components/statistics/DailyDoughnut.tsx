@@ -1,8 +1,8 @@
-import { percentage } from "../utils/math.js";
+import { percentage } from "../../utils/math.js";
 import { ArcElement, Chart, DoughnutController, Tooltip } from 'chart.js';
 import { useEffect, useRef } from 'react';
-import { eventColors } from '../domain/calendar';
-import type { DailyStatistics } from '../model/statistics.js';
+import { eventColors } from '../../domain/calendar';
+import type { DailyStatistics } from '../../model/statistics.js';
 
 interface DailyDoughnutProps { statistics: DailyStatistics; compact?: boolean }
 
