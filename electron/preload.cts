@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld("plannerDB", {
   readPalette: () => ipcRenderer.invoke("planner-db:read-palette"),
   writePalette: (value: unknown) => ipcRenderer.invoke("planner-db:write-palette", value),
   write: (input: unknown) => ipcRenderer.invoke("planner-db:write", input),
+  reset: (expectedRevision: unknown) => ipcRenderer.invoke("planner-db:reset", expectedRevision),
 });

@@ -1,4 +1,5 @@
 import { isPalette } from "../src/theme.js";
+import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
 import { DatabaseService } from "./databaseService.js";
 import type { DatabaseWrite } from "../src/model/database.js";
 import { app, BrowserWindow, ipcMain } from "electron";
@@ -76,6 +77,11 @@ app.whenReady().then(() => {
   };
   ipcMain.handle("planner-db:read", event => { trusted(event); return database!.read(); });
   ipcMain.handle("planner-db:write", (event, input: DatabaseWrite) => { trusted(event); return database!.write(input); });
+  ipcMain.handle("planner-db:reset", (event, expectedRevision: unknown) => {
+    trusted(event);
+    if (!isNonNegativeSafeInteger(expectedRevision)) throw new Error("Revisione non valida.");
+    return database!.reset(expectedRevision);
+  });
   ipcMain.handle("planner-db:read-palette", event => { trusted(event); return database!.readPalette(); });
   ipcMain.handle("planner-db:write-palette", (event, value: unknown) => {
     trusted(event);

@@ -37,6 +37,11 @@ export class DatabaseService implements DatabaseBridge {
     if (!result || typeof result === 'string') throw new Error('Salvataggio senza risultato valido.');
     return result;
   }
+  async reset(expectedRevision: number) {
+    const result = await this.request({action: 'reset', expectedRevision});
+    if (!result || typeof result === 'string') throw new Error('Ripristino senza risultato valido.');
+    return result;
+  }
   async readPalette() {
     const result = await this.request({action: 'readPalette'});
     if (!isPalette(result)) throw new Error('Risposta palette non valida.');

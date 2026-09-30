@@ -8,6 +8,7 @@ parentPort!.on('message', (request: DatabaseWorkerRequest) => {
     switch (request.action) {
       case 'read': response = {id: request.id, result: store.read()}; break;
       case 'write': response = {id: request.id, result: store.write(request.input)}; break;
+      case 'reset': response = {id: request.id, result: store.reset(request.expectedRevision)}; break;
       case 'readPalette': response = {id: request.id, result: store.readPalette()}; break;
       case 'writePalette': response = {id: request.id, result: store.writePalette(request.input)}; break;
       default: throw new Error('Operazione non supportata.');

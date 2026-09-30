@@ -14,6 +14,7 @@ export type AppDialogState =
   | { type: "preferences" }
   | { type: "habit" }
   | { type: "clear" }
+  | { type: "reset-all" }
   | null;
 
 interface AppDialogsProps {
@@ -67,7 +68,8 @@ export function AppDialogs({ dialog, onChange }: AppDialogsProps) {
     return <CalendarPreferences state={state} onSave={savePreferences} onClose={() => onChange(null)} />;
   }
   if (dialog.type === "habit") return <HabitEditor onClose={() => onChange(null)} />;
-  return <ClearCalendarDialog onClose={() => onChange(null)} />;
+  if (dialog.type === "clear") return <ClearCalendarDialog onClose={() => onChange(null)} />;
+  return <ResetAllDialog onClose={() => onChange(null)} />;
 }
 
 /** Conferma separatamente la cancellazione completa e lo sblocco dei vincoli. */
@@ -106,4 +108,24 @@ function ClearCalendarDialog({ onClose }: { onClose: () => void }) {
       </div>
     </CalendarDialog>
   );
+}
+
+/** Conferma esplicita per la cancellazione atomica di archivio, storico e preferenze. */
+function ResetAllDialog({ onClose }: { onClose: () => void }) {
+  const { saving, resetAll } = useDB();
+  const [confirmation, setConfirmation] = useState("");
+  const [error, setError] = useState("");
+  return <CalendarDialog title="Ripristina tutto" onClose={onClose}>
+    <p>Questa operazione elimina <strong>tutti i dati dell’app su questo dispositivo</strong>: calendario, abitudini, profilo, obiettivi, storico degli esiti e copia precedente dell’importazione. La palette torna a quella iniziale.</p>
+    <p>Non è annullabile. Esporta un backup dalle Impostazioni prima di continuare, se vuoi conservare i dati. I file già esportati non verranno eliminati.</p>
+    <label>Scrivi RESET per confermare<input autoComplete="off" value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>
+    {error && <p role="alert" className="capacity-warning">{error}</p>}
+    <div className="modal-actions">
+      <StandardButton variant="secondary" type="button" onClick={onClose}>Annulla</StandardButton>
+      <StandardButton variant="primary" type="button" disabled={saving || confirmation !== "RESET"} onClick={async () => {
+        try { await resetAll(); onClose(); }
+        catch (cause) { setError(cause instanceof Error ? cause.message : "Impossibile ripristinare l’app."); }
+      }}>Conferma: elimina tutti i dati</StandardButton>
+    </div>
+  </CalendarDialog>;
 }

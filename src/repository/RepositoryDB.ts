@@ -32,6 +32,7 @@ export class RepositoryDB implements DBRepository {
     return connection.write({ archive, expectedRevision: null });
   }
   async save(input: DatabaseWrite) { validateArchive(input.archive); return this.connection().write(input); }
+  async reset(expectedRevision: number) { return this.connection().reset(expectedRevision); }
   async prepareImport(text: string) { return parseArchive(text); }
   async exportBackup(archive: PlannerArchive) { return exportArchive(archive); }
 }

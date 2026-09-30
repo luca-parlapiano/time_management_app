@@ -9,16 +9,13 @@ import { RoundButton } from "../ui/RoundButton";
 interface AppSidebarProps {
   expanded: boolean;
   onToggle: () => void;
-  onAdd: () => void;
   onAddHabit: () => void;
   onOpenHabits: () => void;
-  onOpenPreferences: () => void;
-  onClear: () => void;
 }
 
 /** Barra laterale persistente con azioni e stato delle abitudini attive. */
-export function AppSidebar({ expanded, onToggle, onAdd, onAddHabit, onOpenHabits, onOpenPreferences, onClear }: AppSidebarProps) {
-  const { habits, archive, state, saving } = useDB();
+export function AppSidebar({ expanded, onToggle, onAddHabit, onOpenHabits }: AppSidebarProps) {
+  const { habits, archive, state } = useDB();
   const referenceDate = today();
   const now = new Date();
   const referenceTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -42,11 +39,6 @@ export function AppSidebar({ expanded, onToggle, onAdd, onAddHabit, onOpenHabits
         <p className="eyebrow">Il tuo tempo, in locale</p>
         <h1>Spazio alle tue giornate.</h1>
         <p className="hero-copy">Attività, impegni e tempo per te. Un calendario continuo, pronto da usare.</p>
-      </div>
-      <div className="hero-icon-actions" role="group" aria-label="Azioni calendario">
-        <RoundButton variant="primary" icon="add" iconSize={26} label="Aggiungi attività" disabled={saving} onClick={onAdd} />
-        <RoundButton variant="secondary" icon="profile" label="Profilo" disabled={saving} onClick={onOpenPreferences} />
-        <RoundButton variant="ghost" icon="trash" label="Svuota calendario" disabled={saving || state.items.length === 0} onClick={onClear} />
       </div>
       <section className="sidebar-habits" aria-labelledby="sidebar-habits-title" hidden={!expanded}>
         <div className="sidebar-habits-heading">

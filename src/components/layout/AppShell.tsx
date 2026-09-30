@@ -30,11 +30,8 @@ export function AppShell() {
       <AppSidebar
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((value) => !value)}
-        onAdd={() => openEditor(week === weekStart(today()) ? today() : week)}
         onAddHabit={() => setDialog({ type: "habit" })}
         onOpenHabits={() => setActiveScreen("habits")}
-        onOpenPreferences={() => setDialog({ type: "preferences" })}
-        onClear={() => setDialog({ type: "clear" })}
       />
       <main className="calendar-panel">
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
@@ -49,7 +46,8 @@ export function AppShell() {
           onOpenEvent={openEvent}
         />
         <StatisticsScreen active={activeScreen === "statistics"} />
-        <SettingsScreen active={activeScreen === "settings"} />
+        <SettingsScreen active={activeScreen === "settings"} onOpenProfile={() => setDialog({ type: "preferences" })}
+          onClearCalendar={() => setDialog({ type: "clear" })} onResetAll={() => setDialog({ type: "reset-all" })} />
       </main>
       <AppDialogs dialog={dialog} onChange={setDialog} />
     </div>

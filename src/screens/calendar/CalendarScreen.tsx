@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { RoundButton } from "../../components/ui/RoundButton";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { addDays, displayDate, today, weekStart } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
@@ -17,6 +18,7 @@ interface CalendarScreenProps {
 export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent }: CalendarScreenProps) {
   const { state, saving, recordOutcome } = useDB();
   const addItem = useCallback((date: string) => onOpenEditor(date), [onOpenEditor]);
+  const addActivity = useCallback(() => onOpenEditor(week === weekStart(today()) ? today() : week), [onOpenEditor, week]);
   const openItem = useCallback((item: Occurrence) => onOpenEvent(item, false), [onOpenEvent]);
   const deleteItem = useCallback((item: Occurrence) => onOpenEvent(item, true), [onOpenEvent]);
   return (
@@ -27,11 +29,14 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
           <h2>Calendario</h2>
           <p aria-live="polite">{displayDate(week, { year: "numeric" })} – {displayDate(addDays(week, 6), { year: "numeric" })}</p>
         </div>
-        <nav className="week-navigation" aria-label="Navigazione settimane">
-          <StandardButton variant="secondary" aria-label="Settimana precedente" onClick={() => onWeekChange(addDays(week, -7))}>← Precedente</StandardButton>
-          <StandardButton variant="secondary" onClick={() => onWeekChange(weekStart(today()))}>Oggi</StandardButton>
-          <StandardButton variant="secondary" aria-label="Settimana successiva" onClick={() => onWeekChange(addDays(week, 7))}>Successiva →</StandardButton>
-        </nav>
+        <div className="calendar-header-actions">
+          <nav className="week-navigation" aria-label="Navigazione settimane">
+            <StandardButton variant="secondary" aria-label="Settimana precedente" onClick={() => onWeekChange(addDays(week, -7))}>← Precedente</StandardButton>
+            <StandardButton variant="secondary" onClick={() => onWeekChange(weekStart(today()))}>Oggi</StandardButton>
+            <StandardButton variant="secondary" aria-label="Settimana successiva" onClick={() => onWeekChange(addDays(week, 7))}>Successiva →</StandardButton>
+          </nav>
+          <RoundButton variant="primary" icon="add" iconSize={26} label="Aggiungi attività" disabled={saving} onClick={addActivity} />
+        </div>
       </header>
       <div className="screen-content calendar-screen-content">
         <WeeklyCalendar

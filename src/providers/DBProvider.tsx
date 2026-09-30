@@ -54,6 +54,18 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Salvataggio non riuscito.'); throw cause; }
     finally { locked.current = false; setSaving(false); }
   }, [repository, run]);
+  const resetAll = useCallback(async () => {
+    if (!current.current) throw new Error('Database non disponibile.');
+    if (locked.current) throw new Error('Salvataggio in corso. Attendi e riprova.');
+    locked.current = true; setSaving(true); setError(null);
+    try {
+      await run(async () => {
+        const next = await repository.reset(current.current!.revision);
+        current.current = next; setSnapshot(next); setPalette('natural'); setPaletteError(false);
+      }, {mode:'blocking', scope:'database:reset', message:'Ripristino dei dati…'});
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Ripristino non riuscito.'); throw cause; }
+    finally { locked.current = false; setSaving(false); }
+  }, [repository, run]);
   const statistics = useMemo(() => new StatisticsRepository(snapshot?.archive ?? emptyArchive), [snapshot?.archive]);
   const value = useMemo<DBContextValue>(() => ({
     getStatisticsActivities: () => statistics.getStatisticsActivities(),
@@ -93,6 +105,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       return {...archive,calendar:{...archive.calendar,items,profile,goals}};
     }, false, loading),
     clearCalendar: loading => mutate(archive => ({...archive,calendar:clearCalendar(archive.calendar),habits:[]}), false, loading),
+    resetAll,
     prepareImport: text => run(() => repository.prepareImport(text), {mode:'local',scope:'backup',message:'Verifica backup…'}),
     importBackup: (archive, loading) => mutate(() => archive,true,{mode:'blocking',scope:'backup',message:'Importazione backup…',...loading}),
     exportBackup: previous => run(() => {
@@ -100,6 +113,6 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       if (!archive) throw new Error('Backup non disponibile.');
       return repository.exportBackup(archive);
     }, {mode:'local',scope:'backup',message:'Preparazione backup…'}),
-  }), [snapshot,error,saving,retry,mutate,repository,run,palette,paletteError,statistics]);
+  }), [snapshot,error,saving,retry,mutate,resetAll,repository,run,palette,paletteError,statistics]);
   return <DBContext.Provider value={value}>{children}</DBContext.Provider>;
 }

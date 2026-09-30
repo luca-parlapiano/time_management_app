@@ -22,6 +22,7 @@ export interface DatabaseBridge {
   readPalette(): Promise<Palette>;
   writePalette(value: Palette): Promise<Palette>;
   write(input: DatabaseWrite): Promise<DatabaseSnapshot>;
+  reset(expectedRevision: number): Promise<DatabaseSnapshot>;
 }
 
 export interface DBRepository {
@@ -29,6 +30,7 @@ export interface DBRepository {
   loadPalette(): Promise<Palette>;
   savePalette(value: Palette): Promise<void>;
   save(input: DatabaseWrite): Promise<DatabaseSnapshot>;
+  reset(expectedRevision: number): Promise<DatabaseSnapshot>;
   prepareImport(text: string): Promise<PlannerArchive>;
   exportBackup(archive: PlannerArchive): Promise<string>;
 }
@@ -56,6 +58,7 @@ export interface DBContextValue {
   deleteItem(target: EditTarget, unlocked: boolean, loading?: LoadingOptions): Promise<void>;
   savePreferences(profile: CalendarProfile, goals: CalendarGoal[], loading?: LoadingOptions): Promise<void>;
   clearCalendar(loading?: LoadingOptions): Promise<void>;
+  resetAll(): Promise<void>;
   prepareImport(text: string): Promise<PlannerArchive>;
   importBackup(archive: PlannerArchive, loading?: LoadingOptions): Promise<void>;
   exportBackup(previous?: boolean): Promise<string>;
@@ -64,6 +67,7 @@ export interface DBContextValue {
 export type DatabaseWorkerOperation =
   | { action: 'read' }
   | { action: 'write'; input: DatabaseWrite }
+  | { action: 'reset'; expectedRevision: number }
   | { action: 'readPalette' }
   | { action: 'writePalette'; input: Palette };
 export type DatabaseWorkerRequest = { id: number } & DatabaseWorkerOperation;

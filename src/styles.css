@@ -96,7 +96,6 @@ h1 {
   gap: 12px;
 }
 
-.hero-icon-actions { display: flex; align-items: center; gap: 12px; }
 .round-button { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; flex: 0 0 52px; padding: 0; }
 .round-button:disabled { cursor: not-allowed; opacity: 0.45; transform: none; }
 
@@ -160,6 +159,8 @@ h1 {
   background: rgba(var(--card-rgb), 0.62);
   border: 1px solid rgba(var(--ink-rgb), 0.08);
 }
+.settings-reset-card { border-color: color-mix(in srgb, var(--warning-text) 35%, transparent); }
+.settings-reset-card .secondary-button { border-color: var(--warning-text); color: var(--warning-text); }
 
 .summary-empty-copy {
   margin: 0;
@@ -173,6 +174,7 @@ h1 {
   align-items: center;
   margin-bottom: 20px;
 }
+.calendar-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
 
 .calendar-grid {
   display: grid;
@@ -293,8 +295,8 @@ h1 {
   background: rgb(var(--surface-rgb));
 }
 
-.palette-picker { min-width: 0; margin: 0 0 28px; padding: 0; border: 0; }
-.palette-picker legend { padding: 0; margin-bottom: 12px; font-size: 15px; font-weight: 700; }
+.palette-picker { min-width: 0; margin: 0; padding: 0; border: 0; }
+.palette-picker legend { padding: 0; margin-bottom: 12px; font-size: 18px; font-weight: 700; }
 .palette-options { display: grid; gap: 8px; }
 .palette-option { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 12px; border: 1px solid rgba(var(--ink-rgb), 0.16); border-radius: 14px; background: rgba(var(--card-rgb), 0.64); cursor: pointer; }
 .palette-option:has(input:checked) { border-color: rgb(var(--accent-rgb)); background: rgba(var(--accent-rgb), 0.1); }
@@ -560,7 +562,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .sidebar-toggle { margin-bottom: 24px; }
 .app-shell.sidebar-collapsed { grid-template-columns: 84px minmax(0, 1fr); }
 .sidebar-collapsed .hero-panel { padding: 32px 15px; }
-.sidebar-collapsed .hero-icon-actions { flex-direction: column; align-items: center; }
 @media (max-width: 720px) {
   .app-shell.drawer-layout { grid-template-columns: 84px minmax(0, 1fr); }
   .drawer-layout:not(.sidebar-collapsed) .hero-panel { position: fixed; inset: 0 auto 0 0; z-index: 20; width: min(360px, calc(100vw - 24px)); overflow-y: auto; background: rgb(var(--panel-rgb)); box-shadow: 12px 0 36px rgba(0, 0, 0, 0.25); }

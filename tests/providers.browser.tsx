@@ -19,6 +19,7 @@ import '../src/themes.css';
 (globalThis as typeof globalThis & {IS_REACT_ACT_ENVIRONMENT: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 const testBridge = (bridge: Pick<DatabaseBridge, 'read' | 'write'>): DatabaseBridge => ({
  ...bridge, readPalette: async () => 'natural', writePalette: async value => value,
+ reset: async () => { throw new Error('Unexpected reset'); },
 });
 let db: DBContextValue;
 let loading: LoadingContextValue;
@@ -37,6 +38,11 @@ const repository: DBRepository={
   if(saved.revision!==input.expectedRevision)throw new Error('Stale revision');
   validateArchive(input.archive);
   saved={archive:structuredClone(input.archive),revision:saved.revision+1,previous:input.replace?saved.archive:saved.previous};
+  return structuredClone(saved);
+ },
+ reset:async expectedRevision=>{
+  if(saved.revision!==expectedRevision)throw new Error('Stale revision');
+  saved={archive:{format:'time-planner-backup',version:1,calendar:emptyCalendar(),habits:[],history:[]},revision:saved.revision+1,previous:null};
   return structuredClone(saved);
  },
  prepareImport:async text=>parseArchive(text),exportBackup:async archive=>exportArchive(archive),
@@ -97,6 +103,10 @@ try {
  check(db!.state.items.length===0&&db!.habits.length===0&&db!.archive.history.length===2,'Clearing calendar and habits retains audit');
  await act(async()=>{await db.importBackup(candidate);});
  check(db!.state.items.length===2&&db!.habits.length===1&&db!.previous?.calendar.items.length===0,'Import restores data and keeps prior archive');
+ await act(async()=>{await db.resetAll();});
+ check(db!.state.items.length===0&&db!.habits.length===0&&db!.archive.history.length===0&&db!.previous===null&&db!.palette==='natural','Reset clears archive, audit and prior import');
+ await act(async()=>{await db.importBackup(candidate);});
+ check(db!.state.items.length===2&&db!.archive.history.length===2,'An exported backup restores test data after reset');
  const bridgeRepository = new RepositoryDB(()=>testBridge({read:async()=>saved,write:async()=>{throw new Error('Unexpected initialization write');}}));
  check((await bridgeRepository.initialize()).revision===saved.revision,'Existing SQLite archive is loaded without rewriting it');
  let missingBridge=false;

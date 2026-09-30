@@ -1,6 +1,7 @@
 import { isPalette } from "../src/theme.js";
 import type { Palette } from "../src/model/theme.js";
 import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
+import { emptyCalendar } from "../src/domain/calendar.js";
 import { DatabaseSync } from 'node:sqlite';
 import { readStoredArchive } from './storedArchive.js';
 import { validateArchive } from '../src/domain/outcomeArchive.js';
@@ -81,6 +82,20 @@ export class SQLiteStore {
       this.db.exec('COMMIT');
       return {archive,revision,previous};
     } catch(error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+  /** Cancella tutti i dati utente e la palette in una sola transazione, mantenendo la revisione monotona. */
+  reset(expectedRevision: number): DatabaseSnapshot {
+    if (!isNonNegativeSafeInteger(expectedRevision) || !isNonNegativeSafeInteger(expectedRevision + 1)) throw new Error('Richiesta database non valida.');
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const existing = this.readSnapshot();
+      if (existing?.revision !== expectedRevision) throw new Error('Dati aggiornati in un’altra finestra. Riapri l’app prima di continuare.');
+      this.db.exec('DELETE FROM activities; DELETE FROM goals; DELETE FROM habits; DELETE FROM outcome_records; DELETE FROM metadata;');
+      const revision = expectedRevision + 1;
+      this.putMetadata('revision', revision);
+      this.db.exec('COMMIT');
+      return { archive: { format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), habits: [], history: [] }, revision, previous: null };
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
   /** Legge il tema del dispositivo; un database senza preferenza usa la palette iniziale. */
   readPalette(): Palette {

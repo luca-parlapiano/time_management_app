@@ -8,6 +8,7 @@ import { readStoredArchive } from '../dist-electron/electron/storedArchive.js';
 import { SQLiteStore } from '../dist-electron/electron/sqliteStore.js';
 import { DatabaseService } from '../dist-electron/electron/databaseService.js';
 import { emptyCalendar, occurrences, setOccurrenceOutcome } from '../dist-electron/src/domain/calendar.js';
+import { createHabit } from '../dist-electron/src/domain/habits.js';
 import { outcomeRecord, latestOutcomes, parseArchive, exportArchive } from '../dist-electron/src/domain/outcomeArchive.js';
 const item = { id:'first',title:'Palestra',date:'2026-09-22',endDate:'2026-09-22',start:'09:00',end:'10:00',kind:'flexible',notes:'',exceptions:{} };
 const initial = () => ({format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]});
@@ -54,6 +55,39 @@ test('SQLite: actual transactional write failure rolls back calendar and history
  } finally {store.close();rmSync(dir,{recursive:true,force:true});}
 });
 
+test('SQLite reset clears all app data, prior import and palette atomically', () => {
+ const dir=mkdtempSync(join(tmpdir(),'agenda-reset-'));const filename=join(dir,'agenda.sqlite');let store=new SQLiteStore(filename);
+ try {
+  const base={...emptyCalendar(),profile:{name:'Luca',notes:''},goals:[{id:'goal',name:'Salute'}]};
+  const created=createHabit(base,[],{title:'Lettura',notes:'',icon:'study',color:'teal',startsOn:'2026-09-28',weekdays:[0],start:'13:00',durationMinutes:20},{habitId:'habit',planId:'plan'});
+  const calendar={...created.calendar,items:[...created.calendar.items,item]};
+  const occurrence=occurrences(calendar.items,item.date,item.date)[0];
+  const archive={...initial(),calendar,habits:created.habits,history:[outcomeRecord(calendar,occurrence,'completed')]};
+  let saved=store.write({archive,expectedRevision:null});
+  saved=store.write({archive,expectedRevision:saved.revision,replace:true});
+  store.writePalette('night');
+  const before=store.read();
+  assert.throws(()=>store.reset(saved.revision-1),/altra finestra/);
+  assert.deepEqual(store.read(),before);
+  assert.equal(store.readPalette(),'night');
+  const fault=new DatabaseSync(filename);
+  fault.exec("CREATE TRIGGER fail_reset BEFORE DELETE ON activities BEGIN SELECT RAISE(ABORT,'injected reset failure'); END");
+  fault.close();
+  assert.throws(()=>store.reset(saved.revision),/injected reset failure/);
+  assert.deepEqual(store.read(),before);
+  assert.equal(store.readPalette(),'night');
+  const repair=new DatabaseSync(filename);repair.exec('DROP TRIGGER fail_reset');repair.close();
+  const reset=store.reset(saved.revision);
+  assert.equal(reset.revision,saved.revision+1);
+  assert.deepEqual(reset.archive,{format:'time-planner-backup',version:1,calendar:emptyCalendar(),habits:[],history:[]});
+  assert.equal(reset.previous,null);
+  assert.equal(store.readPalette(),'natural');
+  store.close();store=new SQLiteStore(filename);
+  assert.deepEqual(store.read(),reset);
+  assert.equal(store.readPalette(),'natural');
+ } finally {store.close();rmSync(dir,{recursive:true,force:true});}
+});
+
 test('Worker service provides asynchronous SQLite access, concurrent requests and reopening', async () => {
  const dir=mkdtempSync(join(tmpdir(),'agenda-worker-'));const filename=join(dir,'agenda.sqlite');let service=new DatabaseService(filename);
  try {
@@ -64,6 +98,9 @@ test('Worker service provides asynchronous SQLite access, concurrent requests an
   assert.equal(results.filter(result=>result.status==='rejected').length,1);
   await service.close();service=new DatabaseService(filename);
   assert.equal((await service.read()).revision,1);
+  const reset=await service.reset(1);
+  assert.deepEqual(reset.archive.calendar,emptyCalendar());
+  assert.equal((await service.read()).revision,2);
  } finally {await service.close();rmSync(dir,{recursive:true,force:true});}
 });
 
