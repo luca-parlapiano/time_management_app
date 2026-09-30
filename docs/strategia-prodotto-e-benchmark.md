@@ -191,10 +191,10 @@ Il calendario attuale copre pianificazione manuale settimanale, ricorrenze, vinc
 esiti, statistiche e backup locali. Il precedente onboarding generativo, il planner
 settimanale e il simulatore sono stati rimossi.
 
-La direzione proposta in questo documento richiede ancora timeline del giorno, inbox,
-routine a step ed esecuzione guidata. Le ricorrenze del calendario non costituiscono da
-sole un modello completo di habit e routine. Prima di estendere AI o simulazione va
-definito quale di questi flussi serva all’utente iniziale.
+La dashboard Oggi e il primo modello di abitudine con piano settimanale sono ora
+disponibili. La direzione proposta richiede ancora inbox, occasioni senza orario,
+modifica del piano nel tempo, routine a step ed esecuzione guidata. Prima di estendere
+AI o simulazione va verificato il valore del ciclo Oggi → esito → percorso.
 
 Persistenza, storico, import/export e statistiche di base sono già implementati:
 non sono più attività da avviare da zero. Le proposte sopra non sono un backlog interamente aperto.

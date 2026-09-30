@@ -10,7 +10,7 @@ import { DatabaseService } from '../dist-electron/electron/databaseService.js';
 import { emptyCalendar, occurrences, setOccurrenceOutcome } from '../dist-electron/src/domain/calendar.js';
 import { outcomeRecord, latestOutcomes, parseArchive, exportArchive } from '../dist-electron/src/domain/outcomeArchive.js';
 const item = { id:'first',title:'Palestra',date:'2026-09-22',endDate:'2026-09-22',start:'09:00',end:'10:00',kind:'flexible',notes:'',exceptions:{} };
-const initial = () => ({format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},history:[]});
+const initial = () => ({format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]});
 
 test('SQLite: persistence, audit corrections, backup, import recovery and stale revisions', () => {
  const dir=mkdtempSync(join(tmpdir(),'agenda-sqlite-')); const filename=join(dir,'agenda.sqlite'); let store;
@@ -82,6 +82,26 @@ test('SQLite palette persists independently of archive replacement and rejects i
   assert.equal(store.readPalette(),'night');
   assert.deepEqual(store.read().previous,saved.archive);
  } finally {store.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('SQLite upgrades a version 1 database with an empty habits table', () => {
+ const dir=mkdtempSync(join(tmpdir(),'agenda-migration-'));const filename=join(dir,'agenda.sqlite');let store;
+ try {
+  const legacy=new DatabaseSync(filename);
+  legacy.exec(`CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE activities (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
+    CREATE TABLE goals (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
+    CREATE TABLE outcome_records (id TEXT PRIMARY KEY, sequence INTEGER UNIQUE NOT NULL, source_id TEXT NOT NULL, activity_id TEXT NOT NULL, occurrence_date TEXT NOT NULL, event_date TEXT NOT NULL, title TEXT NOT NULL, icon TEXT NOT NULL, color TEXT NOT NULL, outcome TEXT NOT NULL, recorded_at TEXT);
+    PRAGMA user_version = 1;`);
+  legacy.close();
+  store=new SQLiteStore(filename);
+  assert.equal(store.read(),null);
+  store.close();store=undefined;
+  const migrated=new DatabaseSync(filename);
+  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,2);
+  assert.ok(migrated.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='habits'").get());
+  migrated.close();
+ } finally {store?.close();rmSync(dir,{recursive:true,force:true});}
 });
 
 test('worker handles concurrent palette and calendar writes without losing either', async () => {

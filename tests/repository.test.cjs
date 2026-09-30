@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { join } = require('node:path');
 const { RepositoryDB } = require(join(process.env.CALENDAR_TEST_BUILD, 'repository/RepositoryDB.js'));
 const { emptyCalendar } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/calendar.js'));
-const emptyArchive = () => ({ format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), history: [] });
+const emptyArchive = () => ({ format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), habits: [], history: [] });
 
 test('repository initializes once through the bridge and preserves data on reopening without browser storage', async () => {
   let saved = null;

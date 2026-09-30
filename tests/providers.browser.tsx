@@ -5,8 +5,8 @@ import { LoadingProvider } from '../src/providers/LoadingProvider';
 import { DBProvider } from '../src/providers/DBProvider';
 import { useDB } from '../src/hooks/useDB';
 import { useLoading } from '../src/hooks/useLoading';
-import { emptyCalendar, occurrences, today } from '../src/domain/calendar';
-import { exportArchive, parseArchive } from '../src/domain/outcomeArchive';
+import { addDays, emptyCalendar, occurrences, today } from '../src/domain/calendar';
+import { exportArchive, parseArchive, validateArchive } from '../src/domain/outcomeArchive';
 import { RepositoryDB } from '../src/repository/RepositoryDB';
 import type { DBContextValue, DBRepository, DatabaseBridge, DatabaseSnapshot, DatabaseWrite } from '../src/model/database';
 import type { LoadingContextValue } from '../src/model/loading';
@@ -28,13 +28,14 @@ let rejectGate: ((error: Error)=>void) | null=null;
 let failInitialization=true;
 const date=today();
 const item: CalendarItem={id:'test-activity',title:'Attività di prova',date,endDate:date,start:'09:00',end:'11:00',kind:'flexible',notes:'Solo dati di test',exceptions:{},icon:'sport',color:'green'};
-let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},history:[]},revision:0,previous:null};
+let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]},revision:0,previous:null};
 const repository: DBRepository={
  initialize:async()=>{initializeCount++;if(failInitialization)throw new Error('Simulated open failure');return structuredClone(saved);},
  loadPalette:async()=> 'natural', savePalette:async(_value: Palette)=>{},
  save:async(input: DatabaseWrite)=>{
   if(gate)await gate;
   if(saved.revision!==input.expectedRevision)throw new Error('Stale revision');
+  validateArchive(input.archive);
   saved={archive:structuredClone(input.archive),revision:saved.revision+1,previous:input.replace?saved.archive:saved.previous};
   return structuredClone(saved);
  },
@@ -51,6 +52,18 @@ try {
  failInitialization=false;
  await act(async()=>{await db.retry();});
  check(db!.ready&&db!.error===null,'Initialization retry succeeds');
+ const weekday=(new Date(`${date}T00:00:00Z`).getUTCDay()+6)%7;
+ await act(async()=>{await db.saveHabit({title:'Lettura',notes:'Dati di prova',icon:'study',color:'teal',startsOn:date,weekdays:[weekday],start:'13:00',durationMinutes:20});});
+ check(db!.habits.length===1&&db!.state.items.filter(entry=>entry.habitId===db!.habits[0].id).length===1,'Provider creates habit and linked calendar series atomically');
+ const habitSource=db!.state.items.find(entry=>entry.habitId===db!.habits[0].id)!;
+ const originalDate=addDays(date,7);
+ const habitOccurrence=occurrences(db!.state.items,originalDate,originalDate).find(entry=>entry.sourceId===habitSource.id)!;
+ const movedDate=addDays(originalDate,1);
+ await act(async()=>{await db.saveItem({...habitSource,...habitOccurrence,id:habitSource.id,date:movedDate,endDate:movedDate},false,{sourceId:habitSource.id,occurrenceDate:originalDate,scope:'occurrence'});});
+ check(occurrences(db!.state.items,movedDate,movedDate).some(entry=>entry.habitId===db!.habits[0].id&&entry.occurrenceDate===originalDate),'Provider saves a moved habit occurrence without changing its identity');
+ let seriesRejected=false;
+ await act(async()=>{try{await db.deleteItem({sourceId:habitSource.id,occurrenceDate:originalDate,scope:'series'},false);}catch{seriesRejected=true;}});
+ check(seriesRejected&&db!.habits[0].plans[0].sourceIds.includes(habitSource.id),'Provider rejects whole-series deletion while the habit plan still references it');
  let finishFirst!:()=>void,finishSecond!:()=>void;
  await act(async()=>{finishFirst=loading.start({mode:'blocking',message:'First'});finishSecond=loading.start({mode:'blocking',message:'Second'});});
  check(loading!.pending===2&&loading!.blocking&&document.querySelector('dialog[open]'),'Overlapping operations show blocking dialog');
@@ -62,7 +75,7 @@ try {
  await act(async()=>{stop=loading.start({mode:'silent',scope:'silent'});});
  check(loading!.pending===1&&!loading!.isLoading('silent')&&!loading!.blocking,'Silent loading has no visual indicator');
  await act(async()=>{stop();});
- const occurrence=occurrences(db!.state.items,date,date)[0];
+ const occurrence=occurrences(db!.state.items,date,date).find(entry=>entry.sourceId===item.id)!;
  await act(async()=>{await db.recordOutcome(occurrence,'partial');});
  check(db!.archive.history.length===1&&db!.state.items[0].outcomes?.[date]==='partial','Provider commits calendar and audit together');
  await act(async()=>{await db.recordOutcome(occurrence,'completed');});
@@ -81,9 +94,9 @@ try {
  const candidate=await db!.prepareImport(text);
  check(candidate.history.length===2,'Backup is exported and validated through repository');
  await act(async()=>{await db.clearCalendar();});
- check(db!.state.items.length===0&&db!.archive.history.length===2,'Clearing calendar retains audit');
+ check(db!.state.items.length===0&&db!.habits.length===0&&db!.archive.history.length===2,'Clearing calendar and habits retains audit');
  await act(async()=>{await db.importBackup(candidate);});
- check(db!.state.items.length===1&&db!.previous?.calendar.items.length===0,'Import restores data and keeps prior archive');
+ check(db!.state.items.length===2&&db!.habits.length===1&&db!.previous?.calendar.items.length===0,'Import restores data and keeps prior archive');
  const bridgeRepository = new RepositoryDB(()=>testBridge({read:async()=>saved,write:async()=>{throw new Error('Unexpected initialization write');}}));
  check((await bridgeRepository.initialize()).revision===saved.revision,'Existing SQLite archive is loaded without rewriting it');
  let missingBridge=false;
@@ -118,4 +131,4 @@ try {
  results.push('ALL PROVIDER AND REPOSITORY TESTS PASSED');
  await act(async()=>{root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><App/></DBProvider></LoadingProvider></StrictMode>);});
 } catch(error) {results.push(`FAIL ${error instanceof Error?error.stack:error}`);}
-finally {document.querySelector('#results')!.textContent=results.join('\n');}
+finally {document.querySelector('#results')!.textContent=results.join('\n');globalThis.IS_REACT_ACT_ENVIRONMENT=false;}

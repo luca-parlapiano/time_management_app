@@ -80,6 +80,10 @@ export function isOccurrenceDate(item: CalendarItem, date: string): boolean {
 export function validateItem(item: CalendarItem): void {
   validateData(item);
   if (item.activityId !== undefined && (typeof item.activityId !== "string" || !item.activityId || !item.recurrence)) throw new Error("Attività ricorrente non valida.");
+  if ((item.habitId === undefined) !== (item.habitPlanId === undefined) ||
+    item.habitId !== undefined && (![item.habitId, item.habitPlanId].every(value => typeof value === "string" && value.length > 0) || !item.recurrence)) {
+    throw new Error("Collegamento all'abitudine non valido.");
+  }
   if (item.outcomes !== undefined) {
     if (!item.outcomes || typeof item.outcomes !== "object" || Array.isArray(item.outcomes)) throw new Error("Esiti non validi.");
     for (const [date, outcome] of Object.entries(item.outcomes)) {
@@ -150,7 +154,8 @@ export function occurrences(items: CalendarItem[], from: string, through: string
     if (data.date <= through && (data.endDate > from || (data.endDate === from && data.end > "00:00"))) {
       const outcome = item.outcomes?.[original];
       result.push({ ...data, id: item.recurrence ? `${item.id}@${original}` : item.id,
-        sourceId: item.id, occurrenceDate: original, completed: outcome === "completed", outcome, recurring: Boolean(item.recurrence), exception });
+        sourceId: item.id, occurrenceDate: original, completed: outcome === "completed", outcome, recurring: Boolean(item.recurrence), exception,
+        ...(item.habitId ? { habitId: item.habitId, habitPlanId: item.habitPlanId } : {}) });
     }
   }
   for (const item of items) {
@@ -195,6 +200,15 @@ export function findConflict(items: CalendarItem[], changedId: string): [Occurre
   }
 }
 
+/** Errore di sovrapposizione con i due appuntamenti coinvolti, utile per mostrare una scelta informata nella UI. */
+export class CalendarConflictError extends Error {
+  constructor(readonly entries: [Occurrence, Occurrence], readonly changedId: string) {
+    const occupied = entries.find(entry => entry.sourceId !== changedId) ?? entries[0];
+    super(`Conflitto: “${occupied.title}” occupa il ${displayDate(occupied.date, { year: "numeric" })} dalle ${occupied.start} alle ${occupied.end}. Scegli un altro intervallo; nessun appuntamento è stato modificato.`);
+    this.name = "CalendarConflictError";
+  }
+}
+
 /**
  * Rifiuta modifiche a un vincolo esistente se manca lo sblocco esplicito dell’utente.
  * Motore e AI non possono superare la protezione; elementi assenti o flessibili passano.
@@ -214,16 +228,16 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
   guard(existing, access);
   if (access.actor !== "user" && proposed.kind !== "flexible") throw new Error("Il motore e l’AI possono inserire solo attività flessibili.");
   validateData(proposed);
-  let replacement: CalendarItem = { ...dataOf(proposed), id: proposed.id, recurrence: proposed.recurrence, exceptions: proposed.exceptions, title: proposed.title.trim() };
+  let replacement: CalendarItem = { ...dataOf(proposed), id: proposed.id, recurrence: proposed.recurrence, exceptions: proposed.exceptions, title: proposed.title.trim(),
+    ...(proposed.habitId ? { habitId: proposed.habitId, habitPlanId: proposed.habitPlanId } : {}) };
   if (existing) {
     if (existing.recurrence && target?.scope === "occurrence") {
       if (!isOccurrenceDate(existing, target.occurrenceDate)) throw new Error("Occorrenza non valida.");
-      const { id: _id, recurrence: _recurrence, exceptions: _exceptions, ...data } = replacement;
       // La chiave resta la data originale: spostare l’evento non ne cambia l’identità.
-      replacement = { ...existing, exceptions: { ...existing.exceptions, [target.occurrenceDate]: data } };
+      replacement = { ...existing, exceptions: { ...existing.exceptions, [target.occurrenceDate]: dataOf(replacement) } };
     } else {
       if (existing.recurrence && (replacement.date !== existing.date || !replacement.recurrence)) throw new Error("La data di inizio e la frequenza della serie sono stabili. Modifica una singola occorrenza per spostarla.");
-      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, outcomes: existing.outcomes, exceptions: existing.exceptions };
+      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, habitId: existing.habitId, habitPlanId: existing.habitPlanId, outcomes: existing.outcomes, exceptions: existing.exceptions };
       // Negli eventi singoli la data stessa è la chiave dell’esito e segue lo spostamento.
       if (!existing.recurrence && existing.outcomes && replacement.date !== existing.date) {
         replacement.outcomes = existing.outcomes[existing.date] === undefined ? {} : { [replacement.date]: existing.outcomes[existing.date] };
@@ -262,7 +276,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
   // Restituisce il candidato soltanto dopo aver controllato struttura e conflitti.
   validateCalendar(next);
   const conflict = findConflict(next.items, replacement.id);
-  if (conflict) throw new Error(`Conflitto: “${conflict[0].title}” e “${conflict[1].title}” il ${displayDate(conflict[1].date, { year: "numeric" })}. Scegli un altro intervallo; nessun vincolo è stato modificato.`);
+  if (conflict) throw new CalendarConflictError(conflict, replacement.id);
   return next;
 }
 /**
@@ -275,6 +289,7 @@ export function deleteItem(state: CalendarState, target: EditTarget, access: Edi
   const item = state.items.find(entry => entry.id === target.sourceId);
   if (!item) throw new Error("Elemento non trovato.");
   guard(item, access);
+  if (item.habitId && target.scope === "series") throw new Error("Questa serie appartiene a un'abitudine. La modifica dell'intero piano non è ancora disponibile; puoi eliminare una singola occorrenza.");
   if (item.recurrence && target.scope === "occurrence") {
     if (!isOccurrenceDate(item, target.occurrenceDate)) throw new Error("Occorrenza non valida.");
     return { ...state, items: state.items.map(entry => entry.id === item.id ? { ...entry, exceptions: { ...entry.exceptions, [target.occurrenceDate]: null } } : entry) };

@@ -1,4 +1,4 @@
-export type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'calendar' | 'statistics' | 'settings';
+export type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'today' | 'habits' | 'calendar' | 'statistics' | 'settings';
 
 interface AppIconProps {
   name: AppIconName;
@@ -14,6 +14,8 @@ export function AppIcon({ name, size = 22 }: AppIconProps) {
     profile: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
     trash: <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7" />,
     'delete-event': <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />,
+    today: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+    habits: <><path d="M12 21C7 18 4 14 4 10a4 4 0 0 1 7-3 4 4 0 0 1 7 3c0 4-3 8-6 11Z" /><path d="M12 7c0-2 1-4 3-5" /></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2" /></>,
     statistics: <path d="M4 20V10h4v10m2 0V4h4v16m2 0v-7h4v7M2 20h20" />,
     settings: <><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="rgb(var(--surface-rgb))" /><circle cx="15" cy="17" r="3" fill="rgb(var(--surface-rgb))" /></>,

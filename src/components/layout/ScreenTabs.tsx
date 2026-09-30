@@ -1,6 +1,6 @@
 import { AppIcon } from "../../icons/AppIcon";
 
-export type ScreenId = "calendar" | "statistics" | "settings";
+export type ScreenId = "today" | "habits" | "calendar" | "statistics" | "settings";
 
 interface ScreenTabsProps {
   activeScreen: ScreenId;
@@ -8,6 +8,8 @@ interface ScreenTabsProps {
 }
 
 const screens: ReadonlyArray<{ id: ScreenId; label: string }> = [
+  { id: "today", label: "Oggi" },
+  { id: "habits", label: "Abitudini" },
   { id: "calendar", label: "Calendario" },
   { id: "statistics", label: "Statistiche" },
   { id: "settings", label: "Impostazioni" },

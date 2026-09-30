@@ -27,7 +27,7 @@ export class RepositoryDB implements DBRepository {
     const existing = await connection.read();
     if (existing) { validateArchive(existing.archive); return existing; }
     const archive: PlannerArchive = {
-      format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), history: [],
+      format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), habits: [], history: [],
     };
     return connection.write({ archive, expectedRevision: null });
   }

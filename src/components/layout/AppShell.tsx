@@ -6,6 +6,8 @@ import type { Occurrence } from "../../model/calendar.js";
 import { CalendarScreen } from "../../screens/calendar/CalendarScreen";
 import { SettingsScreen } from "../../screens/settings/SettingsScreen";
 import { StatisticsScreen } from "../../screens/statistics/StatisticsScreen";
+import { HabitsScreen } from "../../screens/habits/HabitsScreen";
+import { TodayScreen } from "../../screens/today/TodayScreen";
 import { AppDialogs, type AppDialogState } from "./AppDialogs";
 import { AppSidebar } from "./AppSidebar";
 import { ScreenTabs, type ScreenId } from "./ScreenTabs";
@@ -15,7 +17,7 @@ export function AppShell() {
   const { palette, saving } = useDB();
   const { isLoading } = useLoading();
   const [sidebarExpanded, setSidebarExpanded] = useState(() => window.matchMedia("(min-width: 721px)").matches);
-  const [activeScreen, setActiveScreen] = useState<ScreenId>("calendar");
+  const [activeScreen, setActiveScreen] = useState<ScreenId>("today");
   const [week, setWeek] = useState(() => weekStart(today()));
   const [dialog, setDialog] = useState<AppDialogState>(null);
   useLayoutEffect(() => {
@@ -26,15 +28,18 @@ export function AppShell() {
     <div className={`app-shell drawer-layout${sidebarExpanded ? "" : " sidebar-collapsed"}`}>
       <AppSidebar
         expanded={sidebarExpanded}
-        week={week}
         onToggle={() => setSidebarExpanded((value) => !value)}
         onAdd={() => openEditor(week === weekStart(today()) ? today() : week)}
+        onAddHabit={() => setDialog({ type: "habit" })}
+        onOpenHabits={() => setActiveScreen("habits")}
         onOpenPreferences={() => setDialog({ type: "preferences" })}
         onClear={() => setDialog({ type: "clear" })}
       />
       <main className="calendar-panel">
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
         {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
+        <TodayScreen active={activeScreen === "today"} onOpenEvent={(item) => setDialog({ type: "event", item, confirmDelete: false })} onOpenHabits={() => setActiveScreen("habits")} />
+        <HabitsScreen active={activeScreen === "habits"} onAdd={() => setDialog({ type: "habit" })} />
         <CalendarScreen
           active={activeScreen === "calendar"}
           week={week}

@@ -23,6 +23,8 @@ export interface ItemData {
 export interface CalendarItem extends ItemData {
   id: string;
   activityId?: string;
+  habitId?: string;
+  habitPlanId?: string;
   outcomes?: Record<string, ItemOutcome>;
   // Weekly on the weekday of date, inclusive until; no end means indefinite.
   recurrence?: { until?: string };
@@ -38,6 +40,8 @@ export interface Occurrence extends ItemData {
   outcome?: ItemOutcome;
   recurring: boolean;
   exception: boolean;
+  habitId?: string;
+  habitPlanId?: string;
 }
 
 export interface CalendarGoal { id: string; name: string }

@@ -8,6 +8,7 @@ import { isFiniteNumber } from "../utils/numbers.js";
 import type { CalendarState, ItemOutcome, Occurrence } from "../model/calendar.js";
 import type { OutcomeRecord, PlannerArchive } from "../model/outcomeArchive.js";
 import { eventAppearance, eventColors, eventIcons, outcomeLabels, validDate, validateCalendar } from "./calendar.js";
+import { validateHabits } from "./habits.js";
 export type { OutcomeRecord,PlannerArchive } from "../model/outcomeArchive.js";
 
 /**
@@ -44,7 +45,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   if (!Array.isArray(calendar.items) || !Array.isArray(calendar.goals)) throw new Error('Archivio calendario non riconosciuto.');
   const dataFields = ['coverImage', 'icon', 'color', 'title', 'date', 'endDate', 'start', 'end', 'kind', 'notes', 'goalId'];
   for (const item of calendar.items) {
-    requireFields(item, [...dataFields, 'id', 'activityId', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
+    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'habitPlanId', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
     if (item.recurrence !== undefined) requireFields(item.recurrence, ['until'], 'Ricorrenza');
     if (!item.exceptions || typeof item.exceptions !== 'object' || Array.isArray(item.exceptions)) throw new Error('Eccezioni non valide.');
     for (const exception of Object.values(item.exceptions)) {
@@ -57,6 +58,14 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   for (const record of value.history) {
     requireFields(record, ['id', 'sourceId', 'activityId', 'occurrenceDate', 'eventDate', 'title', 'icon', 'color', 'outcome', 'recordedAt'], 'Esito');
   }
+  if (value.habits !== undefined) {
+    if (!Array.isArray(value.habits)) throw new Error('Archivio delle abitudini non valido.');
+    for (const habit of value.habits) {
+      requireFields(habit, ['id', 'title', 'notes', 'icon', 'color', 'status', 'plans'], 'Abitudine');
+      if (!Array.isArray(habit.plans)) throw new Error("Piani dell'abitudine non validi.");
+      for (const plan of habit.plans) requireFields(plan, ['id', 'startsOn', 'weekdays', 'start', 'durationMinutes', 'sourceIds'], 'Piano abitudine');
+    }
+  }
 }
 
 /**
@@ -65,12 +74,13 @@ function validateArchiveFields(value: Record<string, unknown>): void {
  * Ammette esiti di attività eliminate: non richiede che la fonte esista nel calendario attuale.
  */
 export function validateArchive(value: unknown): asserts value is PlannerArchive {
-  requireFields(value, ['format', 'version', 'calendar', 'history', 'exportedAt'], 'Backup');
+  requireFields(value, ['format', 'version', 'calendar', 'habits', 'history', 'exportedAt'], 'Backup');
   if (value.format !== 'time-planner-backup' || value.version !== 1) throw new Error("Formato di backup non riconosciuto.");
   if (value.exportedAt !== undefined && (typeof value.exportedAt !== 'string' || !isFiniteNumber(Date.parse(value.exportedAt)))) throw new Error('Data di esportazione non valida.');
   validateArchiveFields(value);
   const archive = value as unknown as PlannerArchive;
   validateCalendar(archive.calendar);
+  validateHabits(archive.habits ?? [], archive.calendar);
   const ids = new Set<string>();
   for (const record of archive.history) {
     if (!record || ![record.id, record.sourceId, record.activityId, record.title].every(value => typeof value === "string" && value.trim()) || ids.has(record.id) ||
@@ -88,7 +98,7 @@ export function validateArchive(value: unknown): asserts value is PlannerArchive
 export function parseArchive(text: string): PlannerArchive {
   const parsed: unknown = JSON.parse(text);
   validateArchive(parsed);
-  return { format: "time-planner-backup", version: 1, calendar: parsed.calendar, history: parsed.history };
+  return { format: "time-planner-backup", version: 1, calendar: parsed.calendar, habits: parsed.habits ?? [], history: parsed.history };
 }
 /**
  * Valida l’archivio e lo serializza in JSON leggibile con la data corrente di esportazione.

@@ -6,6 +6,8 @@ Rilevazione sul codice del 27 settembre 2026. [Indice documentazione](README.md)
 
 | Area | Disponibile |
 | --- | --- |
+| Oggi | Dashboard della giornata, prossimo passo, timeline cronologica e registrazione rapida degli esiti |
+| Abitudini | Creazione con giorni, orario e durata, collegamento esplicito al calendario e percorso di quattro settimane con prossime occasioni |
 | Calendario | Settimana corrente, navigazione, editor, spostamento manuale, eliminazione, controllo conflitti e vincoli protetti |
 | Ricorrenze | Settimanali anche per attività flessibili, più giorni collegati, scadenza facoltativa, eccezioni e identità originale degli appuntamenti |
 | Esiti | Superato, non superato, parziale, correzioni e storico mantenuto dopo eliminazione/svuotamento |
@@ -25,13 +27,17 @@ un adapter addestrato e validato.
 La [strategia di prodotto](strategia-prodotto-e-benchmark.md) propone una direzione
 più ampia del calendario attuale. Restano da definire o implementare:
 
-- timeline giornaliera dedicata, inbox e routine con sequenze di step;
+- inbox e routine con sequenze di step;
+- modifica del piano delle abitudini con data di decorrenza e pausa/ripresa;
+- occasioni autonome «da collocare» generate dal piano: oggi le abitudini creano direttamente eventi settimanali con orario;
+- notifiche facoltative per proporre uno spazio libero compatibile, senza prenotarlo o sostituire impegni automaticamente;
 - timer, reminder azionabili e misurazione della durata reale;
 - ripianificazione assistita compatibile con date, vincoli ed esiti;
 - apprendimento delle preferenze e ranking personale degli slot;
 - eventuale AI con proposta, validazione, anteprima e conferma.
 
-La vista calendario giorno/mese e il drag-and-drop non sono implementati. Le viste
+La vista calendario giorno/mese e il drag-and-drop non sono implementati. “Oggi” è
+una dashboard giornaliera, non un editor del calendario. Le viste
 annuali delle statistiche non sono viste mensili di modifica del calendario.
 Account, sincronizzazione, mobile e cloud restano esclusi dall’attuale perimetro.
 
@@ -73,9 +79,10 @@ costituisce approvazione delle funzionalità future.
 1. Consolidare il calendario attuale con verifiche interattive di uso e recupero dati.
 2. Confermare il segmento primario e intervistare cinque persone; verificare il valore
    del client desktop prima di considerare altri client o il cloud.
-3. Scegliere il prossimo flusso: giornata, inbox o routine minima con 2–5 step.
+3. Verificare con gli utenti il flusso Oggi → esito → percorso dell'abitudine; poi
+   scegliere tra occasioni senza orario, inbox o routine minima con 2–5 step.
    Confrontare checklist e timer, abitudini calendarizzate e flessibili, reminder utili
-   e invasivi. Definire la prima giornata d’uso e i criteri di accettazione della scelta.
+   e invasivi.
 4. Definire le misure MVP: primo piano, prima routine completata, ritorno a sette giorni
    e reminder azionati, quando queste funzioni saranno disponibili.
 5. Valutare la disponibilità a pagare per sync, desktop, AI o backup prima di estendere

@@ -5,7 +5,7 @@ const {StatisticsRepository}=require(join(process.env.CALENDAR_TEST_BUILD,'repos
 const c=require(join(process.env.CALENDAR_TEST_BUILD,'domain/calendar.js'));
 const a=require(join(process.env.CALENDAR_TEST_BUILD,'domain/outcomeArchive.js'));
 const item=(id,date='2026-09-21',patch={})=>({id,title:'Palestra',date,endDate:date,start:'09:00',end:'10:00',kind:'flexible',notes:'',exceptions:{},...patch});
-const archive=(items,history=[])=>({format:'time-planner-backup',version:1,calendar:{...c.emptyCalendar(),items},history});
+const archive=(items,history=[])=>({format:'time-planner-backup',version:1,calendar:{...c.emptyCalendar(),items},habits:[],history});
 function record(state,sourceId,date,outcome){const entry=c.occurrences(state.calendar.items,date,date).find(value=>value.sourceId===sourceId);return a.outcomeRecord(state.calendar,entry,outcome);}
 
 test('weekly statistics: groups repeated activities, seven days, outcomes and unrecorded appointments',()=>{

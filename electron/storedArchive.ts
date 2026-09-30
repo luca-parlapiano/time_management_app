@@ -23,6 +23,7 @@ function legacyStatus(value: unknown): 'completed' | 'skipped' | undefined {
  */
 export function readStoredArchive(value: unknown): PlannerArchive {
   const archive = object(structuredClone(value));
+  if (archive.habits === undefined) archive.habits = [];
   const calendar = object(archive.calendar);
   if (!Array.isArray(calendar.items)) throw new Error('Archivio calendario non riconosciuto.');
   const legacy = calendar.items.map(value => {

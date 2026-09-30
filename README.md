@@ -1,7 +1,7 @@
 # Time Planner — Calendario locale
 
 App desktop locale basata su Electron, React, Vite e TypeScript, con SQLite in un
-worker. Si apre sulla settimana corrente senza richiedere un profilo o un piano.
+worker. Si apre sulla dashboard della giornata senza richiedere un profilo o un piano.
 Nessun account, backend proprietario o sincronizzazione.
 
 ## Documentazione
@@ -34,6 +34,9 @@ le prove browser con dati temporanei. Dopo modifiche a main/preload riavviare El
 
 ## Funzionalità attuali
 
+- Dashboard “Oggi” con prossimo passo, timeline e registrazione rapida degli esiti.
+- Abitudini con piano settimanale a giorni e orario definiti, collegate al calendario
+  e accompagnate da una timeline del percorso recente.
 - Calendario settimanale con creazione, modifica, spostamento da editor ed eliminazione.
 - Impegni fissi e tempo protetto con sblocco esplicito; conflitti rifiutati.
 - Ricorrenze settimanali, selezione di più giorni ed eccezioni per singola occorrenza.

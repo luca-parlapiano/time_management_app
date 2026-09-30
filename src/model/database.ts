@@ -3,6 +3,7 @@ import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTa
 import type { LoadingOptions } from "./loading.js";
 import type { PlannerArchive } from "./outcomeArchive.js";
 import type { Palette } from "./theme.js";
+import type { Habit, HabitDraft } from "./habit.js";
 
 export interface DatabaseSnapshot {
   archive: PlannerArchive;
@@ -42,6 +43,7 @@ export interface DBContextValue {
   paletteError: boolean;
   changePalette(value: Palette): Promise<void>;
   state: CalendarState;
+  habits: Habit[];
   archive: PlannerArchive;
   previous: PlannerArchive | null;
   ready: boolean;
@@ -49,6 +51,7 @@ export interface DBContextValue {
   saving: boolean;
   retry(): Promise<void>;
   recordOutcome(item: Occurrence, outcome: ItemOutcome, loading?: LoadingOptions): Promise<void>;
+  saveHabit(input: HabitDraft, loading?: LoadingOptions): Promise<void>;
   saveItem(item: CalendarItem, unlocked: boolean, target?: EditTarget, weekdays?: number[], loading?: LoadingOptions): Promise<void>;
   deleteItem(target: EditTarget, unlocked: boolean, loading?: LoadingOptions): Promise<void>;
   savePreferences(profile: CalendarProfile, goals: CalendarGoal[], loading?: LoadingOptions): Promise<void>;

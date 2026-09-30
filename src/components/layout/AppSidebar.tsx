@@ -1,23 +1,27 @@
 import type { CSSProperties } from "react";
-import { addDays, displayDate, eventAppearance, eventColors } from "../../domain/calendar";
+import { addDays, displayDate, eventColors, today } from "../../domain/calendar";
+import { habitSummary, habitTimeline } from "../../domain/habitTimeline";
 import { useDB } from "../../hooks/useDB";
 import { EventIcon } from "../../icons/EventIcon";
 import { RoundButton } from "../ui/RoundButton";
-import { SidebarWeeklyDoughnut } from "./SidebarWeeklyDoughnut";
 
 interface AppSidebarProps {
   expanded: boolean;
-  week: string;
   onToggle: () => void;
   onAdd: () => void;
+  onAddHabit: () => void;
+  onOpenHabits: () => void;
   onOpenPreferences: () => void;
   onClear: () => void;
 }
 
-/** Barra laterale persistente con azioni e riepilogo della settimana corrente. */
-export function AppSidebar({ expanded, week, onToggle, onAdd, onOpenPreferences, onClear }: AppSidebarProps) {
-  const { getWeeklyActivities, state, saving } = useDB();
-  const activities = getWeeklyActivities(week);
+/** Barra laterale persistente con azioni e stato delle abitudini attive. */
+export function AppSidebar({ expanded, onToggle, onAdd, onAddHabit, onOpenHabits, onOpenPreferences, onClear }: AppSidebarProps) {
+  const { habits, archive, state, saving } = useDB();
+  const referenceDate = today();
+  const now = new Date();
+  const referenceTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const activeHabits = habits.filter(habit => habit.status === "active");
   return (
     <aside id="sidebar-drawer" className="hero-panel" aria-label="Barra laterale">
       <RoundButton
@@ -40,26 +44,29 @@ export function AppSidebar({ expanded, week, onToggle, onAdd, onOpenPreferences,
         <RoundButton variant="secondary" icon="profile" label="Profilo" disabled={saving} onClick={onOpenPreferences} />
         <RoundButton variant="ghost" icon="trash" label="Svuota calendario" disabled={saving || state.items.length === 0} onClick={onClear} />
       </div>
-      <section className="sidebar-activities" aria-labelledby="sidebar-activities-title">
-        <h2 id="sidebar-activities-title" className={expanded ? undefined : "sr-only"}>Le tue statistiche settimanali</h2>
-        <p className="sidebar-weekly-range" hidden={!expanded}>{displayDate(week)} – {displayDate(addDays(week, 6))}</p>
-        {activities.length === 0 ? (
-          <p className="summary-empty-copy" hidden={!expanded}>Nessuna attività creata. Usa + per aggiungerne una.</p>
+      <section className="sidebar-habits" aria-labelledby="sidebar-habits-title" hidden={!expanded}>
+        <div className="sidebar-habits-heading">
+          <h2 id="sidebar-habits-title">Le tue abitudini</h2>
+          <button type="button" onClick={onOpenHabits}>Apri</button>
+        </div>
+        {activeHabits.length === 0 ? (
+          <div className="sidebar-habits-empty">
+            <p>{habits.length === 0 ? "Nessuna abitudine ancora. Parti da un piano semplice." : "Nessuna abitudine attiva."}</p>
+            {habits.length === 0 && <button type="button" onClick={onAddHabit}>Crea un’abitudine</button>}
+          </div>
         ) : (
-          <ul className="sidebar-activity-list">
-            {activities.map(({ event: item, statistics }) => {
-              const appearance = eventAppearance(item);
+          <ul className="sidebar-habit-list">
+            {activeHabits.map(habit => {
+              const entries = habitTimeline(state, archive.history, habit, addDays(referenceDate, -27), addDays(referenceDate, 30));
+              const summary = habitSummary(entries, referenceDate, referenceTime);
               return (
-                <li
-                  key={item.activityId ?? item.id}
-                  className="sidebar-activity"
-                  title={`${item.title}: ${statistics.completed} superate, ${statistics.skipped} non superate, ${statistics.partial} parziali, ${statistics.pending} senza esito`}
-                  tabIndex={expanded ? undefined : 0}
-                  style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}
-                >
-                  <span className="sidebar-activity-icon"><EventIcon icon={appearance.icon} /></span>
-                  <span className={expanded ? "sidebar-activity-title" : "sr-only"}>{item.title}</span>
-                  {expanded && <SidebarWeeklyDoughnut title={item.title} statistics={statistics} />}
+                <li key={habit.id} className="sidebar-habit" style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}>
+                  <span className="sidebar-habit-icon" aria-hidden="true"><EventIcon icon={habit.icon} /></span>
+                  <div className="sidebar-habit-content">
+                    <strong className="sidebar-habit-title">{habit.title}</strong>
+                    <span className="sidebar-habit-progress">4 settimane: {summary.completed}/{summary.planned} completate · serie {summary.streak}</span>
+                    <span className="sidebar-habit-next">{summary.next ? `Prossima: ${displayDate(summary.next.date, { weekday: "short", day: "numeric", month: "short" })}${summary.next.start ? ` · ${summary.next.start}` : ""}` : "Nessuna prossima occasione pianificata"}</span>
+                  </div>
                 </li>
               );
             })}

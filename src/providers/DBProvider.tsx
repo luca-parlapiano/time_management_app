@@ -3,6 +3,7 @@ import { createContext, useCallback, useEffect, useMemo, useRef, useState } from
 import type { ReactNode } from "react";
 import { clearCalendar, deleteItem, emptyCalendar, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
 import { outcomeRecord } from "../domain/outcomeArchive";
+import { createHabit } from "../domain/habits";
 import { useLoading } from "../hooks/useLoading";
 import type { ItemData } from "../model/calendar.js";
 import type { DBContextValue, DatabaseSnapshot, DBRepository } from "../model/database.js";
@@ -14,7 +15,7 @@ import { repositoryDB } from "../repository/RepositoryDB";
 interface DBProviderProps { children: ReactNode; repository?: DBRepository }
 
 export const DBContext = createContext<DBContextValue | null>(null);
-const emptyArchive: PlannerArchive = { format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), history: [] };
+const emptyArchive: PlannerArchive = { format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), habits: [], history: [] };
 export function DBProvider({ children, repository = repositoryDB }: DBProviderProps) {
   const { run } = useLoading();
   const [palette, setPalette] = useState<Palette>("natural");
@@ -66,6 +67,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       catch { setPaletteError(true); }
     },
     state: snapshot?.archive.calendar ?? emptyArchive.calendar,
+    habits: snapshot?.archive.habits ?? [],
     archive: snapshot?.archive ?? emptyArchive,
     previous: snapshot?.previous ?? null,
     ready: snapshot !== null, error, saving, retry,
@@ -73,6 +75,10 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       calendar: setOccurrenceOutcome(archive.calendar, item.sourceId, item.occurrenceDate, outcome),
       history: [...archive.history, outcomeRecord(archive.calendar, item, outcome)],
     }), false, loading ?? {scope:`outcome:${item.id}`}),
+    saveHabit: (input, loading) => mutate(archive => {
+      const result = createHabit(archive.calendar, archive.habits ?? [], input, { habitId: crypto.randomUUID(), planId: crypto.randomUUID() });
+      return { ...archive, calendar: result.calendar, habits: result.habits };
+    }, false, loading ?? { scope: "habit:save" }),
     saveItem: (item, unlocked, target, weekdays, loading) => mutate(archive => ({...archive,
       calendar: weekdays ? putWeeklyActivity(archive.calendar,item,weekdays,{actor:'user',unlocked},target) : putItem(archive.calendar,item,{actor:'user',unlocked},target),
     }), false, loading),
@@ -86,7 +92,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       const items = archive.calendar.items.map(item => ({...unlink(item), exceptions:Object.fromEntries(Object.entries(item.exceptions).map(([date,exception]) => [date,exception === null ? null : unlink(exception)]))}));
       return {...archive,calendar:{...archive.calendar,items,profile,goals}};
     }, false, loading),
-    clearCalendar: loading => mutate(archive => ({...archive,calendar:clearCalendar(archive.calendar)}), false, loading),
+    clearCalendar: loading => mutate(archive => ({...archive,calendar:clearCalendar(archive.calendar),habits:[]}), false, loading),
     prepareImport: text => run(() => repository.prepareImport(text), {mode:'local',scope:'backup',message:'Verifica backup…'}),
     importBackup: (archive, loading) => mutate(() => archive,true,{mode:'blocking',scope:'backup',message:'Importazione backup…',...loading}),
     exportBackup: previous => run(() => {

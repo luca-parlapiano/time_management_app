@@ -403,6 +403,87 @@ test('cover photo choice persists and updates linked series and exceptions witho
 });
 
 const archives = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/outcomeArchive.js'));
+const habits = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habits.js'));
+const { habitSummary, habitTimeline } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habitTimeline.js'));
+test('habit summary excludes future plans and keeps a recorded removed occasion in the streak', () => {
+  const entry = (date, start, outcome, removed = false) => ({sourceId:date+start,occurrenceDate:date,date,start,outcome,moved:false,removed});
+  const entries = [
+    entry('2026-09-28','09:00','completed'),
+    entry('2026-09-29',undefined,'completed',true),
+    entry('2026-09-30','08:00','partial'),
+    entry('2026-09-30','20:00',undefined),
+    entry('2026-10-01','09:00',undefined),
+  ];
+  const before = habitSummary(entries,'2026-09-29','12:00');
+  assert.equal(before.completed,2);
+  assert.equal(before.planned,2);
+  assert.equal(before.streak,2);
+  assert.equal(before.next,entries[3]);
+  const after = habitSummary(entries,'2026-09-30','12:00');
+  assert.equal(after.completed,2);
+  assert.equal(after.planned,3);
+  assert.equal(after.streak,0);
+  assert.equal(after.next,entries[3]);
+});
+test('habit creation links weekly occasions atomically and preserves their identity', () => {
+  const draft = { title:'Leggere',notes:'Dopo cena',icon:'study',color:'teal',startsOn:'2026-09-28',weekdays:[0,2,4],start:'21:00',durationMinutes:20 };
+  const created = habits.createHabit(c.emptyCalendar(), [], draft, {habitId:'habit-reading',planId:'plan-reading'});
+  assert.equal(created.habits.length,1);
+  assert.equal(created.calendar.items.length,3);
+  assert.deepEqual(new Set(created.calendar.items.map(entry=>entry.habitId)),new Set(['habit-reading']));
+  assert.deepEqual(created.habits[0].plans[0].sourceIds.sort(),created.calendar.items.map(entry=>entry.id).sort());
+  const visible=c.occurrences(created.calendar.items,'2026-09-28','2026-10-04');
+  assert.deepEqual(visible.map(entry=>[entry.date,entry.start,entry.end]),[
+    ['2026-09-28','21:00','21:20'],['2026-09-30','21:00','21:20'],['2026-10-02','21:00','21:20'],
+  ]);
+  archives.validateArchive({format:'time-planner-backup',version:1,calendar:created.calendar,habits:created.habits,history:[]});
+  const occupied=put(c.emptyCalendar(),item('occupied',{date:'2026-09-28',endDate:'2026-09-28',start:'21:10',end:'22:00'}));
+  assert.throws(()=>habits.createHabit(occupied,[],draft,{habitId:'habit-conflict',planId:'plan-conflict'}),/Conflitto/);
+  assert.equal(occupied.items.length,1);
+});
+test('habit collision identifies the occupied calendar event without changing it', () => {
+  const draft = { title:'Leggere',notes:'',icon:'study',color:'teal',startsOn:'2026-09-28',weekdays:[0],start:'21:00',durationMinutes:20 };
+  const occupied = put(c.emptyCalendar(), fixed('Lavoro', {date:'2026-09-28',endDate:'2026-09-28',start:'21:10',end:'22:00'}));
+  const before = structuredClone(occupied);
+  assert.throws(() => habits.createHabit(occupied, [], draft, {habitId:'habit-reading',planId:'plan-reading'}), error => {
+    assert.ok(error instanceof c.CalendarConflictError);
+    assert.equal(error.entries.find(entry => entry.sourceId !== error.changedId).title, 'Lavoro');
+    return true;
+  });
+  assert.deepEqual(occupied, before);
+});
+test('a moved habit occurrence saves with its original identity and a real collision is rejected', () => {
+  const draft = { title:'Leggere',notes:'',icon:'study',color:'teal',startsOn:'2026-09-28',weekdays:[0],start:'21:00',durationMinutes:20 };
+  const created = habits.createHabit(c.emptyCalendar(), [], draft, {habitId:'habit-reading',planId:'plan-reading'});
+  const source = created.calendar.items[0];
+  const occurrence = c.occurrences(created.calendar.items, '2026-09-28', '2026-09-28')[0];
+  const proposed = {...source, ...occurrence, id:source.id, date:'2026-09-29', endDate:'2026-09-29'};
+  const moved = put(created.calendar, proposed, user, target(source.id, occurrence.occurrenceDate));
+  const exception = moved.items[0].exceptions[occurrence.occurrenceDate];
+  assert.equal(exception.date, '2026-09-29');
+  assert.equal(Object.hasOwn(exception, 'habitId'), false);
+  const visible = c.occurrences(moved.items, '2026-09-29', '2026-09-29')[0];
+  assert.equal(visible.occurrenceDate, '2026-09-28');
+  assert.equal(visible.habitId, 'habit-reading');
+  archives.validateArchive({format:'time-planner-backup',version:1,calendar:moved,habits:created.habits,history:[]});
+  const occupied = put(created.calendar, fixed('Lavoro', {date:'2026-09-29',endDate:'2026-09-29',start:'21:10',end:'22:00'}));
+  assert.throws(() => put(occupied, proposed, user, target(source.id, occurrence.occurrenceDate)), c.CalendarConflictError);
+  assert.deepEqual(occupied.items[0], source);
+});
+test('a removed habit occurrence keeps its latest recorded result; deleting its whole series is refused', () => {
+  const draft = { title:'Leggere',notes:'',icon:'study',color:'teal',startsOn:'2026-09-28',weekdays:[0],start:'21:00',durationMinutes:20 };
+  const created = habits.createHabit(c.emptyCalendar(), [], draft, {habitId:'habit-reading',planId:'plan-reading'});
+  const occurrence = c.occurrences(created.calendar.items, '2026-09-28', '2026-09-28')[0];
+  const history = [archives.outcomeRecord(created.calendar, occurrence, 'partial'), archives.outcomeRecord(created.calendar, occurrence, 'completed')];
+  const recorded = c.setOccurrenceOutcome(created.calendar, occurrence.sourceId, occurrence.occurrenceDate, 'completed');
+  assert.throws(() => c.deleteItem(recorded, target(occurrence.sourceId, occurrence.occurrenceDate, 'series'), user), /piano non è ancora disponibile/);
+  const removed = c.deleteItem(recorded, target(occurrence.sourceId, occurrence.occurrenceDate), user);
+  archives.validateArchive({format:'time-planner-backup',version:1,calendar:removed,habits:created.habits,history});
+  const entries = habitTimeline(removed, history, created.habits[0], '2026-09-28', '2026-09-28');
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].outcome, 'completed');
+  assert.equal(entries[0].removed, true);
+});
 test('corrections preserve an audit trail but count each appointment once, independent of deletion', () => {
   let state = put(c.emptyCalendar(), item('history'));
   const occurrence = c.occurrences(state.items, '2026-09-14', '2026-09-14')[0];
@@ -412,15 +493,17 @@ test('corrections preserve an audit trail but count each appointment once, indep
   state = c.clearCalendar(state);
   assert.equal(history.length, 2);
   assert.deepEqual(archives.latestOutcomes(history), [second]);
-  const archive = { format: 'time-planner-backup', version: 1, calendar: state, history };
+  const archive = { format: 'time-planner-backup', version: 1, calendar: state, habits: [], history };
   assert.deepEqual(archives.parseArchive(archives.exportArchive(archive)).history, history);
 });
 test('import accepts only the current backup and rejects foreign formats and unknown fields', () => {
   const state = put(c.emptyCalendar(), item('history'));
   const occurrence = c.occurrences(state.items, '2026-09-14', '2026-09-14')[0];
   const record = archives.outcomeRecord(state, occurrence, 'completed');
-  const backup = { format: 'time-planner-backup', version: 1, calendar: state, history: [record] };
+  const backup = { format: 'time-planner-backup', version: 1, calendar: state, habits: [], history: [record] };
   assert.deepEqual(archives.parseArchive(archives.exportArchive(backup)), JSON.parse(JSON.stringify(backup)));
+  const legacy = {...backup}; delete legacy.habits;
+  assert.deepEqual(archives.parseArchive(JSON.stringify(legacy)).habits, []);
   for (const value of [state, { answers: {}, plannerResult: {} }, { ...backup, version: 9 }, null, []]) {
     assert.throws(() => archives.parseArchive(JSON.stringify(value)));
   }

@@ -4,6 +4,7 @@ import type { Occurrence } from "../../model/calendar.js";
 import { CalendarEventMenu } from "../../screens/calendar/CalendarEventMenu";
 import { CalendarItemEditor } from "../../screens/calendar/CalendarItemEditor";
 import { CalendarPreferences } from "../../screens/settings/CalendarPreferences";
+import { HabitEditor } from "../../screens/habits/HabitEditor";
 import { CalendarDialog } from "../ui/CalendarDialog";
 import { StandardButton } from "../ui/StandardButton";
 
@@ -11,6 +12,7 @@ export type AppDialogState =
   | { type: "event"; item: Occurrence; confirmDelete: boolean }
   | { type: "editor"; date: string; occurrence?: Occurrence }
   | { type: "preferences" }
+  | { type: "habit" }
   | { type: "clear" }
   | null;
 
@@ -64,6 +66,7 @@ export function AppDialogs({ dialog, onChange }: AppDialogsProps) {
   if (dialog.type === "preferences") {
     return <CalendarPreferences state={state} onSave={savePreferences} onClose={() => onChange(null)} />;
   }
+  if (dialog.type === "habit") return <HabitEditor onClose={() => onChange(null)} />;
   return <ClearCalendarDialog onClose={() => onChange(null)} />;
 }
 
@@ -76,7 +79,7 @@ function ClearCalendarDialog({ onClose }: { onClose: () => void }) {
   return (
     <CalendarDialog title="Svuota calendario" onClose={onClose}>
       <p>Verranno eliminati <strong>tutti gli elementi di tutte le settimane</strong>, inclusi impegni fissi, tempo protetto, serie ricorrenti, eccezioni, note e stati di completamento o salto.</p>
-      <p>Restano lo storico degli esiti, il profilo, gli obiettivi e la palette. Questa operazione non è annullabile; puoi prima esportare il calendario.</p>
+      <p>Restano lo storico degli esiti, il profilo, gli obiettivi e la palette. Le abitudini collegate vengono eliminate insieme al loro piano; questa operazione non è annullabile. Puoi prima esportare il calendario.</p>
       {hasConstraints && (
         <label className="clear-unlock">
           <input type="checkbox" checked={unlocked} onChange={(event) => setUnlocked(event.target.checked)} />
