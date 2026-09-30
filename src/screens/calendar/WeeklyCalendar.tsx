@@ -1,7 +1,7 @@
 import { percentage } from "../../utils/math.js";
 import { toMinutes as minutes } from "../../utils/time.js";
 import type { CSSProperties } from "react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { addDays, displayDate, occurrences, today } from "../../domain/calendar";
 import type { CalendarState, ItemOutcome, Occurrence } from "../../model/calendar.js";
 import { AgendaEventCard } from "./AgendaEventCard";
@@ -41,7 +41,7 @@ function useCurrentTimeIndicator(days: string[], initialFirstHour: number, initi
   return { date, firstHour, lastHour, label, top: percentage(currentMinutes - firstHour * 60, (lastHour - firstHour) * 60) };
 }
 
-export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit, onDelete, onOutcome }: WeeklyCalendarProps) {
+function WeeklyCalendarContent({ state, week, disabled, onAdd, onEdit, onDelete, onOutcome }: WeeklyCalendarProps) {
   const visible = occurrences(state.items, week, addDays(week, 6));
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
   const dayEntries = days.map(date => visible.filter(item => item.date <= date && (item.endDate > date || (item.endDate === date && item.end > "00:00"))));
@@ -87,3 +87,6 @@ export function WeeklyCalendar({ state, week, disabled, onAdd, onEdit, onDelete,
     })}
   </section>;
 }
+
+/** Mantiene la settimana già calcolata durante i cambi di sezione non pertinenti. */
+export const WeeklyCalendar = memo(WeeklyCalendarContent);

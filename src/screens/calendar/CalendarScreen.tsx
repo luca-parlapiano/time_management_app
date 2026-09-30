@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { addDays, displayDate, today, weekStart } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
@@ -15,6 +16,9 @@ interface CalendarScreenProps {
 /** Schermata settimanale del calendario e relativi comandi di navigazione. */
 export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent }: CalendarScreenProps) {
   const { state, saving, recordOutcome } = useDB();
+  const addItem = useCallback((date: string) => onOpenEditor(date), [onOpenEditor]);
+  const openItem = useCallback((item: Occurrence) => onOpenEvent(item, false), [onOpenEvent]);
+  const deleteItem = useCallback((item: Occurrence) => onOpenEvent(item, true), [onOpenEvent]);
   return (
     <section id="panel-calendar" className="app-screen" role="tabpanel" aria-labelledby="tab-calendar" tabIndex={0} hidden={!active}>
       <header className="calendar-header">
@@ -34,9 +38,9 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
           state={state}
           week={week}
           disabled={saving}
-          onAdd={(date) => onOpenEditor(date)}
-          onEdit={(item) => onOpenEvent(item, false)}
-          onDelete={(item) => onOpenEvent(item, true)}
+          onAdd={addItem}
+          onEdit={openItem}
+          onDelete={deleteItem}
           onOutcome={recordOutcome}
         />
       </div>

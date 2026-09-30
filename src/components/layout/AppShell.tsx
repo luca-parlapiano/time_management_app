@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 import { today, weekStart } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
 import { useLoading } from "../../hooks/useLoading";
@@ -23,7 +23,8 @@ export function AppShell() {
   useLayoutEffect(() => {
     document.documentElement.dataset.palette = palette;
   }, [palette]);
-  const openEditor = (date: string, occurrence?: Occurrence) => setDialog({ type: "editor", date, occurrence });
+  const openEditor = useCallback((date: string, occurrence?: Occurrence) => setDialog({ type: "editor", date, occurrence }), []);
+  const openEvent = useCallback((item: Occurrence, confirmDelete = false) => setDialog({ type: "event", item, confirmDelete }), []);
   return (
     <div className={`app-shell drawer-layout${sidebarExpanded ? "" : " sidebar-collapsed"}`}>
       <AppSidebar
@@ -38,14 +39,14 @@ export function AppShell() {
       <main className="calendar-panel">
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
         {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
-        <TodayScreen active={activeScreen === "today"} onOpenEvent={(item) => setDialog({ type: "event", item, confirmDelete: false })} onOpenHabits={() => setActiveScreen("habits")} />
+        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={() => setActiveScreen("habits")} />
         <HabitsScreen active={activeScreen === "habits"} onAdd={() => setDialog({ type: "habit" })} />
         <CalendarScreen
           active={activeScreen === "calendar"}
           week={week}
           onWeekChange={setWeek}
           onOpenEditor={openEditor}
-          onOpenEvent={(item, confirmDelete) => setDialog({ type: "event", item, confirmDelete })}
+          onOpenEvent={openEvent}
         />
         <StatisticsScreen active={activeScreen === "statistics"} />
         <SettingsScreen active={activeScreen === "settings"} />

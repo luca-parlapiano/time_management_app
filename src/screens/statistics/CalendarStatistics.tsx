@@ -2,7 +2,7 @@ import { ActivityHeatmap } from "./ActivityHeatmap";
 import { useDB } from "../../hooks/useDB";
 import { DailyDoughnut } from "./DailyDoughnut";
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { addDays, displayDate, eventAppearance, eventColors, occurrences, outcomeLabels, today } from "../../domain/calendar";
 import { latestOutcomes, statisticsOutcomeLabels } from "../../domain/outcomeArchive";
 import type { CalendarState, Occurrence } from "../../model/calendar.js";
@@ -13,7 +13,7 @@ import { EventIcon } from "../../icons/EventIcon";
 
 interface CalendarStatisticsProps { state: CalendarState; history: OutcomeRecord[] }
 
-export function CalendarStatistics({ state, history }: CalendarStatisticsProps) {
+function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) {
   const { getDailyStatistics } = useDB();
   const [view, setView] = useState<"overview" | "activity">("overview");
   const [year, setYear] = useState(() => Number(today().slice(0, 4)));
@@ -116,3 +116,6 @@ export function CalendarStatistics({ state, history }: CalendarStatisticsProps) 
     </CalendarDialog>}
   </div>;
 }
+
+/** Evita di ricostruire la griglia annuale quando cambia soltanto la sezione attiva. */
+export const CalendarStatistics = memo(CalendarStatisticsContent);
