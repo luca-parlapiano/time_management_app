@@ -96,13 +96,23 @@ con indici per data e occorrenza.
 RepositoryDB legge sempre SQLite. Se non esiste ancora uno snapshot, salva un calendario
 vuoto con storico vuoto e revisione attesa nulla. Le aperture successive restituiscono
 lo snapshot esistente senza riscriverlo. Un errore di lettura o scrittura viene presentato
-all’utente: non provoca un ripristino silenzioso. L’importazione accetta esclusivamente backup JSON `time-planner-backup` v1, con calendario v2, abitudini facoltative per compatibilità con i backup precedenti e storico. Campi estranei e formati diversi vengono rifiutati. Gli esiti correnti sono rappresentati soltanto da `outcomes`.
+all’utente: non provoca un ripristino silenzioso. L’importazione usa backup JSON
+`time-planner-backup` v2 con calendario v2, abitudini facoltative e storico. I backup v1
+vengono convertiti eliminando il precedente modello di abitudini e i relativi
+appuntamenti; calendario indipendente, profilo, obiettivi e storico restano disponibili.
+Campi estranei e formati diversi vengono rifiutati. Gli esiti correnti sono
+rappresentati soltanto da `outcomes`.
 
-Ogni abitudine possiede un'identità distinta da `activityId`, uno o più piani e gli ID
-delle serie settimanali generate. La prima versione crea piani con giorni e orario
-definiti. Il salvataggio di abitudine e appuntamenti usa la stessa revisione e
-transazione; un conflitto lascia invariato l'intero snapshot. I progressi della vista
-Abitudini sono derivati dalle occasioni e dagli esiti confermati.
+Ogni abitudine da acquisire conserva soltanto identità, nome, motivazione, aspetto e un
+traguardo da 1 a 12 step. Giorni, orario e durata appartengono alle serie del calendario;
+`habitId` le collega all'abitudine e `activityId` ne mantiene stabile il percorso nello
+storico. Creazione e modifica aggiornano abitudine e appuntamenti nella stessa revisione e
+transazione; un conflitto lascia invariato l'intero snapshot. Step e capitoli sono
+derivati dagli ultimi esiti confermati e non vengono salvati come totali.
+
+Una routine è invece una normale serie ricorrente del calendario. Non viene salvata
+nella tabella `habits`, non ha `habitId`, step o percorso: serve soltanto a ricordare
+un'attività periodica e usa le operazioni calendario già esistenti.
 
 Il backup JSON resta importabile/esportabile. Ogni importazione sostituisce i dati e conserva una copia del precedente archivio. Gli esiti rimangono nello storico dopo l’eliminazione delle attività; le statistiche contano l’ultimo esito per appuntamento.
 

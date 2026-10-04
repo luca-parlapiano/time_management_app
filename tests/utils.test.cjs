@@ -4,7 +4,7 @@ const {join} = require('node:path');
 const utils = name => require(join(process.env.CALENDAR_TEST_BUILD, 'utils', `${name}.js`));
 const {isFiniteNumber, isPositiveNumber, isIntegerInRange, isNonNegativeSafeInteger} = utils('numbers');
 const {clamp, percentage, positiveModulo} = utils('math');
-const {toMinutes, toTime, formatTimeWithMeridiem} = utils('time');
+const {toMinutes, toTime, formatTimeWithMeridiem, greetingForHour} = utils('time');
 const {validDate, addDays, weekStart} = utils('dates');
 
 test('numeric validation rejects coercion, non-finite values and unsafe revisions', () => {
@@ -47,6 +47,12 @@ test('clock conversions preserve midnight wrapping and formatting', () => {
   assert.equal(formatTimeWithMeridiem('13:05'),'1:05 PM');
   assert.equal(formatTimeWithMeridiem('invalid'),'invalid');
   assert.equal(formatTimeWithMeridiem('Infinity:00'),'Infinity:00');
+});
+
+test('local greeting changes at morning, afternoon and evening boundaries', () => {
+  for (const [hour, greeting] of [[0,'Buonasera'],[4,'Buonasera'],[5,'Buongiorno'],[11,'Buongiorno'],[12,'Buon pomeriggio'],[17,'Buon pomeriggio'],[18,'Buonasera'],[23,'Buonasera']]) {
+    assert.equal(greetingForHour(hour), greeting);
+  }
 });
 
 test('civil date helpers preserve leap dates, year rollover and daylight-saving boundaries', () => {

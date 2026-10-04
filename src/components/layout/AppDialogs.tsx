@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { useDB } from "../../hooks/useDB";
-import type { Occurrence } from "../../model/calendar.js";
+import type { ItemKind, Occurrence } from "../../model/calendar.js";
 import { CalendarEventMenu } from "../../screens/calendar/CalendarEventMenu";
 import { CalendarItemEditor } from "../../screens/calendar/CalendarItemEditor";
 import { CalendarPreferences } from "../../screens/settings/CalendarPreferences";
 import { HabitEditor } from "../../screens/habits/HabitEditor";
 import { CalendarDialog } from "../ui/CalendarDialog";
 import { StandardButton } from "../ui/StandardButton";
+import { today } from "../../domain/calendar";
 
 export type AppDialogState =
   | { type: "event"; item: Occurrence; confirmDelete: boolean }
-  | { type: "editor"; date: string; occurrence?: Occurrence }
+  | { type: "editor"; date: string; occurrence?: Occurrence; routine?: boolean; initialKind?: ItemKind }
+  | { type: "create" }
   | { type: "preferences" }
-  | { type: "habit" }
+  | { type: "habit"; habitId?: string }
   | { type: "clear" }
   | { type: "reset-all" }
   | null;
@@ -20,11 +22,12 @@ export type AppDialogState =
 interface AppDialogsProps {
   dialog: AppDialogState;
   onChange: (dialog: AppDialogState) => void;
+  onHabitSaved: (firstOccurrenceDate: string) => void;
 }
 
 /** Coordina i dialoghi aperti dalle diverse aree dell’app. */
-export function AppDialogs({ dialog, onChange }: AppDialogsProps) {
-  const { state, recordOutcome, saveItem, deleteItem, savePreferences } = useDB();
+export function AppDialogs({ dialog, onChange, onHabitSaved }: AppDialogsProps) {
+  const { state, habits, recordOutcome, saveItem, deleteItem, savePreferences } = useDB();
   if (!dialog) return null;
   if (dialog.type === "event") {
     const { item } = dialog;
@@ -33,7 +36,7 @@ export function AppDialogs({ dialog, onChange }: AppDialogsProps) {
         initialConfirmDelete={dialog.confirmDelete}
         item={item}
         onClose={() => onChange(null)}
-        onEdit={() => onChange({ type: "editor", date: item.date, occurrence: item })}
+        onEdit={() => onChange(item.habitId ? { type: "habit", habitId: item.habitId } : { type: "editor", date: item.date, occurrence: item })}
         onOutcome={async (outcome) => {
           await recordOutcome(item, outcome);
           onChange(null);
@@ -51,6 +54,8 @@ export function AppDialogs({ dialog, onChange }: AppDialogsProps) {
         items={state.items}
         date={dialog.date}
         occurrence={dialog.occurrence}
+        routine={dialog.routine}
+        initialKind={dialog.initialKind}
         item={state.items.find((item) => item.id === dialog.occurrence?.sourceId)}
         onClose={() => onChange(null)}
         onSave={async (item, unlocked, target, weekdays) => {
@@ -64,12 +69,34 @@ export function AppDialogs({ dialog, onChange }: AppDialogsProps) {
       />
     );
   }
+  if (dialog.type === "create") return <CreationChoiceDialog
+    onClose={() => onChange(null)}
+    onHabit={() => onChange({ type: "habit" })}
+    onRoutine={() => onChange({ type: "editor", date: today(), routine: true })}
+  />;
   if (dialog.type === "preferences") {
     return <CalendarPreferences state={state} onSave={savePreferences} onClose={() => onChange(null)} />;
   }
-  if (dialog.type === "habit") return <HabitEditor onClose={() => onChange(null)} />;
+  if (dialog.type === "habit") return <HabitEditor habit={habits.find(habit => habit.id === dialog.habitId)} onClose={() => onChange(null)} onSaved={onHabitSaved} />;
   if (dialog.type === "clear") return <ClearCalendarDialog onClose={() => onChange(null)} />;
   return <ResetAllDialog onClose={() => onChange(null)} />;
+}
+
+/** Distingue subito un percorso di apprendimento da un semplice promemoria ricorrente. */
+function CreationChoiceDialog({ onClose, onHabit, onRoutine }: { onClose: () => void; onHabit: () => void; onRoutine: () => void }) {
+  return <CalendarDialog title="Cosa vuoi creare?" onClose={onClose}>
+    <div className="creation-choice">
+      <button type="button" onClick={onHabit}>
+        <strong>Nuova abitudine</strong>
+        <span>Impara un comportamento con un piccolo traguardo da 1 a 12 completamenti.</span>
+      </button>
+      <button type="button" onClick={onRoutine}>
+        <strong>Nuova routine</strong>
+        <span>Ricorda un’attività da svolgere regolarmente, senza step né percorso.</span>
+      </button>
+    </div>
+    <div className="modal-actions"><StandardButton type="button" variant="secondary" onClick={onClose}>Annulla</StandardButton></div>
+  </CalendarDialog>;
 }
 
 /** Conferma separatamente la cancellazione completa e lo sblocco dei vincoli. */
@@ -81,7 +108,7 @@ function ClearCalendarDialog({ onClose }: { onClose: () => void }) {
   return (
     <CalendarDialog title="Svuota calendario" onClose={onClose}>
       <p>Verranno eliminati <strong>tutti gli elementi di tutte le settimane</strong>, inclusi impegni fissi, tempo protetto, serie ricorrenti, eccezioni, note e stati di completamento o salto.</p>
-      <p>Restano lo storico degli esiti, il profilo, gli obiettivi e la palette. Le abitudini collegate vengono eliminate insieme al loro piano; questa operazione non è annullabile. Puoi prima esportare il calendario.</p>
+      <p>Restano nell’archivio lo storico degli esiti, il profilo, gli obiettivi e la palette; senza le attività correnti, gli esiti non compariranno più nelle statistiche. Le abitudini vengono eliminate insieme ai loro appuntamenti; questa operazione non è annullabile. Puoi prima esportare il calendario.</p>
       {hasConstraints && (
         <label className="clear-unlock">
           <input type="checkbox" checked={unlocked} onChange={(event) => setUnlocked(event.target.checked)} />

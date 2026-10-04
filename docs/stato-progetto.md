@@ -6,9 +6,10 @@ Rilevazione sul codice del 27 settembre 2026. [Indice documentazione](README.md)
 
 | Area | Disponibile |
 | --- | --- |
-| Oggi | Dashboard della giornata, prossimo passo, timeline cronologica e registrazione rapida degli esiti |
-| Abitudini | Creazione con giorni, orario e durata, collegamento esplicito al calendario e percorso di quattro settimane con prossime occasioni |
-| Calendario | Settimana corrente, navigazione, editor, spostamento manuale, eliminazione, controllo conflitti e vincoli protetti |
+| Oggi | Abitudini e routine ricorrenti della giornata, con registrazione rapida degli esiti; esclude appuntamenti fissi e attività singole |
+| Abitudini | Creazione e modifica con 1–12 step, giorni, orario e durata; percorso permanente nella Home e dettaglio degli esiti |
+| Routine | Promemoria ricorrenti senza step, salvati come attività flessibili del calendario |
+| Calendario | Visione completa della settimana e creazione di appuntamenti fissi che proteggono gli orari, oltre a navigazione, modifica e conflitti |
 | Ricorrenze | Settimanali anche per attività flessibili, più giorni collegati, scadenza facoltativa, eccezioni e identità originale degli appuntamenti |
 | Esiti | Superato, non superato, parziale, correzioni e storico mantenuto dopo eliminazione/svuotamento |
 | Statistiche | Riepiloghi settimanali, panoramica annuale giornaliera e vista per attività; regole nel documento dei Provider |
@@ -27,9 +28,9 @@ un adapter addestrato e validato.
 La [strategia di prodotto](strategia-prodotto-e-benchmark.md) propone una direzione
 più ampia del calendario attuale. Restano da definire o implementare:
 
-- inbox e routine con sequenze di step;
-- modifica del piano delle abitudini con data di decorrenza e pausa/ripresa;
-- occasioni autonome «da collocare» generate dal piano: oggi le abitudini creano direttamente eventi settimanali con orario;
+- inbox e sequenze composte da più attività ordinate;
+- modifica con data di decorrenza invece della sostituzione del calendario corrente;
+- occasioni autonome «da collocare»: oggi le abitudini creano direttamente eventi settimanali con orario;
 - notifiche facoltative per proporre uno spazio libero compatibile, senza prenotarlo o sostituire impegni automaticamente;
 - timer, reminder azionabili e misurazione della durata reale;
 - ripianificazione assistita compatibile con date, vincoli ed esiti;
@@ -80,10 +81,11 @@ costituisce approvazione delle funzionalità future.
 2. Confermare il segmento primario e intervistare cinque persone; verificare il valore
    del client desktop prima di considerare altri client o il cloud.
 3. Verificare con gli utenti il flusso Oggi → esito → percorso dell'abitudine; poi
-   scegliere tra occasioni senza orario, inbox o routine minima con 2–5 step.
+   scegliere tra occasioni senza orario o inbox. Le routine restano promemoria
+   ricorrenti e non hanno step.
    Confrontare checklist e timer, abitudini calendarizzate e flessibili, reminder utili
    e invasivi.
-4. Definire le misure MVP: primo piano, prima routine completata, ritorno a sette giorni
+4. Definire le misure MVP: primo piano, primo traguardo di abitudine, ritorno a sette giorni
    e reminder azionati, quando queste funzioni saranno disponibili.
 5. Valutare la disponibilità a pagare per sync, desktop, AI o backup prima di estendere
    il perimetro. Valutare funzioni AI solo dopo aver verificato il bisogno.

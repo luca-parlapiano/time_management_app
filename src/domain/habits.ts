@@ -1,17 +1,38 @@
 import { eventColors, eventIcons } from "../constants.js";
 import type { CalendarItem, CalendarState } from "../model/calendar.js";
-import type { Habit, HabitDraft } from "../model/habit.js";
-import { addDays, putWeeklyActivity, validDate } from "./calendar.js";
+import type { Habit, HabitDraft, HabitStepTarget } from "../model/habit.js";
+import { addDays, dateNumber, durationMinutes, isOccurrenceDate, putWeeklyActivity, validDate, validateCalendar, weekStart } from "./calendar.js";
 import { isIntegerInRange } from "../utils/numbers.js";
 import { toMinutes } from "../utils/time.js";
 
-export interface CreateHabitIds { habitId: string; planId: string }
+export interface CreateHabitIds { habitId: string }
 
-/** Valida i dati inseriti per una nuova abitudine programmata a giorni e orario definiti. */
+/** Restituisce true soltanto per un numero intero di step compreso tra 1 e 12. */
+export function isHabitStepTarget(value: unknown): value is HabitStepTarget {
+  return typeof value === "number" && isIntegerInRange(value, 1, 12);
+}
+
+/**
+ * Restituisce la prima data pianificata non precedente all'inizio dell'abitudine.
+ * Se un giorno scelto è già trascorso nella settimana iniziale, usa la settimana seguente.
+ */
+export function firstHabitOccurrenceDate(input: Pick<HabitDraft, "startsOn" | "weekdays">): string {
+  if (!validDate(input.startsOn) || !Array.isArray(input.weekdays) || !input.weekdays.length ||
+    input.weekdays.some(day => !isIntegerInRange(day, 0, 6))) throw new Error("Pianificazione dell’abitudine non valida.");
+  const [first] = input.weekdays.map(day => {
+    const date = addDays(weekStart(input.startsOn), day);
+    return date < input.startsOn ? addDays(date, 7) : date;
+  }).sort();
+  if (!first) throw new Error("Pianificazione dell’abitudine non valida.");
+  return first;
+}
+
+/** Valida identità, motivazione, traguardo e pianificazione di un'abitudine da acquisire. */
 export function validateHabitDraft(input: HabitDraft): void {
-  if (!input || typeof input.title !== "string" || !input.title.trim()) throw new Error("Inserisci il nome dell'abitudine.");
-  if (typeof input.notes !== "string") throw new Error("Note non valide.");
-  if (!Object.hasOwn(eventIcons, input.icon) || !Object.hasOwn(eventColors, input.color)) throw new Error("Aspetto dell'abitudine non valido.");
+  if (!input || typeof input.title !== "string" || !input.title.trim()) throw new Error("Inserisci il nome dell’abitudine.");
+  if (typeof input.motivation !== "string") throw new Error("Motivazione non valida.");
+  if (!Object.hasOwn(eventIcons, input.icon) || !Object.hasOwn(eventColors, input.color)) throw new Error("Aspetto dell’abitudine non valido.");
+  if (!isHabitStepTarget(input.stepTarget)) throw new Error("Scegli un traguardo da 1 a 12 step.");
   if (!validDate(input.startsOn)) throw new Error("Data iniziale non valida.");
   if (!Array.isArray(input.weekdays) || !input.weekdays.length || input.weekdays.some(day => !isIntegerInRange(day, 0, 6)) || new Set(input.weekdays).size !== input.weekdays.length) {
     throw new Error("Scegli almeno un giorno della settimana.");
@@ -20,75 +41,110 @@ export function validateHabitDraft(input: HabitDraft): void {
   if (!isIntegerInRange(input.durationMinutes, 5, 1440)) throw new Error("La durata deve essere compresa tra 5 minuti e 24 ore.");
 }
 
-/**
- * Crea un'abitudine e le serie settimanali collegate in un unico risultato immutabile.
- * Se un appuntamento entra in conflitto, l'operazione solleva un errore e il chiamante
- * non riceve modifiche parziali.
- */
-export function createHabit(calendar: CalendarState, habits: Habit[], draft: HabitDraft, ids: CreateHabitIds): { calendar: CalendarState; habits: Habit[] } {
-  validateHabitDraft(draft);
-  if (!ids.habitId || !ids.planId || habits.some(habit => habit.id === ids.habitId)) throw new Error("Identità dell'abitudine non valida.");
+function proposedItem(draft: HabitDraft, habitId: string): CalendarItem {
   const startMinutes = toMinutes(draft.start);
   const endTotal = startMinutes + draft.durationMinutes;
-  const end = `${String(Math.floor(endTotal / 60) % 24).padStart(2, "0")}:${String(endTotal % 60).padStart(2, "0")}`;
-  const endDate = endTotal >= 1440 ? addDays(draft.startsOn, 1) : draft.startsOn;
-  const proposed: CalendarItem = {
-    id: ids.planId,
-    habitId: ids.habitId,
-    habitPlanId: ids.planId,
+  return {
+    id: habitId,
+    habitId,
     title: draft.title.trim(),
-    notes: draft.notes,
+    notes: draft.motivation,
     icon: draft.icon,
     color: draft.color,
     coverImage: false,
     date: draft.startsOn,
-    endDate,
+    endDate: endTotal >= 1440 ? addDays(draft.startsOn, 1) : draft.startsOn,
     start: draft.start,
-    end,
+    end: `${String(Math.floor(endTotal / 60) % 24).padStart(2, "0")}:${String(endTotal % 60).padStart(2, "0")}`,
     kind: "flexible",
     recurrence: {},
     exceptions: {},
   };
-  const nextCalendar = putWeeklyActivity(calendar, proposed, [...draft.weekdays].sort(), { actor: "user", unlocked: false });
-  const sourceIds = nextCalendar.items.filter(item => item.habitId === ids.habitId && item.habitPlanId === ids.planId).map(item => item.id);
-  if (sourceIds.length !== draft.weekdays.length) throw new Error("Piano dell'abitudine incompleto.");
-  const habit: Habit = {
-    id: ids.habitId,
-    title: draft.title.trim(),
-    notes: draft.notes,
-    icon: draft.icon,
-    color: draft.color,
-    status: "active",
-    plans: [{ id: ids.planId, startsOn: draft.startsOn, weekdays: [...draft.weekdays].sort(), start: draft.start, durationMinutes: draft.durationMinutes, sourceIds }],
-  };
-  return { calendar: nextCalendar, habits: [...habits, habit] };
 }
 
-/** Verifica struttura, identità e collegamenti tra abitudini, piani e calendario. */
+function habitOf(id: string, draft: HabitDraft): Habit {
+  return { id, title: draft.title.trim(), motivation: draft.motivation, icon: draft.icon, color: draft.color, stepTarget: draft.stepTarget };
+}
+
+/**
+ * Crea un'abitudine e le serie settimanali collegate in un unico risultato immutabile.
+ * Un conflitto lascia calendario e abitudini originali invariati.
+ */
+export function createHabit(calendar: CalendarState, habits: Habit[], draft: HabitDraft, ids: CreateHabitIds): { calendar: CalendarState; habits: Habit[] } {
+  validateHabitDraft(draft);
+  if (!ids.habitId || habits.some(habit => habit.id === ids.habitId)) throw new Error("Identità dell’abitudine non valida.");
+  const nextCalendar = putWeeklyActivity(calendar, proposedItem(draft, ids.habitId), [...draft.weekdays].sort(), { actor: "user", unlocked: false });
+  return { calendar: nextCalendar, habits: [...habits, habitOf(ids.habitId, draft)] };
+}
+
+/**
+ * Sostituisce atomicamente dati e pianificazione di un'abitudine esistente. Le serie
+ * vengono ricreate con la stessa identità settimanale; gli esiti ancora compatibili
+ * restano sul calendario e lo storico conserva tutti i risultati precedenti.
+ */
+export function updateHabit(calendar: CalendarState, habits: Habit[], id: string, draft: HabitDraft): { calendar: CalendarState; habits: Habit[] } {
+  validateHabitDraft(draft);
+  if (!habits.some(habit => habit.id === id)) throw new Error("Abitudine non trovata.");
+  const previous = calendar.items.filter(item => item.habitId === id);
+  const previousById = new Map(previous.map(item => [item.id, item]));
+  const withoutHabit = { ...calendar, items: calendar.items.filter(item => item.habitId !== id) };
+  let nextCalendar = putWeeklyActivity(withoutHabit, proposedItem(draft, id), [...draft.weekdays].sort(), { actor: "user", unlocked: false });
+  nextCalendar = { ...nextCalendar, items: nextCalendar.items.map(item => {
+    if (item.habitId !== id) return item;
+    const old = previousById.get(item.id);
+    if (!old?.outcomes) return item;
+    const outcomes = Object.fromEntries(Object.entries(old.outcomes).filter(([date]) => isOccurrenceDate(item, date)));
+    return { ...item, outcomes };
+  }) };
+  validateCalendar(nextCalendar);
+  return { calendar: nextCalendar, habits: habits.map(habit => habit.id === id ? habitOf(id, draft) : habit) };
+}
+
+/**
+ * Elimina un'abitudine e tutte le serie di calendario collegate in un unico risultato.
+ * Lo storico degli esiti non fa parte di questo stato e deve essere conservato dal chiamante.
+ */
+export function deleteHabit(calendar: CalendarState, habits: Habit[], id: string): { calendar: CalendarState; habits: Habit[] } {
+  if (!habits.some(habit => habit.id === id)) throw new Error("Abitudine non trovata.");
+  const nextCalendar = { ...calendar, items: calendar.items.filter(item => item.habitId !== id) };
+  const nextHabits = habits.filter(habit => habit.id !== id);
+  validateCalendar(nextCalendar);
+  validateHabits(nextHabits, nextCalendar);
+  return { calendar: nextCalendar, habits: nextHabits };
+}
+
+/** Ricostruisce i campi modificabili dell'abitudine dalle sue serie nel calendario. */
+export function habitDraft(calendar: CalendarState, habit: Habit): HabitDraft {
+  const items = calendar.items.filter(item => item.habitId === habit.id).sort((a, b) => a.date.localeCompare(b.date));
+  const first = items[0];
+  if (!first) throw new Error("Pianificazione dell’abitudine non disponibile.");
+  const weekdays = [...new Set(items.map(item => (dateNumber(item.date) - dateNumber(weekStart(item.date))) / 86_400_000))].sort();
+  return {
+    title: habit.title,
+    motivation: habit.motivation,
+    icon: habit.icon,
+    color: habit.color,
+    stepTarget: habit.stepTarget,
+    startsOn: first.date,
+    weekdays,
+    start: first.start,
+    durationMinutes: durationMinutes(first),
+  };
+}
+
+/** Verifica struttura, identità e collegamenti tra abitudini e calendario. */
 export function validateHabits(habits: unknown, calendar: CalendarState): asserts habits is Habit[] {
   if (!Array.isArray(habits)) throw new Error("Archivio delle abitudini non valido.");
   const habitIds = new Set<string>();
-  const planIds = new Set<string>();
-  const sources = new Map(calendar.items.map(item => [item.id, item]));
   for (const habit of habits) {
-    if (!habit || typeof habit !== "object") throw new Error("Abitudine non valida.");
-    if (typeof habit.id !== "string" || !habit.id || habitIds.has(habit.id) || typeof habit.title !== "string" || !habit.title.trim() || typeof habit.notes !== "string" ||
-      !Object.hasOwn(eventIcons, habit.icon) || !Object.hasOwn(eventColors, habit.color) || !["active", "paused"].includes(habit.status) || !Array.isArray(habit.plans) || !habit.plans.length) {
-      throw new Error("Abitudine non valida.");
-    }
+    if (!habit || typeof habit !== "object" || typeof habit.id !== "string" || !habit.id || habitIds.has(habit.id) ||
+      typeof habit.title !== "string" || !habit.title.trim() || typeof habit.motivation !== "string" || !isHabitStepTarget(habit.stepTarget) ||
+      !Object.hasOwn(eventIcons, habit.icon) || !Object.hasOwn(eventColors, habit.color)) throw new Error("Abitudine non valida.");
     habitIds.add(habit.id);
-    for (const plan of habit.plans) {
-      const draft: HabitDraft = { title: habit.title, notes: habit.notes, icon: habit.icon, color: habit.color, startsOn: plan.startsOn, weekdays: plan.weekdays, start: plan.start, durationMinutes: plan.durationMinutes };
-      if (!plan || typeof plan.id !== "string" || !plan.id || planIds.has(plan.id) || !Array.isArray(plan.sourceIds) || plan.sourceIds.length !== plan.weekdays.length) throw new Error("Piano dell'abitudine non valido.");
-      validateHabitDraft(draft);
-      planIds.add(plan.id);
-      for (const sourceId of plan.sourceIds) {
-        const source = sources.get(sourceId);
-        if (!source || source.habitId !== habit.id || source.habitPlanId !== plan.id) throw new Error("Collegamento dell'abitudine al calendario non valido.");
-      }
-    }
+    const sources = calendar.items.filter(item => item.habitId === habit.id);
+    if (!sources.length || sources.some(item => !item.recurrence || item.activityId !== habit.id)) throw new Error("Pianificazione dell’abitudine non valida.");
   }
   for (const item of calendar.items) {
-    if (item.habitId && (!habitIds.has(item.habitId) || !planIds.has(item.habitPlanId!))) throw new Error("Appuntamento collegato a un'abitudine mancante.");
+    if (item.habitId && !habitIds.has(item.habitId)) throw new Error("Appuntamento collegato a un’abitudine mancante.");
   }
 }

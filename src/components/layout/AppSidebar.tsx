@@ -1,8 +1,9 @@
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { addDays, displayDate, eventColors, today } from "../../domain/calendar";
-import { habitSummary, habitTimeline } from "../../domain/habitTimeline";
+import { habitTimeline, nextHabitOccurrence } from "../../domain/habitTimeline";
 import { useDB } from "../../hooks/useDB";
+import { useLocalMinute } from "../../hooks/useLocalMinute";
 import { EventIcon } from "../../icons/EventIcon";
 import { RoundButton } from "../ui/RoundButton";
 
@@ -13,53 +14,51 @@ interface AppSidebarProps {
   onOpenHabits: () => void;
 }
 
-/** Barra laterale persistente con azioni e stato delle abitudini attive. */
+/** Barra laterale persistente con le abitudini e la loro prossima occasione. */
 export function AppSidebar({ expanded, onToggle, onAddHabit, onOpenHabits }: AppSidebarProps) {
   const { habits, archive, state } = useDB();
   const referenceDate = today();
-  const now = new Date();
+  const now = useLocalMinute();
   const referenceTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const activeHabits = useMemo(() => habits.filter(habit => habit.status === "active").map(habit => {
+  const activeHabits = useMemo(() => habits.map(habit => {
     const entries = habitTimeline(state, archive.history, habit, addDays(referenceDate, -27), addDays(referenceDate, 30));
-    return { habit, summary: habitSummary(entries, referenceDate, referenceTime) };
+    return { habit, next: nextHabitOccurrence(entries, referenceDate, referenceTime) };
   }), [habits, state, archive.history, referenceDate, referenceTime]);
   return (
     <aside id="sidebar-drawer" className="hero-panel" aria-label="Barra laterale">
-      <RoundButton
-        variant="secondary"
-        className="sidebar-toggle"
-        icon={expanded ? "sidebar-close" : "sidebar-open"}
-        iconSize={24}
-        label={expanded ? "Riduci barra laterale" : "Espandi barra laterale"}
-        aria-expanded={expanded}
-        aria-controls="sidebar-drawer"
-        onClick={onToggle}
-      />
-      <div className="sidebar-intro" hidden={!expanded}>
-        <p className="eyebrow">Il tuo tempo, in locale</p>
-        <h1>Spazio alle tue giornate.</h1>
-        <p className="hero-copy">Attività, impegni e tempo per te. Un calendario continuo, pronto da usare.</p>
+      <div className="sidebar-brand">
+        <RoundButton
+          variant="secondary"
+          className="sidebar-toggle"
+          icon={expanded ? "sidebar-close" : "sidebar-open"}
+          iconSize={24}
+          label={expanded ? "Riduci barra laterale" : "Espandi barra laterale"}
+          aria-expanded={expanded}
+          aria-controls="sidebar-drawer"
+          onClick={onToggle}
+        />
+        <h1 className="sidebar-brand-name" hidden={!expanded}>Il tuo <span>tempo</span></h1>
       </div>
-      <section className="sidebar-habits" aria-labelledby="sidebar-habits-title" hidden={!expanded}>
-        <div className="sidebar-habits-heading">
+      <section className="sidebar-habits" aria-labelledby={expanded ? "sidebar-habits-title" : undefined} aria-label={expanded ? undefined : "Le tue abitudini"}>
+        <div className="sidebar-habits-heading" hidden={!expanded}>
           <h2 id="sidebar-habits-title">Le tue abitudini</h2>
           <button type="button" onClick={onOpenHabits}>Apri</button>
         </div>
         {activeHabits.length === 0 ? (
-          <div className="sidebar-habits-empty">
-            <p>{habits.length === 0 ? "Nessuna abitudine ancora. Parti da un piano semplice." : "Nessuna abitudine attiva."}</p>
-            {habits.length === 0 && <button type="button" onClick={onAddHabit}>Crea un’abitudine</button>}
-          </div>
+          expanded ? <div className="sidebar-habits-empty">
+            <p>Nessuna abitudine ancora. Parti da un piccolo traguardo.</p>
+            <button type="button" onClick={onAddHabit}>Crea</button>
+          </div> : <RoundButton variant="secondary" icon="habits" label="Apri abitudini" onClick={onOpenHabits} />
         ) : (
           <ul className="sidebar-habit-list">
-            {activeHabits.map(({ habit, summary }) => (
-                <li key={habit.id} className="sidebar-habit" style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}>
-                  <span className="sidebar-habit-icon" aria-hidden="true"><EventIcon icon={habit.icon} /></span>
-                  <div className="sidebar-habit-content">
-                    <strong className="sidebar-habit-title">{habit.title}</strong>
-                    <span className="sidebar-habit-progress">4 settimane: {summary.completed}/{summary.planned} completate · serie {summary.streak}</span>
-                    <span className="sidebar-habit-next">{summary.next ? `Prossima: ${displayDate(summary.next.date, { weekday: "short", day: "numeric", month: "short" })}${summary.next.start ? ` · ${summary.next.start}` : ""}` : "Nessuna prossima occasione pianificata"}</span>
-                  </div>
+            {activeHabits.map(({ habit, next }) => (
+                <li key={habit.id} className={`sidebar-habit${expanded ? "" : " sidebar-habit-compact"}`} style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}>
+                  {expanded ? <>
+                    <div className="sidebar-habit-identity"><span className="sidebar-habit-icon" aria-hidden="true"><EventIcon icon={habit.icon} /></span><strong className="sidebar-habit-title">{habit.title}</strong></div>
+                    <span className="sidebar-habit-next">{next ? `Prossima: ${displayDate(next.date, { weekday: "short", day: "numeric", month: "short" })}${next.start ? ` · ${next.start}` : ""}` : "Nessuna prossima occasione pianificata"}</span>
+                  </> : <button type="button" className="sidebar-habit-compact-button" onClick={onOpenHabits}
+                    aria-label={`Apri abitudine. ${habit.title}`}
+                    title={habit.title}><span className="sidebar-habit-icon" aria-hidden="true"><EventIcon icon={habit.icon} /></span></button>}
                 </li>
             ))}
           </ul>

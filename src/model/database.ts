@@ -54,6 +54,8 @@ export interface DBContextValue {
   retry(): Promise<void>;
   recordOutcome(item: Occurrence, outcome: ItemOutcome, loading?: LoadingOptions): Promise<void>;
   saveHabit(input: HabitDraft, loading?: LoadingOptions): Promise<void>;
+  updateHabit(id: string, input: HabitDraft, loading?: LoadingOptions): Promise<void>;
+  deleteHabit(id: string, loading?: LoadingOptions): Promise<void>;
   saveItem(item: CalendarItem, unlocked: boolean, target?: EditTarget, weekdays?: number[], loading?: LoadingOptions): Promise<void>;
   deleteItem(target: EditTarget, unlocked: boolean, loading?: LoadingOptions): Promise<void>;
   savePreferences(profile: CalendarProfile, goals: CalendarGoal[], loading?: LoadingOptions): Promise<void>;

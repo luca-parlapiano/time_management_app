@@ -14,26 +14,33 @@ export interface HabitTimelineEntry {
   removed: boolean;
 }
 
-export interface HabitSummary {
+export interface HabitJourneyProgress {
   completed: number;
-  planned: number;
-  streak: number;
-  next?: HabitTimelineEntry;
+  currentStep: number;
+  chapter: number;
+  milestonesReached: number;
+  target: Habit["stepTarget"];
 }
 
 /**
- * Riassume le occasioni già iniziate nel periodo ricevuto, la serie consecutiva
- * di completamenti e la prossima occasione ancora pianificata. Quelle future
- * non entrano nel denominatore; quelle rimosse senza esito non entrano nel percorso.
+ * Calcola il percorso permanente dell'abitudine usando l'ultimo esito confermato
+ * di ogni occorrenza. Parziali, salti e tempo trascorso non sottraggono step.
  */
-export function habitSummary(entries: HabitTimelineEntry[], referenceDate: string, referenceTime: string): HabitSummary {
-  const due = entries.filter(entry => entry.date < referenceDate || entry.date === referenceDate && (entry.start ?? "00:00") <= referenceTime);
-  const completed = due.filter(entry => entry.outcome === "completed").length;
-  const settled = entries.filter(entry => entry.date < referenceDate || entry.date === referenceDate && entry.outcome !== undefined);
-  let streak = 0;
-  for (let index = settled.length - 1; index >= 0 && settled[index].outcome === "completed"; index -= 1) streak += 1;
-  const next = entries.find(entry => !entry.removed && !entry.outcome && (entry.date > referenceDate || entry.date === referenceDate && (entry.start ?? "00:00") > referenceTime));
-  return { completed, planned: due.length, streak, next };
+export function habitJourneyProgress(history: OutcomeRecord[], habit: Habit): HabitJourneyProgress {
+  const completed = latestOutcomes(history).filter(record => record.activityId === habit.id && record.outcome === "completed").length;
+  const currentStep = completed === 0 ? 0 : (completed - 1) % habit.stepTarget + 1;
+  return {
+    completed,
+    currentStep,
+    chapter: completed === 0 ? 1 : Math.floor((completed - 1) / habit.stepTarget) + 1,
+    milestonesReached: Math.floor(completed / habit.stepTarget),
+    target: habit.stepTarget,
+  };
+}
+
+/** Restituisce la prossima occasione non registrata rispetto a data e ora locali. */
+export function nextHabitOccurrence(entries: HabitTimelineEntry[], referenceDate: string, referenceTime: string): HabitTimelineEntry | undefined {
+  return entries.find(entry => !entry.removed && !entry.outcome && (entry.date > referenceDate || entry.date === referenceDate && (entry.start ?? "00:00") > referenceTime));
 }
 
 /**
@@ -42,7 +49,7 @@ export function habitSummary(entries: HabitTimelineEntry[], referenceDate: strin
  * senza un esito registrato, un'occorrenza rimossa non compare nello storico.
  */
 export function habitTimeline(calendar: CalendarState, history: OutcomeRecord[], habit: Habit, from: string, through: string): HabitTimelineEntry[] {
-  const sources = new Set(habit.plans.flatMap(plan => plan.sourceIds));
+  const sources = new Set(calendar.items.filter(item => item.habitId === habit.id).map(item => item.id));
   const entries = new Map<string, HabitTimelineEntry>();
   const keyOf = (sourceId: string, occurrenceDate: string) => JSON.stringify([sourceId, occurrenceDate]);
   for (const occurrence of occurrences(calendar.items.filter(item => sources.has(item.id)), from, through)) {
@@ -53,7 +60,7 @@ export function habitTimeline(calendar: CalendarState, history: OutcomeRecord[],
     });
   }
   for (const record of latestOutcomes(history)) {
-    if (!sources.has(record.sourceId) || record.eventDate < from || record.eventDate > through) continue;
+    if (record.activityId !== habit.id || record.eventDate < from || record.eventDate > through) continue;
     const key = keyOf(record.sourceId, record.occurrenceDate);
     if (entries.has(key)) continue;
     entries.set(key, {

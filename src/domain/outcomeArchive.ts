@@ -7,7 +7,7 @@ export { statisticsOutcomeLabels } from "../constants.js";
 import { isFiniteNumber } from "../utils/numbers.js";
 import type { CalendarState, ItemOutcome, Occurrence } from "../model/calendar.js";
 import type { OutcomeRecord, PlannerArchive } from "../model/outcomeArchive.js";
-import { eventAppearance, eventColors, eventIcons, outcomeLabels, validDate, validateCalendar } from "./calendar.js";
+import { eventAppearance, eventColors, eventIcons, isProgressActivity, outcomeLabels, validDate, validateCalendar } from "./calendar.js";
 import { validateHabits } from "./habits.js";
 export type { OutcomeRecord,PlannerArchive } from "../model/outcomeArchive.js";
 
@@ -31,11 +31,38 @@ export function latestOutcomes(history: OutcomeRecord[]): OutcomeRecord[] {
   for (const record of history) latest.set(JSON.stringify([record.sourceId, record.occurrenceDate]), record);
   return [...latest.values()];
 }
+
+/**
+ * Seleziona gli esiti delle sole abitudini e routine ancora presenti nel calendario.
+ * I record esclusi restano nell'archivio di audit e nei backup, ma non alimentano le statistiche.
+ */
+export function progressOutcomeHistory(calendar: CalendarState, history: OutcomeRecord[]): OutcomeRecord[] {
+  const sourceIds = new Set(calendar.items.filter(isProgressActivity).map(item => item.id));
+  return history.filter(record => sourceIds.has(record.sourceId));
+}
 /** Richiede un oggetto con soli campi dichiarati, senza eliminare silenziosamente dati estranei. */
 function requireFields(value: unknown, allowed: readonly string[], path: string): asserts value is Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${path}: oggetto non valido.`);
   const unexpected = Object.keys(value).find(key => !allowed.includes(key));
   if (unexpected) throw new Error(`${path}: campo non previsto “${unexpected}”.`);
+}
+
+/**
+ * Converte un backup v1 nel nuovo formato eliminando le vecchie abitudini e i loro
+ * appuntamenti. Calendario indipendente, profilo, obiettivi e storico restano intatti.
+ */
+export function upgradeArchive(value: unknown): unknown {
+  const cloned: unknown = structuredClone(value);
+  if (!cloned || typeof cloned !== "object" || Array.isArray(cloned)) return cloned;
+  const archive = cloned as Record<string, unknown>;
+  if (archive.format !== "time-planner-backup" || archive.version !== 1) return cloned;
+  if (archive.calendar && typeof archive.calendar === "object" && !Array.isArray(archive.calendar)) {
+    const calendar = archive.calendar as Record<string, unknown>;
+    if (Array.isArray(calendar.items)) calendar.items = calendar.items.filter(item => !item || typeof item !== "object" || Array.isArray(item) || !("habitId" in item));
+  }
+  archive.habits = [];
+  archive.version = 2;
+  return archive;
 }
 
 /** Controlla i confini del formato prima di applicare le regole di dominio ai contenuti. */
@@ -45,7 +72,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   if (!Array.isArray(calendar.items) || !Array.isArray(calendar.goals)) throw new Error('Archivio calendario non riconosciuto.');
   const dataFields = ['coverImage', 'icon', 'color', 'title', 'date', 'endDate', 'start', 'end', 'kind', 'notes', 'goalId'];
   for (const item of calendar.items) {
-    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'habitPlanId', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
+    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'routine', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
     if (item.recurrence !== undefined) requireFields(item.recurrence, ['until'], 'Ricorrenza');
     if (!item.exceptions || typeof item.exceptions !== 'object' || Array.isArray(item.exceptions)) throw new Error('Eccezioni non valide.');
     for (const exception of Object.values(item.exceptions)) {
@@ -61,9 +88,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   if (value.habits !== undefined) {
     if (!Array.isArray(value.habits)) throw new Error('Archivio delle abitudini non valido.');
     for (const habit of value.habits) {
-      requireFields(habit, ['id', 'title', 'notes', 'icon', 'color', 'status', 'plans'], 'Abitudine');
-      if (!Array.isArray(habit.plans)) throw new Error("Piani dell'abitudine non validi.");
-      for (const plan of habit.plans) requireFields(plan, ['id', 'startsOn', 'weekdays', 'start', 'durationMinutes', 'sourceIds'], 'Piano abitudine');
+      requireFields(habit, ['id', 'title', 'motivation', 'icon', 'color', 'stepTarget'], 'Abitudine');
     }
   }
 }
@@ -75,7 +100,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
  */
 export function validateArchive(value: unknown): asserts value is PlannerArchive {
   requireFields(value, ['format', 'version', 'calendar', 'habits', 'history', 'exportedAt'], 'Backup');
-  if (value.format !== 'time-planner-backup' || value.version !== 1) throw new Error("Formato di backup non riconosciuto.");
+  if (value.format !== 'time-planner-backup' || value.version !== 2) throw new Error("Formato di backup non riconosciuto.");
   if (value.exportedAt !== undefined && (typeof value.exportedAt !== 'string' || !isFiniteNumber(Date.parse(value.exportedAt)))) throw new Error('Data di esportazione non valida.');
   validateArchiveFields(value);
   const archive = value as unknown as PlannerArchive;
@@ -92,13 +117,13 @@ export function validateArchive(value: unknown): asserts value is PlannerArchive
 }
 /**
  * Legge un JSON e restituisce un backup validato, pronto per l’anteprima di importazione.
- * Accetta esclusivamente il formato time-planner-backup v1 con calendario e storico.
+ * Accetta il formato corrente e converte il precedente eliminando le vecchie abitudini.
  * Propaga errori di parsing/validazione; non salva né converte formati diversi.
  */
 export function parseArchive(text: string): PlannerArchive {
-  const parsed: unknown = JSON.parse(text);
+  const parsed = upgradeArchive(JSON.parse(text));
   validateArchive(parsed);
-  return { format: "time-planner-backup", version: 1, calendar: parsed.calendar, habits: parsed.habits ?? [], history: parsed.history };
+  return { format: "time-planner-backup", version: 2, calendar: parsed.calendar, habits: parsed.habits ?? [], history: parsed.history };
 }
 /**
  * Valida l’archivio e lo serializza in JSON leggibile con la data corrente di esportazione.

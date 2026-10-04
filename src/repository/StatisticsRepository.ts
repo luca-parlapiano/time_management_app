@@ -3,8 +3,8 @@ import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegmen
 import { isIntegerInRange } from "../utils/numbers.js";
 import { today } from "../utils/dates.js";
 import { percentage } from "../utils/math.js";
-import { addDays, eventAppearance, occurrences, validDate, weekStart } from '../domain/calendar.js';
-import { latestOutcomes } from '../domain/outcomeArchive.js';
+import { addDays, eventAppearance, isProgressActivity, occurrences, validDate, weekStart } from '../domain/calendar.js';
+import { latestOutcomes, progressOutcomeHistory } from '../domain/outcomeArchive.js';
 import type { CalendarItem } from '../model/calendar.js';
 import type { PlannerArchive } from '../model/outcomeArchive.js';
 
@@ -14,22 +14,25 @@ const occurrenceKey = (sourceId: string, date: string) => JSON.stringify([source
 /** Read model between the persisted archive and the UI. Never writes derived totals. */
 export class StatisticsRepository {
   private readonly latest;
+  private readonly items;
   private readonly dailyCache = new Map<string, DailyStatistics>();
   constructor(private readonly archive: PlannerArchive) {
-    this.latest = latestOutcomes(archive.history);
+    this.items = archive.calendar.items.filter(isProgressActivity);
+    this.latest = latestOutcomes(progressOutcomeHistory(archive.calendar, archive.history));
   }
 
   // Match the existing sidebar semantics: one activity per shared identity or normalized title.
   private group(event: StatisticsEvent): CalendarItem[] {
     const sourceId = 'sourceId' in event ? event.sourceId : event.id;
-    const source = this.archive.calendar.items.find(item => item.id === sourceId);
+    const source = this.items.find(item => item.id === sourceId);
+    if (!source) return [];
     const ids = new Set([sourceId]);
     const groups = new Set(source?.activityId ? [source.activityId] : []);
     const names = new Set([normalizedTitle(source?.title ?? event.title)]);
     let changed = true;
     while (changed) {
       changed = false;
-      for (const item of this.archive.calendar.items) {
+      for (const item of this.items) {
         if (ids.has(item.id)) {
           if (item.activityId) groups.add(item.activityId);
           names.add(normalizedTitle(item.title));
@@ -41,7 +44,7 @@ export class StatisticsRepository {
         }
       }
     }
-    return this.archive.calendar.items.filter(item => ids.has(item.id));
+    return this.items.filter(item => ids.has(item.id));
   }
 
   getWeeklyStatistics(event: StatisticsEvent, dailyDate: string): WeeklyActivityStatistics {
@@ -54,7 +57,7 @@ export class StatisticsRepository {
     const activityIds = new Set(members.map(item => item.activityId ?? item.id));
     if ('activityId' in event && event.activityId) activityIds.add(event.activityId);
     const names = new Set(members.length ? members.map(item => normalizedTitle(item.title)) : [normalizedTitle(event.title)]);
-    const knownSources = new Set(this.archive.calendar.items.map(item => item.id));
+    const knownSources = new Set(this.items.map(item => item.id));
     const entries = new Map<string, StatisticsEntry>();
     for (const item of occurrences(members, from, through)) {
       // An overnight appointment belongs to its start day, and is counted once.
@@ -85,7 +88,7 @@ export class StatisticsRepository {
     const cached = this.dailyCache.get(date);
     if (cached) return cached;
     const entries = new Map<string, DailyStatisticsEntry>();
-    for (const event of occurrences(this.archive.calendar.items, date, date)) {
+    for (const event of occurrences(this.items, date, date)) {
       entries.set(occurrenceKey(event.sourceId, event.occurrenceDate), {
         title: event.title, ...eventAppearance(event), outcome: event.outcome,
       });
@@ -117,19 +120,14 @@ export class StatisticsRepository {
     return result;
   }
 
-  /** Elenca una sola voce per attività, includendo lo storico delle attività eliminate. */
+  /** Elenca una sola voce per abitudine o routine attualmente monitorata. */
   getStatisticsActivities(): StatisticsActivity[] {
     const seen = new Set<string>();
     const result: StatisticsActivity[] = [];
-    for (const event of this.archive.calendar.items) {
+    for (const event of this.items) {
       if (seen.has(event.id)) continue;
       this.group(event).forEach(item => seen.add(item.id));
       result.push({id: event.id, title: event.title, ...eventAppearance(event)});
-    }
-    for (const record of this.latest) {
-      if (seen.has(record.sourceId) || result.some(item => normalizedTitle(item.title) === normalizedTitle(record.title))) continue;
-      seen.add(record.sourceId);
-      result.push({id: record.sourceId, title: record.title, color: record.color, icon: record.icon});
     }
     return result;
   }
@@ -142,12 +140,12 @@ export class StatisticsRepository {
     if (!isIntegerInRange(year, 1900, 9998) || !validDate(referenceDate)) throw new Error('Periodo non valido.');
     const activity = this.getStatisticsActivities().find(item => item.id === id);
     if (!activity) throw new Error('Attività non trovata.');
-    const source = this.archive.calendar.items.find(item => item.id === id);
+    const source = this.items.find(item => item.id === id);
     const members = source ? this.group(source) : [];
     const sourceIds = new Set([id, ...members.map(item => item.id)]);
     const activityIds = new Set(members.map(item => item.activityId ?? item.id));
     const names = new Set([normalizedTitle(activity.title), ...members.map(item => normalizedTitle(item.title))]);
-    const knownSources = new Set(this.archive.calendar.items.map(item => item.id));
+    const knownSources = new Set(this.items.map(item => item.id));
     const from = `${year}-01-01`, through = `${year}-12-31`;
     const entries = new Map<string, StatisticsEntry>();
     for (const event of occurrences(members, from, through)) {
@@ -180,7 +178,7 @@ export class StatisticsRepository {
     if (!validDate(dailyDate)) throw new Error('Data non valida per le statistiche settimanali.');
     const seen = new Set<string>();
     const result: WeeklyActivitySummary[] = [];
-    for (const event of this.archive.calendar.items) {
+    for (const event of this.items) {
       if (seen.has(event.id)) continue;
       this.group(event).forEach(item => seen.add(item.id));
       result.push({event, statistics: this.getWeeklyStatistics(event, dailyDate)});

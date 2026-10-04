@@ -10,15 +10,15 @@ interface CalendarScreenProps {
   active: boolean;
   week: string;
   onWeekChange: (week: string) => void;
-  onOpenEditor: (date: string, occurrence?: Occurrence) => void;
+  onOpenEditor: (date: string, occurrence?: Occurrence, initialKind?: "fixed") => void;
   onOpenEvent: (item: Occurrence, confirmDelete: boolean) => void;
 }
 
 /** Schermata settimanale del calendario e relativi comandi di navigazione. */
 export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent }: CalendarScreenProps) {
   const { state, saving, recordOutcome } = useDB();
-  const addItem = useCallback((date: string) => onOpenEditor(date), [onOpenEditor]);
-  const addActivity = useCallback(() => onOpenEditor(week === weekStart(today()) ? today() : week), [onOpenEditor, week]);
+  const addItem = useCallback((date: string) => onOpenEditor(date, undefined, "fixed"), [onOpenEditor]);
+  const addActivity = useCallback(() => onOpenEditor(week === weekStart(today()) ? today() : week, undefined, "fixed"), [onOpenEditor, week]);
   const openItem = useCallback((item: Occurrence) => onOpenEvent(item, false), [onOpenEvent]);
   const deleteItem = useCallback((item: Occurrence) => onOpenEvent(item, true), [onOpenEvent]);
   return (
@@ -35,7 +35,7 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
             <StandardButton variant="secondary" onClick={() => onWeekChange(weekStart(today()))}>Oggi</StandardButton>
             <StandardButton variant="secondary" aria-label="Settimana successiva" onClick={() => onWeekChange(addDays(week, 7))}>Successiva →</StandardButton>
           </nav>
-          <RoundButton variant="primary" icon="add" iconSize={26} label="Aggiungi attività" disabled={saving} onClick={addActivity} />
+          <RoundButton variant="primary" icon="add" iconSize={26} label="Nuovo appuntamento fisso" disabled={saving} onClick={addActivity} />
         </div>
       </header>
       <div className="screen-content calendar-screen-content">

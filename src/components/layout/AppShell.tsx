@@ -2,12 +2,13 @@ import { useCallback, useLayoutEffect, useState } from "react";
 import { today, weekStart } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
 import { useLoading } from "../../hooks/useLoading";
-import type { Occurrence } from "../../model/calendar.js";
+import type { ItemKind, Occurrence } from "../../model/calendar.js";
 import { CalendarScreen } from "../../screens/calendar/CalendarScreen";
 import { SettingsScreen } from "../../screens/settings/SettingsScreen";
 import { StatisticsScreen } from "../../screens/statistics/StatisticsScreen";
 import { HabitsScreen } from "../../screens/habits/HabitsScreen";
 import { TodayScreen } from "../../screens/today/TodayScreen";
+import { AppHeader } from "./AppHeader";
 import { AppDialogs, type AppDialogState } from "./AppDialogs";
 import { AppSidebar } from "./AppSidebar";
 import { ScreenTabs, type ScreenId } from "./ScreenTabs";
@@ -23,21 +24,27 @@ export function AppShell() {
   useLayoutEffect(() => {
     document.documentElement.dataset.palette = palette;
   }, [palette]);
-  const openEditor = useCallback((date: string, occurrence?: Occurrence) => setDialog({ type: "editor", date, occurrence }), []);
+  const openEditor = useCallback((date: string, occurrence?: Occurrence, initialKind?: ItemKind) => setDialog({ type: "editor", date, occurrence, initialKind }), []);
   const openEvent = useCallback((item: Occurrence, confirmDelete = false) => setDialog({ type: "event", item, confirmDelete }), []);
+  const showSavedHabit = useCallback((firstOccurrenceDate: string) => {
+    setWeek(weekStart(firstOccurrenceDate));
+    setActiveScreen("calendar");
+    setDialog(null);
+  }, []);
   return (
     <div className={`app-shell drawer-layout${sidebarExpanded ? "" : " sidebar-collapsed"}`}>
       <AppSidebar
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((value) => !value)}
-        onAddHabit={() => setDialog({ type: "habit" })}
+        onAddHabit={() => setDialog({ type: "create" })}
         onOpenHabits={() => setActiveScreen("habits")}
       />
       <main className="calendar-panel">
+        <AppHeader activeScreen={activeScreen} />
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
         {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
         <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={() => setActiveScreen("habits")} />
-        <HabitsScreen active={activeScreen === "habits"} onAdd={() => setDialog({ type: "habit" })} />
+        <HabitsScreen active={activeScreen === "habits"} onAdd={() => setDialog({ type: "create" })} onEdit={habitId => setDialog({ type: "habit", habitId })} />
         <CalendarScreen
           active={activeScreen === "calendar"}
           week={week}
@@ -49,7 +56,7 @@ export function AppShell() {
         <SettingsScreen active={activeScreen === "settings"} onOpenProfile={() => setDialog({ type: "preferences" })}
           onClearCalendar={() => setDialog({ type: "clear" })} onResetAll={() => setDialog({ type: "reset-all" })} />
       </main>
-      <AppDialogs dialog={dialog} onChange={setDialog} />
+      <AppDialogs dialog={dialog} onChange={setDialog} onHabitSaved={showSavedHabit} />
     </div>
   );
 }

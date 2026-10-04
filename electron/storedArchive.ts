@@ -1,5 +1,5 @@
 import { isOccurrenceDate, occurrences, validDate } from '../src/domain/calendar.js';
-import { outcomeRecord, validateArchive } from '../src/domain/outcomeArchive.js';
+import { outcomeRecord, upgradeArchive, validateArchive } from '../src/domain/outcomeArchive.js';
 import type { PlannerArchive } from '../src/model/outcomeArchive.js';
 
 /** Richiede un oggetto JSON salvato; rifiuta valori nulli, primitivi e array. */
@@ -22,7 +22,7 @@ function legacyStatus(value: unknown): 'completed' | 'skipped' | undefined {
  * futuri. Lo storico esistente resta intatto e i record recuperati non hanno timestamp.
  */
 export function readStoredArchive(value: unknown): PlannerArchive {
-  const archive = object(structuredClone(value));
+  const archive = object(upgradeArchive(value));
   if (archive.habits === undefined) archive.habits = [];
   const calendar = object(archive.calendar);
   if (!Array.isArray(calendar.items)) throw new Error('Archivio calendario non riconosciuto.');

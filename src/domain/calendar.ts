@@ -24,6 +24,22 @@ export function eventAppearance(item: Pick<ItemData, "icon" | "color" | "kind">)
 }
 
 /**
+ * Indica se un elemento appartiene alla Home operativa. Mostra solo attività
+ * flessibili ricorrenti; vincoli e attività singole restano nel Calendario.
+ */
+type ProgressActivity = Pick<CalendarItem, "kind" | "habitId" | "routine"> | Pick<Occurrence, "kind" | "habitId" | "routine">;
+
+/** Restituisce true soltanto per abitudini e routine ricorrenti di cui registrare i progressi. */
+export function isProgressActivity(item: ProgressActivity): boolean {
+  return item.kind === "flexible" && (Boolean(item.habitId) || item.routine === true);
+}
+
+/** Indica se un'occorrenza deve comparire nella dashboard operativa di oggi. */
+export function appearsOnTodayScreen(item: Pick<Occurrence, "kind" | "habitId" | "routine">): boolean {
+  return isProgressActivity(item);
+}
+
+/**
  * Crea un calendario v2 vuoto con array nuovi a ogni chiamata.
  * Non legge archivi e non impone la compilazione del profilo.
  */
@@ -80,9 +96,9 @@ export function isOccurrenceDate(item: CalendarItem, date: string): boolean {
 export function validateItem(item: CalendarItem): void {
   validateData(item);
   if (item.activityId !== undefined && (typeof item.activityId !== "string" || !item.activityId || !item.recurrence)) throw new Error("Attività ricorrente non valida.");
-  if ((item.habitId === undefined) !== (item.habitPlanId === undefined) ||
-    item.habitId !== undefined && (![item.habitId, item.habitPlanId].every(value => typeof value === "string" && value.length > 0) || !item.recurrence)) {
-    throw new Error("Collegamento all'abitudine non valido.");
+  if (item.routine !== undefined && (item.routine !== true || item.kind !== "flexible" || !item.recurrence || item.habitId)) throw new Error("Routine non valida.");
+  if (item.habitId !== undefined && (typeof item.habitId !== "string" || !item.habitId || !item.recurrence)) {
+    throw new Error("Collegamento all’abitudine non valido.");
   }
   if (item.outcomes !== undefined) {
     if (!item.outcomes || typeof item.outcomes !== "object" || Array.isArray(item.outcomes)) throw new Error("Esiti non validi.");
@@ -155,7 +171,7 @@ export function occurrences(items: CalendarItem[], from: string, through: string
       const outcome = item.outcomes?.[original];
       result.push({ ...data, id: item.recurrence ? `${item.id}@${original}` : item.id,
         sourceId: item.id, occurrenceDate: original, completed: outcome === "completed", outcome, recurring: Boolean(item.recurrence), exception,
-        ...(item.habitId ? { habitId: item.habitId, habitPlanId: item.habitPlanId } : {}) });
+        ...(item.habitId ? { habitId: item.habitId } : {}), ...(item.routine ? { routine: true as const } : {}) });
     }
   }
   for (const item of items) {
@@ -229,7 +245,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
   if (access.actor !== "user" && proposed.kind !== "flexible") throw new Error("Il motore e l’AI possono inserire solo attività flessibili.");
   validateData(proposed);
   let replacement: CalendarItem = { ...dataOf(proposed), id: proposed.id, recurrence: proposed.recurrence, exceptions: proposed.exceptions, title: proposed.title.trim(),
-    ...(proposed.habitId ? { habitId: proposed.habitId, habitPlanId: proposed.habitPlanId } : {}) };
+    ...(proposed.habitId ? { habitId: proposed.habitId } : {}), ...(proposed.routine ? { routine: true } : {}) };
   if (existing) {
     if (existing.recurrence && target?.scope === "occurrence") {
       if (!isOccurrenceDate(existing, target.occurrenceDate)) throw new Error("Occorrenza non valida.");
@@ -237,7 +253,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
       replacement = { ...existing, exceptions: { ...existing.exceptions, [target.occurrenceDate]: dataOf(replacement) } };
     } else {
       if (existing.recurrence && (replacement.date !== existing.date || !replacement.recurrence)) throw new Error("La data di inizio e la frequenza della serie sono stabili. Modifica una singola occorrenza per spostarla.");
-      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, habitId: existing.habitId, habitPlanId: existing.habitPlanId, outcomes: existing.outcomes, exceptions: existing.exceptions };
+      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, habitId: existing.habitId, outcomes: existing.outcomes, exceptions: existing.exceptions };
       // Negli eventi singoli la data stessa è la chiave dell’esito e segue lo spostamento.
       if (!existing.recurrence && existing.outcomes && replacement.date !== existing.date) {
         replacement.outcomes = existing.outcomes[existing.date] === undefined ? {} : { [replacement.date]: existing.outcomes[existing.date] };
@@ -289,7 +305,7 @@ export function deleteItem(state: CalendarState, target: EditTarget, access: Edi
   const item = state.items.find(entry => entry.id === target.sourceId);
   if (!item) throw new Error("Elemento non trovato.");
   guard(item, access);
-  if (item.habitId && target.scope === "series") throw new Error("Questa serie appartiene a un'abitudine. La modifica dell'intero piano non è ancora disponibile; puoi eliminare una singola occorrenza.");
+  if (item.habitId && target.scope === "series") throw new Error("Questa serie appartiene a un’abitudine. Modificala dalla sezione Abitudini; qui puoi eliminare una singola occorrenza.");
   if (item.recurrence && target.scope === "occurrence") {
     if (!isOccurrenceDate(item, target.occurrenceDate)) throw new Error("Occorrenza non valida.");
     return { ...state, items: state.items.map(entry => entry.id === item.id ? { ...entry, exceptions: { ...entry.exceptions, [target.occurrenceDate]: null } } : entry) };
@@ -324,6 +340,7 @@ export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, 
   const matches = dates.map(({ date }) => existing ? state.items.filter(item =>
     item.id !== existing.id && item.title.trim().toLocaleLowerCase("it-IT") === proposed.title.trim().toLocaleLowerCase("it-IT") &&
     item.kind === proposed.kind && item.start === proposed.start && item.end === proposed.end && durationMinutes(item) === durationMinutes(proposed) &&
+    Boolean(item.routine) === Boolean(proposed.routine) &&
     item.date >= date && (!proposed.recurrence?.until || item.date <= proposed.recurrence.until) &&
     (dateNumber(item.date) - dateNumber(date)) % (7 * DAY) === 0 &&
     // Una serie è riutilizzabile solo se ha la stessa scadenza, anche quando è illimitata.

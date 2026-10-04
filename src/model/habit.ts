@@ -1,29 +1,22 @@
 import type { EventColor, EventIcon } from "./calendar.js";
 
-export interface HabitPlan {
-  id: string;
-  startsOn: string;
-  weekdays: number[];
-  start: string;
-  durationMinutes: number;
-  sourceIds: string[];
-}
+export type HabitStepTarget = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
 export interface Habit {
   id: string;
   title: string;
-  notes: string;
+  motivation: string;
   icon: EventIcon;
   color: EventColor;
-  status: "active" | "paused";
-  plans: HabitPlan[];
+  stepTarget: HabitStepTarget;
 }
 
 export interface HabitDraft {
   title: string;
-  notes: string;
+  motivation: string;
   icon: EventIcon;
   color: EventColor;
+  stepTarget: HabitStepTarget;
   startsOn: string;
   weekdays: number[];
   start: string;

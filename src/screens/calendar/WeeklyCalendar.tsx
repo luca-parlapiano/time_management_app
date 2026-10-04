@@ -67,7 +67,7 @@ function WeeklyCalendarContent({ state, week, disabled, onAdd, onEdit, onDelete,
       const entries = dayEntries[dayIndex];
       return <article key={date} className={`day-column ${date === currentTime.date ? "day-today" : ""}`}>
         <header className="day-header"><time dateTime={date}>{displayDate(date, { weekday: "short", day: "numeric", month: undefined })}</time><small>{date === currentTime.date ? "Oggi" : "\u00a0"}</small>
-          <StandardButton variant="ghost" disabled={disabled} type="button" className="day-add" aria-label={`Aggiungi attività il ${date}`} onClick={() => onAdd(date)} title="Aggiungi attività">+</StandardButton>
+          <StandardButton variant="ghost" disabled={disabled} type="button" className="day-add" aria-label={`Nuovo appuntamento fisso il ${date}`} onClick={() => onAdd(date)} title="Nuovo appuntamento fisso">+</StandardButton>
         </header>
         <div className="day-blocks day-timeline">
           {entries.length === 0 && <p className="day-empty">Nessun elemento</p>}

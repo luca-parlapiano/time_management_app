@@ -24,7 +24,8 @@ export interface CalendarItem extends ItemData {
   id: string;
   activityId?: string;
   habitId?: string;
-  habitPlanId?: string;
+  /** Identifica una routine monitorata, distinta da una normale serie del calendario. */
+  routine?: true;
   outcomes?: Record<string, ItemOutcome>;
   // Weekly on the weekday of date, inclusive until; no end means indefinite.
   recurrence?: { until?: string };
@@ -41,7 +42,7 @@ export interface Occurrence extends ItemData {
   recurring: boolean;
   exception: boolean;
   habitId?: string;
-  habitPlanId?: string;
+  routine?: true;
 }
 
 export interface CalendarGoal { id: string; name: string }

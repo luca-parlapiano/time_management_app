@@ -16,7 +16,7 @@ export interface OutcomeRecord {
 
 export interface PlannerArchive {
   format: "time-planner-backup";
-  version: 1;
+  version: 2;
   calendar: CalendarState;
   /** Assente nei backup creati prima dell'introduzione delle abitudini. */
   habits?: Habit[];

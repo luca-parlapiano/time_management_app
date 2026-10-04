@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { displayDate, outcomeLabels } from "../../domain/calendar";
+import { displayDate, isProgressActivity, outcomeLabels } from "../../domain/calendar";
 import type { ItemOutcome, Occurrence } from "../../model/calendar.js";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { CalendarDialog } from "../../components/ui/CalendarDialog";
@@ -21,7 +21,7 @@ export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, 
   }
   return <CalendarDialog compact title={item.title} onClose={onClose}>
     <p className="editor-hint">{displayDate(item.date, { weekday: "long" })} · {item.start}–{item.end}</p>
-    {!confirmDelete && <fieldset className="event-outcome-options">
+    {!confirmDelete && isProgressActivity(item) && <fieldset className="event-outcome-options">
       <legend>Com’è andata?</legend>
       <div>{(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <StandardButton variant="secondary" type="button" key={outcome} aria-pressed={item.outcome === outcome} onClick={() => run(() => onOutcome(outcome))}>{outcomeLabels[outcome]}</StandardButton>)}</div>
     </fieldset>}

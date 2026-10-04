@@ -16,7 +16,7 @@ export class SQLiteStore {
     this.db = new DatabaseSync(filename);
     this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
     const version = (this.db.prepare('PRAGMA user_version').get() as {user_version:number}).user_version;
-    if (version > 2) { this.db.close(); throw new Error('Database creato da una versione più recente dell’app.'); }
+    if (version > 3) { this.db.close(); throw new Error('Database creato da una versione più recente dell’app.'); }
     this.db.exec(`BEGIN;
       CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS activities (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
@@ -31,8 +31,14 @@ export class SQLiteStore {
       );
       CREATE INDEX IF NOT EXISTS outcomes_event_date ON outcome_records(event_date);
       CREATE INDEX IF NOT EXISTS outcomes_occurrence ON outcome_records(source_id, occurrence_date);
-      PRAGMA user_version = 2;
       COMMIT;`);
+    if (version < 3) {
+      this.db.exec(`BEGIN;
+        DELETE FROM activities WHERE json_extract(data, '$.habitId') IS NOT NULL;
+        DELETE FROM habits;
+        PRAGMA user_version = 3;
+        COMMIT;`);
+    }
   }
   private metadata(key: string): string | undefined { return (this.db.prepare('SELECT value FROM metadata WHERE key=?').get(key) as {value:string} | undefined)?.value; }
   private putMetadata(key: string, value: unknown) { this.db.prepare('INSERT OR REPLACE INTO metadata(key,value) VALUES (?,?)').run(key,JSON.stringify(value)); }
@@ -50,7 +56,7 @@ export class SQLiteStore {
     const profile = JSON.parse(this.metadata('profile') ?? 'null') as CalendarProfile | null;
     const history = this.db.prepare(`SELECT id,source_id AS sourceId,activity_id AS activityId,occurrence_date AS occurrenceDate,
       event_date AS eventDate,title,icon,color,outcome,recorded_at AS recordedAt FROM outcome_records ORDER BY sequence`).all().map(row => ({...row})) as unknown as OutcomeRecord[];
-    const archive = readStoredArchive({format:'time-planner-backup',version:1,calendar:{version:2,items,goals,profile},habits,history});
+    const archive = readStoredArchive({format:'time-planner-backup',version:2,calendar:{version:2,items,goals,profile},habits,history});
     const storedPrevious: unknown = JSON.parse(this.metadata('previousImport') ?? 'null');
     const previous = storedPrevious === null ? null : readStoredArchive(storedPrevious);
     const parsedRevision = JSON.parse(revision);
@@ -94,7 +100,7 @@ export class SQLiteStore {
       const revision = expectedRevision + 1;
       this.putMetadata('revision', revision);
       this.db.exec('COMMIT');
-      return { archive: { format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), habits: [], history: [] }, revision, previous: null };
+      return { archive: { format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [] }, revision, previous: null };
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
   /** Legge il tema del dispositivo; un database senza preferenza usa la palette iniziale. */

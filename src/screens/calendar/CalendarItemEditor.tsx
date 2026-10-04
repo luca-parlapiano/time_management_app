@@ -1,7 +1,7 @@
 import { isPositiveNumber } from "../../utils/numbers.js";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
-import { activityCovers } from "../../activityCovers";
+import { eventCover } from "../../activityCovers";
 import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventIcons, kindLabels, validDate, validateData, weekStart } from "../../domain/calendar";
 import type { CalendarItem, EditTarget, EventColor, EventIcon as IconName, ItemKind, Occurrence } from "../../model/calendar.js";
 import { StandardButton } from "../../components/ui/StandardButton";
@@ -12,22 +12,24 @@ interface CalendarItemEditorProps {
   date: string;
   item?: CalendarItem;
   occurrence?: Occurrence;
+  routine?: boolean;
+  initialKind?: ItemKind;
   items: CalendarItem[];
   onClose: () => void;
   onSave: (item: CalendarItem, unlocked: boolean, target?: EditTarget, weekdays?: number[]) => Promise<void>;
   onDelete: (target: EditTarget, unlocked: boolean) => Promise<void>;
 }
 
-export function CalendarItemEditor({ date, item, occurrence, items, onClose, onSave, onDelete }: CalendarItemEditorProps) {
+export function CalendarItemEditor({ date, item, occurrence, routine = false, initialKind = "flexible", items, onClose, onSave, onDelete }: CalendarItemEditorProps) {
   const dayLabels = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
   const [weekdays, setWeekdays] = useState<number[]>([Array.from({ length: 7 }, (_, i) => addDays(weekStart(date), i)).indexOf(date)]);
   const [linkedSourceIds, setLinkedSourceIds] = useState<string[]>([]);
   const linked = items.filter(other => item?.activityId && other.activityId === item.activityId);
-  const candidates = items.filter(other => item && other.id !== item.id && other.recurrence && (!item.activityId || other.activityId !== item.activityId));
+  const candidates = items.filter(other => item && other.id !== item.id && other.recurrence && Boolean(other.routine) === Boolean(item.routine) && (!item.activityId || other.activityId !== item.activityId));
   const [scope, setScope] = useState<"occurrence" | "series">("occurrence");
   const initial: CalendarItem = item && occurrence
     ? { ...item, ...occurrence, id: item.id }
-    : { id: crypto.randomUUID(), title: "", date, endDate: date, start: "09:00", end: "10:00", kind: "flexible", notes: "", exceptions: {} };
+    : { id: crypto.randomUUID(), title: "", date, endDate: date, start: "09:00", end: "10:00", kind: routine ? "flexible" : initialKind, notes: "", exceptions: {}, recurrence: routine ? {} : undefined, ...(routine ? { routine: true as const } : {}) };
   const [draft, setDraft] = useState(initial);
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
@@ -36,18 +38,19 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
     if (error) { errorRef.current?.focus(); errorRef.current?.scrollIntoView({ block: "nearest" }); }
   }, [error]);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(routine);
   const [appearanceChanged, setAppearanceChanged] = useState(false);
   const locked = Boolean(item && item.kind !== "flexible" && !unlocked);
   const target = item && occurrence ? { sourceId: item.id, occurrenceDate: occurrence.occurrenceDate, scope, applyAppearanceToSeries: appearanceChanged, linkedSourceIds } : undefined;
   const seriesEdit = Boolean(item?.recurrence && scope === "series");
   const duration = durationMinutes(draft);
   const appearance = eventAppearance(draft);
+  const cover = eventCover(draft.kind, appearance.icon);
   const shortDate = (value: string) => validDate(value) ? displayDate(value, { day: "numeric", month: "short", year: "numeric" }) : "Scegli una data";
   const repeatDays = !item?.recurrence ? weekdays.map(day => dayLabels[day]).join(", ") : (linked.length ? linked : [item]).map(entry => displayDate(entry.date, { weekday: "short", day: undefined, month: undefined })).join(", ");
   function change(patch: Partial<CalendarItem>) { setDraft(current => ({ ...current, ...patch })); setError(""); setConfirmDelete(false); }
   function changeAppearance(patch: Partial<Pick<CalendarItem, "icon" | "color" | "coverImage">>) { setAppearanceChanged(true); change(patch); }
-  return <CalendarDialog title={item ? "Modifica elemento" : "Aggiungi attività"} onClose={onClose}>
+  return <CalendarDialog title={item?.routine ? "Modifica routine" : item ? "Modifica elemento" : routine ? "Nuova routine" : initialKind === "fixed" ? "Nuovo appuntamento fisso" : "Aggiungi attività"} onClose={onClose}>
     <form noValidate onSubmit={async event => {
       event.preventDefault();
       try {
@@ -58,6 +61,8 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
         setScheduleOpen(true);
       }
     }}>
+      {routine && !item && <p className="editor-hint">Una routine è un’attività ricorrente da ricordare. Non ha step né un percorso di apprendimento.</p>}
+      {!routine && !item && initialKind === "fixed" && <p className="editor-hint">Questo appuntamento occupa e protegge il suo spazio nel Calendario. Non comparirà nella Home.</p>}
       {item?.recurrence && <div className="form-grid">
         <label>Ambito della modifica
           <select value={scope} onChange={event => {
@@ -90,7 +95,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
         <label>Titolo<input autoFocus={!locked && !item} required value={draft.title} onChange={e => change({ title: e.target.value })} /></label>
         <div className="event-appearance" style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
           {item?.recurrence && <p className="editor-hint">Icona, immagine e colore valgono per tutta la serie e per gli appuntamenti collegati, anche nei giorni diversi.</p>}
-          <div className="event-cover-preview" style={draft.coverImage !== false ? { "--cover-image": `url("${activityCovers[appearance.icon].src}")` } as CSSProperties : undefined}>
+          <div className="event-cover-preview" style={draft.coverImage !== false ? { "--cover-image": `url("${cover.src}")` } as CSSProperties : undefined}>
             <span className="event-icon"><EventIcon icon={appearance.icon} /></span><strong>{draft.title.trim() || "La tua attività"}</strong>
           </div>
           <fieldset className="appearance-options">
@@ -100,7 +105,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
             </button>)}</div>
           </fieldset>
           <label className="activity-check"><input type="checkbox" checked={draft.coverImage !== false} onChange={e => changeAppearance({ coverImage: e.target.checked })} />Immagine predefinita per questa icona</label>
-          {draft.coverImage !== false && <p className="editor-hint">{activityCovers[appearance.icon].label} · {activityCovers[appearance.icon].source ? `Foto di ${activityCovers[appearance.icon].author} / Unsplash` : activityCovers[appearance.icon].author}</p>}
+          {draft.coverImage !== false && <p className="editor-hint">{cover.label} · {cover.source ? `Foto di ${cover.author} / Unsplash` : cover.author}</p>}
           <fieldset className="appearance-options">
             <legend>Colore</legend>
             <div className="color-options">{(Object.keys(eventColors) as EventColor[]).map(color => <button key={color} type="button" className="color-option" aria-label={eventColors[color].label} title={eventColors[color].label} aria-pressed={appearance.color === color} style={{ "--swatch": eventColors[color].value } as CSSProperties} onClick={() => changeAppearance({ color })}>
@@ -113,7 +118,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
           <div className="item-kind-options">
             {(Object.keys(kindLabels) as ItemKind[]).map(kind => <label className="item-kind-option" key={kind} title={kindLabels[kind]}>
               <input type="radio" name="item-kind" aria-label={kindLabels[kind]} value={kind} checked={draft.kind === kind} onChange={() => {
-                change({ kind });
+                change({ kind, ...(kind === "flexible" ? {} : { routine: undefined }) });
               }} />
               <span>{{ fixed: "Fisso", protected: "Protetto", flexible: "Flessibile" }[kind]}</span>
             </label>)}
@@ -139,7 +144,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
               }} /></label>
             </div>
             <p className="editor-hint">{isPositiveNumber(duration) ? `${duration} minuti` : "Controlla date e orari"} · Durata massima 24 ore.</p>
-        {!item?.recurrence && <label>Ripetizione<select value={draft.recurrence ? "weekly" : "none"} onChange={e => change({ recurrence: e.target.value === "weekly" ? {} : undefined })}>
+        {!item?.recurrence && <label>Ripetizione<select value={draft.recurrence ? "weekly" : "none"} onChange={e => change({ recurrence: e.target.value === "weekly" ? {} : undefined, ...(e.target.value === "weekly" ? {} : { routine: undefined }) })}>
           <option value="none">Solo questa data</option><option value="weekly">Ogni settimana nei giorni scelti</option>
         </select></label>}
         {!item?.recurrence && draft.recurrence && <fieldset className="appearance-options"><legend>Giorni della settimana</legend>
@@ -149,6 +154,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
         {draft.recurrence && (!item?.recurrence || seriesEdit) && <label>Ultima data della serie
           <input type="date" min={draft.date} value={draft.recurrence.until ?? ""} onChange={e => change({ recurrence: e.target.value ? { until: e.target.value } : {} })} />
         </label>}
+        {draft.kind === "flexible" && draft.recurrence && !draft.habitId && (!item?.recurrence || seriesEdit) && <label className="activity-check"><input type="checkbox" checked={draft.routine === true} onChange={e => change({ routine: e.target.checked ? true : undefined })} />Monitora questa serie come routine nella Home e nelle Statistiche</label>}
             <StandardButton variant="secondary" type="button" onClick={() => {
               try {
                 validateData({ ...draft, title: draft.title.trim() || "Attività" });
@@ -169,7 +175,7 @@ export function CalendarItemEditor({ date, item, occurrence, items, onClose, onS
           if (!confirmDelete) { setConfirmDelete(true); return; }
           try { await onDelete(target, unlocked); } catch (cause) { setError((cause as Error).message); }
         }}>{confirmDelete ? "Conferma eliminazione" : "Elimina"}</StandardButton>}
-        <StandardButton variant="primary" type="submit" disabled={locked}>Salva {seriesEdit ? "serie" : "elemento"}</StandardButton>
+        <StandardButton variant="primary" type="submit" disabled={locked}>{routine && !item ? "Crea routine" : item?.routine ? "Salva routine" : `Salva ${seriesEdit ? "serie" : "elemento"}`}</StandardButton>
       </div>
       </div>
     </form>

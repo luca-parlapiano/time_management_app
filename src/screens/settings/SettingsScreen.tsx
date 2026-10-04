@@ -31,7 +31,7 @@ export function SettingsScreen({ active, onOpenProfile, onClearCalendar, onReset
         <ArchiveSettings />
         <section className="summary-card" aria-labelledby="settings-clear-title">
           <h3 id="settings-clear-title">Svuota calendario</h3>
-          <p>Rimuove appuntamenti e abitudini pianificate. Conserva profilo, obiettivi, storico degli esiti e palette.</p>
+          <p>Rimuove appuntamenti, routine e abitudini pianificate. Conserva profilo, obiettivi, storico degli esiti e palette.</p>
           <StandardButton variant="secondary" type="button" disabled={saving || (state.items.length === 0 && habits.length === 0)} onClick={onClearCalendar}>Svuota calendario</StandardButton>
         </section>
         <section className="summary-card settings-reset-card" aria-labelledby="settings-reset-title">

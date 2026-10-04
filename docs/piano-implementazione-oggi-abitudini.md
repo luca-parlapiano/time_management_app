@@ -1,4 +1,4 @@
-# Piano di implementazione: Oggi e Abitudini
+# Piano di implementazione: Oggi, Abitudini e Routine
 
 > Proposta operativa del 29 settembre 2026. Descrive lavoro da realizzare, non
 > funzionalità già disponibili. Lo [stato del progetto](stato-progetto.md) resta il
@@ -7,11 +7,13 @@
 
 ## Stato di avanzamento
 
-La prima tranche è implementata: modello e persistenza delle abitudini, migrazione
-SQLite v1→v2, compatibilità dei backup precedenti, creazione di un piano settimanale
-con giorni/orario/durata, dashboard Oggi e percorso recente in Abitudini. Restano da
-realizzare modifica del piano con decorrenza, pausa/ripresa, occasioni senza orario,
-client mobile, sincronizzazione e promemoria.
+Il modello corrente distingue due intenzioni. Un'abitudine è un comportamento da
+acquisire: ha un traguardo obbligatorio da 1 a 12 step e una pianificazione settimanale
+modificabile. Una routine è invece una normale attività ricorrente del calendario,
+senza step né percorso dedicato. Un esito positivo dell'abitudine fa avanzare il
+percorso permanente; parziali, salti e tempo trascorso non
+sottraggono step. La migrazione SQLite v2→v3 e il backup v2 eliminano il precedente
+modello di abitudini e i suoi appuntamenti, preservando gli altri dati e lo storico.
 
 **Da implementare:** l'occasione autonoma generata dal piano, inizialmente «da
 collocare», e le notifiche facoltative che suggeriscono uno spazio compatibile.
@@ -27,23 +29,26 @@ L'utente definisce un'abitudine e un piano praticabile, trova nella dashboard **
 le occasioni della giornata, registra l'esito e segue nel tempo il percorso nella
 sezione **Abitudini**. Quando il piano non funziona, può modificarlo mantenendo la
 storia precedente. **Calendario** continua a gestire gli orari e gli altri impegni.
+Le routine sono promemoria ricorrenti e rimangono nel Calendario, senza avanzamento.
 
 Esempio di riferimento: «Leggere 20 minuti il lunedì, mercoledì e venerdì alle 21».
 La prima versione deve permettere di crearla, vedere le tre occasioni nelle rispettive
 giornate, spostarne una, registrarla come completata/parziale/saltata e distinguere
 il piano precedente dopo un cambio di frequenza o orario.
 
-## Decisioni di modello da fissare prima della UI
+## Modello corrente
 
 | Entità | Responsabilità | Identità stabile |
 | --- | --- | --- |
-| Abitudine | Nome, aspetto, durata proposta, stato e piano corrente | `habitId` |
-| Piano | Frequenza, giorni, eventuale orario e data di entrata in vigore; le modifiche non riscrivono le occasioni passate | `planId` o revisione del piano |
-| Occasione | Una possibilità prevista di praticare l'abitudine; può essere collocata nel calendario | Chiave composta da piano, serie e data originale |
+| Abitudine | Nome, motivazione, aspetto e traguardo da 1 a 12 step | `habitId` |
+| Pianificazione | Serie settimanali nel calendario; la modifica è atomica | `habitId` sulle serie |
+| Occasione | Un appuntamento previsto per praticare l'abitudine | Serie e data originale |
 | Esito | Registrazione o correzione riferita a una sola occasione | ID del record; chiave dell'occasione per deduplicare |
+| Routine | Serie ricorrente usata come promemoria, senza step | Identità dell'attività nel calendario |
 
-`activityId` identifica già gruppi di appuntamenti ricorrenti: non va riutilizzato
-come `habitId`. Collegare esplicitamente gli appuntamenti di calendario all'abitudine.
+Per le abitudini, `activityId` usa l'identità stabile dell'abitudine così lo storico continua
+a contribuire al percorso anche dopo una modifica della pianificazione. `habitId`
+collega invece gli appuntamenti correnti all'abitudine.
 Conservare la data originale dell'occasione quando viene spostata, come avviene oggi
 per le ricorrenze. Gli esiti già registrati restano consultabili anche se l'occasione
 o l'abitudine viene archiviata. «Senza esito» è distinto da «saltata»; le occasioni
@@ -112,8 +117,8 @@ il nuovo piano, senza perdere la storia.
 ### 3. Dashboard Oggi e integrazione con Calendario
 
 - Aggiungere `Oggi` come schermata iniziale: prossimo passo, timeline verticale
-  della giornata, indicatore dell'ora attuale e azioni rapide sugli esiti. Gli altri
-  impegni restano visibili perché occupano tempo reale.
+  di abitudini e routine ricorrenti e azioni rapide sugli esiti. Gli appuntamenti
+  fissi e le attività singole restano esclusivamente nel Calendario.
 - Le occasioni delle abitudini con orario compaiono una sola volta sia in Oggi sia
   nel Calendario. Spostamento e correzione devono aggiornare entrambe le viste e
   il dettaglio dell'abitudine dopo la conferma del salvataggio.

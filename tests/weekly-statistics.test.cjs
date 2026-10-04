@@ -4,8 +4,8 @@ const {join}=require('node:path');
 const {StatisticsRepository}=require(join(process.env.CALENDAR_TEST_BUILD,'repository/StatisticsRepository.js'));
 const c=require(join(process.env.CALENDAR_TEST_BUILD,'domain/calendar.js'));
 const a=require(join(process.env.CALENDAR_TEST_BUILD,'domain/outcomeArchive.js'));
-const item=(id,date='2026-09-21',patch={})=>({id,title:'Palestra',date,endDate:date,start:'09:00',end:'10:00',kind:'flexible',notes:'',exceptions:{},...patch});
-const archive=(items,history=[])=>({format:'time-planner-backup',version:1,calendar:{...c.emptyCalendar(),items},habits:[],history});
+const item=(id,date='2026-09-21',patch={})=>({id,title:'Palestra',date,endDate:date,start:'09:00',end:'10:00',kind:'flexible',notes:'',recurrence:{until:date},routine:true,exceptions:{},...patch});
+const archive=(items,history=[])=>({format:'time-planner-backup',version:2,calendar:{...c.emptyCalendar(),items},habits:[],history});
 function record(state,sourceId,date,outcome){const entry=c.occurrences(state.calendar.items,date,date).find(value=>value.sourceId===sourceId);return a.outcomeRecord(state.calendar,entry,outcome);}
 
 test('weekly statistics: groups repeated activities, seven days, outcomes and unrecorded appointments',()=>{
@@ -20,7 +20,7 @@ test('weekly statistics: groups repeated activities, seven days, outcomes and un
  assert.equal(repo.getWeeklyStatistics(mon,'2026-09-28').total,1);
 });
 
-test('weekly statistics: last correction wins globally before filtering dates; historical deletion is retained',()=>{
+test('weekly statistics: last correction wins globally and deleted activities leave statistics',()=>{
  const event=item('work'),data=archive([event]);
  const first=record(data,event.id,event.date,'completed');
  data.history=[first,{...first,id:'correction',outcome:'skipped'},{...first,id:'moved',eventDate:'2026-09-28',outcome:'partial'}];
@@ -28,7 +28,7 @@ test('weekly statistics: last correction wins globally before filtering dates; h
  assert.equal(repo.getWeeklyStatistics(event,'2026-09-21').total,0);
  const stats=repo.getWeeklyStatistics(event,'2026-09-28');assert.equal(stats.total,1);assert.equal(stats.partial,1);
  const deleted=new StatisticsRepository(archive([],data.history)).getWeeklyStatistics(event,'2026-09-28');
- assert.equal(deleted.partial,1);assert.equal(deleted.pending,0);
+ assert.equal(deleted.total,0);assert.equal(deleted.pending,0);
 });
 
 test('weekly statistics: shared activity IDs, moved and deleted recurrences, overnight counted on start day',()=>{
@@ -69,7 +69,7 @@ test('daily statistics: segments preserve event colors and count appointments, n
  assert.equal(stats.activities.reduce((sum,x)=>sum+x.count,0),stats.total);
 });
 
-test('daily statistics: last correction wins, live colors override archived colors and deleted events remain',()=>{
+test('daily statistics: last correction wins, live colors override archived colors and deleted activities leave statistics',()=>{
  const event=item('a',undefined,{color:'blue'}),data=archive([event]);
  const first=record(data,event.id,event.date,'partial');
  data.history=[first,{...first,id:'last',outcome:'completed',recordedAt:'2026-10-01T12:00:00Z'}];
@@ -77,7 +77,7 @@ test('daily statistics: last correction wins, live colors override archived colo
  const stats=new StatisticsRepository(data).getDailyStatistics(event.date);
  assert.equal(stats.total,1);assert.equal(stats.completed,1);assert.equal(stats.partial,0);assert.equal(stats.activities[0].color,'green');
  const deleted=new StatisticsRepository(archive([],data.history));
- assert.equal(deleted.getDailyStatistics(event.date).activities[0].color,'blue');
+ assert.equal(deleted.getDailyStatistics(event.date).total,0);
  assert.equal(deleted.getDailyStatistics('2026-10-01').total,0);
 });
 
@@ -91,7 +91,7 @@ test('daily statistics: moved and removed recurrences, overnight and exclusive m
 test('daily statistics: empty dates, validation and historical date correction',()=>{
  const event=item('a'),data=archive([event]),first=record(data,event.id,event.date,'completed');
  const repo=new StatisticsRepository(archive([],[first,{...first,id:'moved',eventDate:'2026-09-22',outcome:'skipped'}]));
- assert.equal(repo.getDailyStatistics(event.date).total,0);assert.equal(repo.getDailyStatistics('2026-09-22').skipped,1);
+ assert.equal(repo.getDailyStatistics(event.date).total,0);assert.equal(repo.getDailyStatistics('2026-09-22').skipped,0);
  assert.deepEqual(repo.getDailyStatistics('2026-12-31').activities,[]);
  assert.throws(()=>repo.getDailyStatistics('2026-02-30'),/Data non valida/);
 });
@@ -135,15 +135,28 @@ test('activity heatmap: partial weight, mixed occurrences, future and empty stat
  assert.equal(repo.getDailyStatistics('2026-09-21').completionPercent,50);
 });
 
-test('activity heatmap: latest saved date, archived events, leap year and invalid input',()=>{
+test('activity heatmap: deleted activities are excluded, with year and input validation',()=>{
  const event=item('a'),data=archive([event]),first=record(data,'a',event.date,'completed');
  const repo=new StatisticsRepository(archive([],[first,{...first,id:'correction',eventDate:'2024-02-29',outcome:'partial'}]));
- assert.equal(repo.getStatisticsActivities().length,1);
- const year=repo.getActivityYearStatistics('a',2024,'2026-09-23');
- assert.equal(year.days.length,366);assert.equal(year.days.find(day=>day.date==='2024-02-29').percent,50);
- assert.equal(repo.getActivityYearStatistics('a',2026,'2026-09-23').days.find(day=>day.date===event.date).state,'empty');
+ assert.equal(repo.getStatisticsActivities().length,0);
+ assert.throws(()=>repo.getActivityYearStatistics('a',2024,'2026-09-23'),/Attività/);
  assert.throws(()=>repo.getActivityYearStatistics('a',2026.5),/Periodo/);
  assert.throws(()=>repo.getActivityYearStatistics('missing',2026),/Attività/);
+});
+
+test('statistics include only habits and recurring routines',()=>{
+ const routine=item('routine');
+ const fixed={...item('fixed'),title:'Lavoro',kind:'fixed'};delete fixed.routine;
+ const protectedBlock={...item('protected'),title:'Sonno',kind:'protected'};delete protectedBlock.routine;
+ const single={...item('single'),title:'Dentista'};delete single.recurrence;delete single.routine;
+ const calendarSeries={...item('work-series'),title:'Lavoro ricorrente'};delete calendarSeries.routine;
+ const data=archive([routine,fixed,protectedBlock,single,calendarSeries]);
+ data.history=[record(data,'routine',routine.date,'completed'),record(data,'fixed',fixed.date,'completed'),record(data,'protected',protectedBlock.date,'skipped'),record(data,'single',single.date,'partial'),record(data,'work-series',calendarSeries.date,'completed')];
+ const repo=new StatisticsRepository(data);
+ assert.deepEqual(repo.getStatisticsActivities().map(activity=>activity.id),['routine']);
+ assert.equal(repo.getWeeklyActivities(routine.date).length,1);
+ const daily=repo.getDailyStatistics(routine.date);
+ assert.deepEqual([daily.total,daily.completed,daily.skipped,daily.partial],[1,1,0,0]);
 });
 
 test('activity heatmap: zero differs from unrecorded; pending occurrences stay in denominator',()=>{

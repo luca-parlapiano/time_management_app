@@ -1,5 +1,16 @@
 import { isFiniteNumber } from "./numbers.js";
 import { positiveModulo } from "./math.js";
+
+/**
+ * Restituisce il saluto italiano per un’ora locale (0–23).
+ * Dalle 5 alle 11 è mattina, dalle 12 alle 17 pomeriggio; la sera include la notte.
+ */
+export function greetingForHour(hour: number): "Buongiorno" | "Buon pomeriggio" | "Buonasera" {
+  if (hour >= 5 && hour < 12) return "Buongiorno";
+  if (hour >= 12 && hour < 18) return "Buon pomeriggio";
+  return "Buonasera";
+}
+
 /**
  * Formatta un orario con AM/PM e normalizza le ore nel ciclo di 24 ore.
  * Restituisce la stringa originale se ore o minuti non sono numeri finiti.

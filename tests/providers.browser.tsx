@@ -28,8 +28,8 @@ let gate: Promise<void> | null=null;
 let rejectGate: ((error: Error)=>void) | null=null;
 let failInitialization=true;
 const date=today();
-const item: CalendarItem={id:'test-activity',title:'Attività di prova',date,endDate:date,start:'09:00',end:'11:00',kind:'flexible',notes:'Solo dati di test',exceptions:{},icon:'sport',color:'green'};
-let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]},revision:0,previous:null};
+const item: CalendarItem={id:'test-activity',title:'Attività di prova',date,endDate:date,start:'09:00',end:'11:00',kind:'flexible',notes:'Solo dati di test',exceptions:{},recurrence:{until:date},routine:true,icon:'sport',color:'green'};
+let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:2,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]},revision:0,previous:null};
 const repository: DBRepository={
  initialize:async()=>{initializeCount++;if(failInitialization)throw new Error('Simulated open failure');return structuredClone(saved);},
  loadPalette:async()=> 'natural', savePalette:async(_value: Palette)=>{},
@@ -42,7 +42,7 @@ const repository: DBRepository={
  },
  reset:async expectedRevision=>{
   if(saved.revision!==expectedRevision)throw new Error('Stale revision');
-  saved={archive:{format:'time-planner-backup',version:1,calendar:emptyCalendar(),habits:[],history:[]},revision:saved.revision+1,previous:null};
+  saved={archive:{format:'time-planner-backup',version:2,calendar:emptyCalendar(),habits:[],history:[]},revision:saved.revision+1,previous:null};
   return structuredClone(saved);
  },
  prepareImport:async text=>parseArchive(text),exportBackup:async archive=>exportArchive(archive),
@@ -59,8 +59,11 @@ try {
  await act(async()=>{await db.retry();});
  check(db!.ready&&db!.error===null,'Initialization retry succeeds');
  const weekday=(new Date(`${date}T00:00:00Z`).getUTCDay()+6)%7;
- await act(async()=>{await db.saveHabit({title:'Lettura',notes:'Dati di prova',icon:'study',color:'teal',startsOn:date,weekdays:[weekday],start:'13:00',durationMinutes:20});});
+ await act(async()=>{await db.saveHabit({title:'Lettura',motivation:'Dati di prova',icon:'study',color:'teal',stepTarget:5,startsOn:date,weekdays:[weekday],start:'13:00',durationMinutes:20});});
  check(db!.habits.length===1&&db!.state.items.filter(entry=>entry.habitId===db!.habits[0].id).length===1,'Provider creates habit and linked calendar series atomically');
+ const habitId=db!.habits[0].id;
+ await act(async()=>{await db.updateHabit(habitId,{title:'Lettura serale',motivation:'Imparare con costanza',icon:'study',color:'teal',stepTarget:12,startsOn:date,weekdays:[weekday],start:'13:00',durationMinutes:20});});
+check(db!.habits[0].title==='Lettura serale'&&db!.habits[0].stepTarget===12&&db!.state.items.some(entry=>entry.habitId===habitId&&entry.title==='Lettura serale'),'Provider updates habit and schedule atomically');
  const habitSource=db!.state.items.find(entry=>entry.habitId===db!.habits[0].id)!;
  const originalDate=addDays(date,7);
  const habitOccurrence=occurrences(db!.state.items,originalDate,originalDate).find(entry=>entry.sourceId===habitSource.id)!;
@@ -69,7 +72,7 @@ try {
  check(occurrences(db!.state.items,movedDate,movedDate).some(entry=>entry.habitId===db!.habits[0].id&&entry.occurrenceDate===originalDate),'Provider saves a moved habit occurrence without changing its identity');
  let seriesRejected=false;
  await act(async()=>{try{await db.deleteItem({sourceId:habitSource.id,occurrenceDate:originalDate,scope:'series'},false);}catch{seriesRejected=true;}});
- check(seriesRejected&&db!.habits[0].plans[0].sourceIds.includes(habitSource.id),'Provider rejects whole-series deletion while the habit plan still references it');
+check(seriesRejected&&db!.state.items.some(entry=>entry.id===habitSource.id),'Provider rejects whole-series deletion while the habit still owns it');
  let finishFirst!:()=>void,finishSecond!:()=>void;
  await act(async()=>{finishFirst=loading.start({mode:'blocking',message:'First'});finishSecond=loading.start({mode:'blocking',message:'Second'});});
  check(loading!.pending===2&&loading!.blocking&&document.querySelector('dialog[open]'),'Overlapping operations show blocking dialog');
@@ -99,6 +102,10 @@ try {
  const text=await db!.exportBackup();
  const candidate=await db!.prepareImport(text);
  check(candidate.history.length===2,'Backup is exported and validated through repository');
+ await act(async()=>{await db.deleteHabit(habitId);});
+ check(db!.habits.length===0&&db!.state.items.length===1&&db!.archive.history.length===2,'Provider deletes a habit and its schedule while retaining audit history');
+ await act(async()=>{await db.importBackup(candidate);});
+ check(db!.state.items.length===2&&db!.habits.length===1,'Import restores the habit after the deletion check');
  await act(async()=>{await db.clearCalendar();});
  check(db!.state.items.length===0&&db!.habits.length===0&&db!.archive.history.length===2,'Clearing calendar and habits retains audit');
  await act(async()=>{await db.importBackup(candidate);});

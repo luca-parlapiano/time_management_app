@@ -1,9 +1,9 @@
 import { StatisticsRepository } from "../repository/StatisticsRepository";
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { clearCalendar, deleteItem, emptyCalendar, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
+import { clearCalendar, deleteItem, emptyCalendar, isProgressActivity, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
 import { outcomeRecord } from "../domain/outcomeArchive";
-import { createHabit } from "../domain/habits";
+import { createHabit, deleteHabit, updateHabit } from "../domain/habits";
 import { useLoading } from "../hooks/useLoading";
 import type { ItemData } from "../model/calendar.js";
 import type { DBContextValue, DatabaseSnapshot, DBRepository } from "../model/database.js";
@@ -15,7 +15,7 @@ import { repositoryDB } from "../repository/RepositoryDB";
 interface DBProviderProps { children: ReactNode; repository?: DBRepository }
 
 export const DBContext = createContext<DBContextValue | null>(null);
-const emptyArchive: PlannerArchive = { format: 'time-planner-backup', version: 1, calendar: emptyCalendar(), habits: [], history: [] };
+const emptyArchive: PlannerArchive = { format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [] };
 export function DBProvider({ children, repository = repositoryDB }: DBProviderProps) {
   const { run } = useLoading();
   const [palette, setPalette] = useState<Palette>("natural");
@@ -83,14 +83,26 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     archive: snapshot?.archive ?? emptyArchive,
     previous: snapshot?.previous ?? null,
     ready: snapshot !== null, error, saving, retry,
-    recordOutcome: (item, outcome, loading) => mutate(archive => ({...archive,
-      calendar: setOccurrenceOutcome(archive.calendar, item.sourceId, item.occurrenceDate, outcome),
-      history: [...archive.history, outcomeRecord(archive.calendar, item, outcome)],
-    }), false, loading ?? {scope:`outcome:${item.id}`}),
+    recordOutcome: (item, outcome, loading) => mutate(archive => {
+      const source = archive.calendar.items.find(entry => entry.id === item.sourceId);
+      if (!source || !isProgressActivity(source)) throw new Error("Gli esiti sono disponibili solo per abitudini e routine ricorrenti.");
+      return {...archive,
+        calendar: setOccurrenceOutcome(archive.calendar, item.sourceId, item.occurrenceDate, outcome),
+        history: [...archive.history, outcomeRecord(archive.calendar, item, outcome)],
+      };
+    }, false, loading ?? {scope:`outcome:${item.id}`}),
     saveHabit: (input, loading) => mutate(archive => {
-      const result = createHabit(archive.calendar, archive.habits ?? [], input, { habitId: crypto.randomUUID(), planId: crypto.randomUUID() });
+      const result = createHabit(archive.calendar, archive.habits ?? [], input, { habitId: crypto.randomUUID() });
       return { ...archive, calendar: result.calendar, habits: result.habits };
     }, false, loading ?? { scope: "habit:save" }),
+    updateHabit: (id, input, loading) => mutate(archive => {
+      const result = updateHabit(archive.calendar, archive.habits ?? [], id, input);
+      return { ...archive, calendar: result.calendar, habits: result.habits };
+    }, false, loading ?? { scope: `habit:${id}` }),
+    deleteHabit: (id, loading) => mutate(archive => {
+      const result = deleteHabit(archive.calendar, archive.habits ?? [], id);
+      return { ...archive, calendar: result.calendar, habits: result.habits };
+    }, false, loading ?? { scope: `habit:${id}` }),
     saveItem: (item, unlocked, target, weekdays, loading) => mutate(archive => ({...archive,
       calendar: weekdays ? putWeeklyActivity(archive.calendar,item,weekdays,{actor:'user',unlocked},target) : putItem(archive.calendar,item,{actor:'user',unlocked},target),
     }), false, loading),

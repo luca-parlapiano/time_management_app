@@ -11,7 +11,7 @@ import { emptyCalendar, occurrences, setOccurrenceOutcome } from '../dist-electr
 import { createHabit } from '../dist-electron/src/domain/habits.js';
 import { outcomeRecord, latestOutcomes, parseArchive, exportArchive } from '../dist-electron/src/domain/outcomeArchive.js';
 const item = { id:'first',title:'Palestra',date:'2026-09-22',endDate:'2026-09-22',start:'09:00',end:'10:00',kind:'flexible',notes:'',exceptions:{} };
-const initial = () => ({format:'time-planner-backup',version:1,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]});
+const initial = () => ({format:'time-planner-backup',version:2,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]});
 
 test('SQLite: persistence, audit corrections, backup, import recovery and stale revisions', () => {
  const dir=mkdtempSync(join(tmpdir(),'agenda-sqlite-')); const filename=join(dir,'agenda.sqlite'); let store;
@@ -59,7 +59,7 @@ test('SQLite reset clears all app data, prior import and palette atomically', ()
  const dir=mkdtempSync(join(tmpdir(),'agenda-reset-'));const filename=join(dir,'agenda.sqlite');let store=new SQLiteStore(filename);
  try {
   const base={...emptyCalendar(),profile:{name:'Luca',notes:''},goals:[{id:'goal',name:'Salute'}]};
-  const created=createHabit(base,[],{title:'Lettura',notes:'',icon:'study',color:'teal',startsOn:'2026-09-28',weekdays:[0],start:'13:00',durationMinutes:20},{habitId:'habit',planId:'plan'});
+  const created=createHabit(base,[],{title:'Lettura',motivation:'',icon:'study',color:'teal',stepTarget:5,startsOn:'2026-09-28',weekdays:[0],start:'13:00',durationMinutes:20},{habitId:'habit'});
   const calendar={...created.calendar,items:[...created.calendar.items,item]};
   const occurrence=occurrences(calendar.items,item.date,item.date)[0];
   const archive={...initial(),calendar,habits:created.habits,history:[outcomeRecord(calendar,occurrence,'completed')]};
@@ -79,7 +79,7 @@ test('SQLite reset clears all app data, prior import and palette atomically', ()
   const repair=new DatabaseSync(filename);repair.exec('DROP TRIGGER fail_reset');repair.close();
   const reset=store.reset(saved.revision);
   assert.equal(reset.revision,saved.revision+1);
-  assert.deepEqual(reset.archive,{format:'time-planner-backup',version:1,calendar:emptyCalendar(),habits:[],history:[]});
+  assert.deepEqual(reset.archive,{format:'time-planner-backup',version:2,calendar:emptyCalendar(),habits:[],history:[]});
   assert.equal(reset.previous,null);
   assert.equal(store.readPalette(),'natural');
   store.close();store=new SQLiteStore(filename);
@@ -135,8 +135,29 @@ test('SQLite upgrades a version 1 database with an empty habits table', () => {
   assert.equal(store.read(),null);
   store.close();store=undefined;
   const migrated=new DatabaseSync(filename);
-  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,2);
+  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,3);
   assert.ok(migrated.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='habits'").get());
+  migrated.close();
+ } finally {store?.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('SQLite version 3 migration removes legacy habits and their linked appointments', () => {
+ const dir=mkdtempSync(join(tmpdir(),'agenda-habits-v3-'));const filename=join(dir,'agenda.sqlite');let store;
+ try {
+  const legacy=new DatabaseSync(filename);
+  legacy.exec(`CREATE TABLE activities (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
+    CREATE TABLE habits (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
+    PRAGMA user_version = 2;`);
+  const oldItem={...item,id:'old-habit-0',activityId:'old-habit',habitId:'old-habit',habitPlanId:'old-plan',recurrence:{}};
+  const oldHabit={id:'old-habit',title:'Vecchia abitudine',notes:'',icon:'study',color:'teal',status:'active',plans:[]};
+  legacy.prepare('INSERT INTO activities VALUES (?,?,?)').run(oldItem.id,0,JSON.stringify(oldItem));
+  legacy.prepare('INSERT INTO habits VALUES (?,?,?)').run(oldHabit.id,0,JSON.stringify(oldHabit));
+  legacy.close();
+  store=new SQLiteStore(filename);store.close();store=undefined;
+  const migrated=new DatabaseSync(filename);
+  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,3);
+  assert.equal(migrated.prepare('SELECT count(*) AS total FROM activities').get().total,0);
+  assert.equal(migrated.prepare('SELECT count(*) AS total FROM habits').get().total,0);
   migrated.close();
  } finally {store?.close();rmSync(dir,{recursive:true,force:true});}
 });
