@@ -1,9 +1,9 @@
-import type { ActivityYearStatistics, DailyStatistics, StatisticsActivity, StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary } from "./statistics.js";
+import type { ActivityYearStatistics, DailyStatistics, StatisticsActivity } from "./statistics.js";
 import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTarget, ItemOutcome, Occurrence } from "./calendar.js";
 import type { LoadingOptions } from "./loading.js";
 import type { PlannerArchive } from "./outcomeArchive.js";
 import type { Palette } from "./theme.js";
-import type { Habit, HabitDraft } from "./habit.js";
+import type { Habit, HabitDraft, HabitDashboard, HabitJourneyProgress, HabitTimelineEntry } from "./habit.js";
 
 export interface DatabaseSnapshot {
   archive: PlannerArchive;
@@ -25,6 +25,12 @@ export interface DatabaseBridge {
   reset(expectedRevision: number): Promise<DatabaseSnapshot>;
 }
 
+/**
+ * Confine della persistenza verso la UI. initialize, save e reset restituiscono
+ * snapshot confermati con habitClosedOn ricostruito dagli esiti, anche in previous.
+ * Vale anche per i repository in memoria. prepareImport restituisce invece un
+ * candidato validato: il Provider lo controlla prima del salvataggio.
+ */
 export interface DBRepository {
   initialize(): Promise<DatabaseSnapshot>;
   loadPalette(): Promise<Palette>;
@@ -36,11 +42,13 @@ export interface DBRepository {
 }
 
 export interface DBContextValue {
+  getHabitCompletionDate(id: string): string | undefined;
+  getHabitProgress(id: string): HabitJourneyProgress;
+  getHabitTimeline(id: string, from: string, through: string): HabitTimelineEntry[];
+  getHabitDashboard(date: string, time: string): HabitDashboard;
   getStatisticsActivities(): StatisticsActivity[];
   getActivityYearStatistics(id: string, year: number, referenceDate?: string): ActivityYearStatistics;
   getDailyStatistics(date: string): DailyStatistics;
-  getWeeklyStatistics(event: StatisticsEvent, dailyDate: string): WeeklyActivityStatistics;
-  getWeeklyActivities(dailyDate: string): WeeklyActivitySummary[];
   palette: Palette;
   paletteError: boolean;
   changePalette(value: Palette): Promise<void>;

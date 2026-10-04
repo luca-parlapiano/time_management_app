@@ -1,4 +1,5 @@
 // Run at /tests/database.browser.html with Vite. Only an in-memory test repository is used.
+import { repeatHabitDraft } from '../src/domain/habitCompletion';
 import { StrictMode, act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LoadingProvider } from '../src/providers/LoadingProvider';
@@ -6,9 +7,9 @@ import { DBProvider } from '../src/providers/DBProvider';
 import { useDB } from '../src/hooks/useDB';
 import { useLoading } from '../src/hooks/useLoading';
 import { addDays, emptyCalendar, occurrences, today } from '../src/domain/calendar';
-import { exportArchive, parseArchive, validateArchive } from '../src/domain/outcomeArchive';
+import { validateArchive } from '../src/domain/outcomeArchive';
 import { RepositoryDB } from '../src/repository/RepositoryDB';
-import type { DBContextValue, DBRepository, DatabaseBridge, DatabaseSnapshot, DatabaseWrite } from '../src/model/database';
+import type { DBContextValue, DatabaseBridge, DatabaseSnapshot, DatabaseWrite } from '../src/model/database';
 import type { LoadingContextValue } from '../src/model/loading';
 import type { CalendarItem } from '../src/model/calendar';
 import type { Palette } from '../src/model/theme';
@@ -30,10 +31,10 @@ let failInitialization=true;
 const date=today();
 const item: CalendarItem={id:'test-activity',title:'Attività di prova',date,endDate:date,start:'09:00',end:'11:00',kind:'flexible',notes:'Solo dati di test',exceptions:{},recurrence:{until:date},routine:true,icon:'sport',color:'green'};
 let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:2,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]},revision:0,previous:null};
-const repository: DBRepository={
- initialize:async()=>{initializeCount++;if(failInitialization)throw new Error('Simulated open failure');return structuredClone(saved);},
- loadPalette:async()=> 'natural', savePalette:async(_value: Palette)=>{},
- save:async(input: DatabaseWrite)=>{
+const memoryBridge: DatabaseBridge={
+ read:async()=>{initializeCount++;if(failInitialization)throw new Error('Simulated open failure');return structuredClone(saved);},
+ readPalette:async()=> 'natural', writePalette:async(value: Palette)=>value,
+ write:async(input: DatabaseWrite)=>{
   if(gate)await gate;
   if(saved.revision!==input.expectedRevision)throw new Error('Stale revision');
   validateArchive(input.archive);
@@ -45,8 +46,9 @@ const repository: DBRepository={
   saved={archive:{format:'time-planner-backup',version:2,calendar:emptyCalendar(),habits:[],history:[]},revision:saved.revision+1,previous:null};
   return structuredClone(saved);
  },
- prepareImport:async text=>parseArchive(text),exportBackup:async archive=>exportArchive(archive),
 };
+// Usa il repository reale su un bridge in memoria, senza accedere a Electron.
+const repository = new RepositoryDB(() => memoryBridge);
 function Probe(){db=useDB();loading=useLoading();return null;}
 const results: string[]=[];
 function check(value: unknown,message:string){if(!value)throw new Error(message);results.push(`PASS ${message}`);}
@@ -145,6 +147,31 @@ check(seriesRejected&&db!.state.items.some(entry=>entry.id===habitSource.id),'Pr
   await new RepositoryDB(() => testBridge({read: async () => null, write: async () => {throw new Error('Write failure');}})).initialize();
  } catch (error) { writeFailed = error instanceof Error && error.message === 'Write failure'; }
  check(writeFailed, 'First initialization write failure is surfaced');
+ await act(async()=>{await db.saveHabit({ title:'Serie da chiudere',motivation:'',icon:'gaming',color:'green',stepTarget:1,startsOn:date,weekdays:[0,1,2,3,4,5,6],start:'16:00',durationMinutes:20 });});
+ const finite = db!.habits.find(habit => habit.title === 'Serie da chiudere')!;
+ const last = occurrences(db!.state.items,date,date).find(entry=>entry.habitId===finite.id)!;
+ await act(async()=>{await db.recordOutcome(last,'completed');});
+ check(!occurrences(db!.state.items,addDays(date,1),addDays(date,30)).some(entry=>entry.habitId===finite.id),'Reaching the target removes all future habit occurrences');
+ check(db!.getHabitProgress(finite.id).currentStep===1&&db!.getHabitCompletionDate(finite.id)===date&&db!.getHabitTimeline(finite.id,addDays(date,1),addDays(date,30)).length===0,'Shared progress, archive status and timeline agree after completion');
+ const completedBackup = await db!.prepareImport(await db!.exportBackup());
+ await act(async()=>{await db.clearCalendar();});
+ await act(async()=>{await db.importBackup(completedBackup);});
+ check(!occurrences(db!.state.items,addDays(date,1),addDays(date,30)).some(entry=>entry.habitId===finite.id),'Import publishes a confirmed snapshot with completed series closed');
+ await act(async()=>{await db.retry();});
+ check(db!.state.items.some(item=>item.habitId===finite.id&&item.habitClosedOn===date)&&!db!.getHabitDashboard(date,'23:59').rows.some(row=>row.habit.id===finite.id),'Reopening keeps calendar and dashboard aligned without Provider normalization');
+ const repeat = repeatHabitDraft(db!.archive, finite, addDays(date,1));
+ await act(async()=>{await db.saveHabit(repeat);});
+ const repeated = db!.habits.find(habit => habit.title === finite.title && habit.id !== finite.id)!;
+ check(!!repeated && !db!.archive.history.some(record=>record.activityId===repeated.id),'Repeating creates a new identity without inheriting completed steps');
+ check(db!.getHabitProgress(repeated.id).completed===0&&db!.getHabitProgress(finite.id).completed===1,'Repeated habits with the same title keep separate indexed results');
+ let reopenConflict = false;
+ await act(async()=>{try { await db.recordOutcome(last,'partial'); } catch { reopenConflict = true; }});
+ check(reopenConflict && db!.state.items.some(item=>item.habitId===finite.id && item.habitClosedOn),'A correction that reopens an occupied schedule fails atomically');
+ check(db!.getHabitCompletionDate(finite.id)===date&&db!.getHabitProgress(finite.id).completed===1,'Rejected correction leaves the confirmed outcome index intact');
+ await act(async()=>{await db.deleteHabit(repeated.id);});
+ await act(async()=>{await db.recordOutcome(last,'partial');});
+ check(occurrences(db!.state.items,addDays(date,1),addDays(date,30)).some(entry=>entry.habitId===finite.id),'Correcting the final completion reopens a conflict-free schedule');
+ check(db!.getHabitCompletionDate(finite.id)===undefined&&db!.getHabitProgress(finite.id).completed===0&&db!.getHabitTimeline(finite.id,date,date)[0]?.outcome==='partial','Successful correction refreshes all indexed views together');
  results.push('ALL PROVIDER AND REPOSITORY TESTS PASSED');
  await act(async()=>{root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><App/></DBProvider></LoadingProvider></StrictMode>);});
 } catch(error) {results.push(`FAIL ${error instanceof Error?error.stack:error}`);}

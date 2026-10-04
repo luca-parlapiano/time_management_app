@@ -72,7 +72,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   if (!Array.isArray(calendar.items) || !Array.isArray(calendar.goals)) throw new Error('Archivio calendario non riconosciuto.');
   const dataFields = ['coverImage', 'icon', 'color', 'title', 'date', 'endDate', 'start', 'end', 'kind', 'notes', 'goalId'];
   for (const item of calendar.items) {
-    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'routine', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
+    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'habitClosedOn', 'routine', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
     if (item.recurrence !== undefined) requireFields(item.recurrence, ['until'], 'Ricorrenza');
     if (!item.exceptions || typeof item.exceptions !== 'object' || Array.isArray(item.exceptions)) throw new Error('Eccezioni non valide.');
     for (const exception of Object.values(item.exceptions)) {
@@ -126,10 +126,23 @@ export function parseArchive(text: string): PlannerArchive {
   return { format: "time-planner-backup", version: 2, calendar: parsed.calendar, habits: parsed.habits ?? [], history: parsed.history };
 }
 /**
+ * Prepara i dati per IPC, SQLite e backup eliminando la sola chiusura derivata.
+ * Il traguardo e gli esiti restano intatti: la chiusura si ricalcola alla lettura.
+ * Non modifica l'archivio ricevuto e conserva gli altri campi per la validazione.
+ */
+export function archiveForStorage(archive: PlannerArchive): PlannerArchive {
+  return { ...archive, calendar: { ...archive.calendar, items: archive.calendar.items.map(item => {
+    if (item.habitClosedOn === undefined) return item;
+    const stored = { ...item };
+    delete stored.habitClosedOn;
+    return stored;
+  }) } };
+}
+/**
  * Valida l’archivio e lo serializza in JSON leggibile con la data corrente di esportazione.
  * Restituisce il testo, senza scrivere file né modificare l’archivio ricevuto.
  */
 export function exportArchive(archive: PlannerArchive): string {
   validateArchive(archive);
-  return JSON.stringify({ ...archive, exportedAt: new Date().toISOString() }, null, 2);
+  return JSON.stringify({ ...archiveForStorage(archive), exportedAt: new Date().toISOString() }, null, 2);
 }

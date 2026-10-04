@@ -1,10 +1,11 @@
+import { reconcileHabitCompletion } from "../src/domain/habitCompletion.js";
 import { isPalette } from "../src/theme.js";
 import type { Palette } from "../src/model/theme.js";
 import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
 import { emptyCalendar } from "../src/domain/calendar.js";
 import { DatabaseSync } from 'node:sqlite';
 import { readStoredArchive } from './storedArchive.js';
-import { validateArchive } from '../src/domain/outcomeArchive.js';
+import { archiveForStorage, validateArchive } from '../src/domain/outcomeArchive.js';
 import type { DatabaseSnapshot, DatabaseWrite } from '../src/model/database.js';
 import type { CalendarItem, CalendarGoal, CalendarProfile } from '../src/model/calendar.js';
 import type { OutcomeRecord } from '../src/model/outcomeArchive.js';
@@ -70,11 +71,11 @@ export class SQLiteStore {
     try {
       const existing = this.readSnapshot();
       if ((existing?.revision ?? null) !== input.expectedRevision) throw new Error('Dati aggiornati in un’altra finestra. Riapri l’app prima di continuare.');
-      const {archive} = input;
+      const archive = reconcileHabitCompletion(input.archive, input.replace ? undefined : existing?.archive);
       const previous = input.replace && existing ? existing.archive : existing?.previous ?? null;
       this.db.exec('DELETE FROM activities; DELETE FROM goals; DELETE FROM habits; DELETE FROM outcome_records;');
       const activityInsert = this.db.prepare('INSERT INTO activities(id,position,data) VALUES (?,?,?)');
-      archive.calendar.items.forEach((item,index) => activityInsert.run(item.id,index,JSON.stringify(item)));
+      archiveForStorage(archive).calendar.items.forEach((item,index) => activityInsert.run(item.id,index,JSON.stringify(item)));
       const goalInsert = this.db.prepare('INSERT INTO goals(id,position,data) VALUES (?,?,?)');
       archive.calendar.goals.forEach((goal,index) => goalInsert.run(goal.id,index,JSON.stringify(goal)));
       const habitInsert = this.db.prepare('INSERT INTO habits(id,position,data) VALUES (?,?,?)');
@@ -84,7 +85,7 @@ export class SQLiteStore {
       const revision = (existing?.revision ?? -1) + 1;
       this.putMetadata('profile',archive.calendar.profile);
       this.putMetadata('revision',revision);
-      this.putMetadata('previousImport',previous);
+      this.putMetadata('previousImport',previous ? archiveForStorage(previous) : null);
       this.db.exec('COMMIT');
       return {archive,revision,previous};
     } catch(error) { this.db.exec('ROLLBACK'); throw error; }

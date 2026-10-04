@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { addDays, displayDate, eventColors, today } from "../../domain/calendar";
-import { habitTimeline, nextHabitOccurrence } from "../../domain/habitTimeline";
+import { nextHabitOccurrence } from "../../domain/habitTimeline";
 import { useDB } from "../../hooks/useDB";
 import { useLocalMinute } from "../../hooks/useLocalMinute";
 import { EventIcon } from "../../icons/EventIcon";
@@ -16,14 +16,14 @@ interface AppSidebarProps {
 
 /** Barra laterale persistente con le abitudini e la loro prossima occasione. */
 export function AppSidebar({ expanded, onToggle, onAddHabit, onOpenHabits }: AppSidebarProps) {
-  const { habits, archive, state } = useDB();
+  const { habits, getHabitCompletionDate, getHabitTimeline } = useDB();
   const referenceDate = today();
   const now = useLocalMinute();
   const referenceTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const activeHabits = useMemo(() => habits.map(habit => {
-    const entries = habitTimeline(state, archive.history, habit, addDays(referenceDate, -27), addDays(referenceDate, 30));
+  const activeHabits = useMemo(() => habits.filter(habit => !getHabitCompletionDate(habit.id)).map(habit => {
+    const entries = getHabitTimeline(habit.id, addDays(referenceDate, -27), addDays(referenceDate, 30));
     return { habit, next: nextHabitOccurrence(entries, referenceDate, referenceTime) };
-  }), [habits, state, archive.history, referenceDate, referenceTime]);
+  }), [habits, getHabitCompletionDate, getHabitTimeline, referenceDate, referenceTime]);
   return (
     <aside id="sidebar-drawer" className="hero-panel" aria-label="Barra laterale">
       <div className="sidebar-brand">
@@ -46,7 +46,7 @@ export function AppSidebar({ expanded, onToggle, onAddHabit, onOpenHabits }: App
         </div>
         {activeHabits.length === 0 ? (
           expanded ? <div className="sidebar-habits-empty">
-            <p>Nessuna abitudine ancora. Parti da un piccolo traguardo.</p>
+            <p>Nessuna abitudine attiva. Puoi crearne una o ripetere un percorso completato.</p>
             <button type="button" onClick={onAddHabit}>Crea</button>
           </div> : <RoundButton variant="secondary" icon="habits" label="Apri abitudini" onClick={onOpenHabits} />
         ) : (

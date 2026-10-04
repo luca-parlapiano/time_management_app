@@ -4,7 +4,7 @@ const {join} = require('node:path');
 const utils = name => require(join(process.env.CALENDAR_TEST_BUILD, 'utils', `${name}.js`));
 const {isFiniteNumber, isPositiveNumber, isIntegerInRange, isNonNegativeSafeInteger} = utils('numbers');
 const {clamp, percentage, positiveModulo} = utils('math');
-const {toMinutes, toTime, formatTimeWithMeridiem, greetingForHour} = utils('time');
+const {normalizeTimeInput, toMinutes, toTime, greetingForHour} = utils('time');
 const {validDate, addDays, weekStart} = utils('dates');
 const {agendaTimePosition} = utils('agendaTimeline');
 const {buildCalendarTimeline, calendarTimelineOffset} = utils('calendarTimeline');
@@ -105,10 +105,6 @@ test('clock conversions preserve midnight wrapping and formatting', () => {
   assert.equal(toTime(-1),'23:59');
   assert.equal(toTime(1440),'00:00');
   assert.equal(toTime(1500),'01:00');
-  assert.equal(formatTimeWithMeridiem('00:00'),'12:00 AM');
-  assert.equal(formatTimeWithMeridiem('13:05'),'1:05 PM');
-  assert.equal(formatTimeWithMeridiem('invalid'),'invalid');
-  assert.equal(formatTimeWithMeridiem('Infinity:00'),'Infinity:00');
 });
 
 test('local greeting changes at morning, afternoon and evening boundaries', () => {
@@ -123,4 +119,14 @@ test('civil date helpers preserve leap dates, year rollover and daylight-saving 
   assert.equal(addDays('2026-12-31',1),'2027-01-01');
   assert.equal(addDays('2026-03-28',2),'2026-03-30');
   assert.equal(weekStart('2027-01-01'),'2026-12-28');
+});
+
+
+test('quick time input accepts compact typing and preserves precise minutes without wrapping invalid times', () => {
+  for (const [input, expected] of [['1930','19:30'],['930','09:30'],['9:30','09:30'],['15:57','15:57'],['9','09:00'],['0','00:00'],['0000','00:00'],['2359','23:59'],[' 1930 ','19:30']]) {
+    assert.equal(normalizeTimeInput(input), expected);
+  }
+  for (const input of ['', ' ', '24', '2400', '23:60', '1960', '-1', '9:', '9:3', '12345', '1.5', 'sera']) {
+    assert.equal(normalizeTimeInput(input), undefined, input);
+  }
 });

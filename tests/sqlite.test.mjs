@@ -221,3 +221,29 @@ test('SQLite: invalid legacy values and unrelated fields are rejected without ch
  assert.deepEqual(readStoredArchive(archive),initial());
  assert.deepEqual(archive,original);
 });
+
+test('SQLite: completed habits close on read and remain closed after reopening without losing audit', () => {
+ const dir = mkdtempSync(join(tmpdir(), 'agenda-habit-completion-'));
+ const filename = join(dir, 'agenda.sqlite');
+ let store;
+ try {
+  store = new SQLiteStore(filename);
+  const created = createHabit(emptyCalendar(), [], { title: 'Percorso finito', motivation: '', icon: 'gaming', color: 'green', stepTarget: 1, startsOn: '2026-10-05', weekdays: [0,1], start: '12:00', durationMinutes: 20 }, { habitId: 'closed' });
+  const entry = occurrences(created.calendar.items, '2026-10-05', '2026-10-05')[0];
+  const archive = { format: 'time-planner-backup', version: 2, ...created, history: [outcomeRecord(created.calendar, entry, 'completed')] };
+  archive.calendar = setOccurrenceOutcome(archive.calendar, entry.sourceId, entry.occurrenceDate, 'completed');
+  const saved = store.write({ archive, expectedRevision: null });
+  assert.equal(saved.archive.history.length, 1);
+  assert.equal(occurrences(saved.archive.calendar.items, '2026-10-06', '2027-12-31').length, 0);
+  store.close();
+  store = new SQLiteStore(filename);
+  assert.deepEqual(store.read(), JSON.parse(JSON.stringify(saved)));
+  const db = new DatabaseSync(filename);
+  assert.equal(db.prepare("SELECT count(*) AS count FROM activities WHERE json_type(data, '$.habitClosedOn') IS NOT NULL").get().count, 0);
+  db.exec("UPDATE activities SET data = json_remove(data, '$.habitClosedOn')");
+  db.close();
+  const legacy = store.read();
+  assert.deepEqual(legacy, JSON.parse(JSON.stringify(saved)));
+  assert.equal(legacy.revision, saved.revision);
+ } finally { store?.close(); rmSync(dir, { recursive: true, force: true }); }
+});

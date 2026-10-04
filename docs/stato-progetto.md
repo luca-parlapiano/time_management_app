@@ -12,7 +12,7 @@ Rilevazione sul codice del 27 settembre 2026. [Indice documentazione](README.md)
 | Calendario | Visione completa della settimana e creazione di appuntamenti fissi che proteggono gli orari, oltre a navigazione, modifica e conflitti |
 | Ricorrenze | Settimanali anche per attività flessibili, più giorni collegati, scadenza facoltativa, eccezioni e identità originale degli appuntamenti |
 | Esiti | Superato, non superato, parziale, correzioni e storico mantenuto dopo eliminazione/svuotamento |
-| Statistiche | Riepiloghi settimanali, panoramica annuale giornaliera e vista per attività; regole nel documento dei Provider |
+| Statistiche | Panoramica annuale giornaliera e vista per attività; regole nel documento dei Provider |
 | Dati | SQLite in worker, transazioni, revisioni, inizializzazione diretta, import/export del solo backup corrente e copia precedente all’importazione |
 | Personalizzazione | Profilo e obiettivi facoltativi, palette persistita in SQLite, icone, colori e copertine |
 

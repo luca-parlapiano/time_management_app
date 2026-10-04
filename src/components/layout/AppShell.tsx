@@ -19,6 +19,7 @@ export function AppShell() {
   const { isLoading } = useLoading();
   const [sidebarExpanded, setSidebarExpanded] = useState(() => window.matchMedia("(min-width: 721px)").matches);
   const [activeScreen, setActiveScreen] = useState<ScreenId>("today");
+  const [selectedHabitId, setSelectedHabitId] = useState<string>();
   const [week, setWeek] = useState(() => weekStart(today()));
   const [dialog, setDialog] = useState<AppDialogState>(null);
   useLayoutEffect(() => {
@@ -26,6 +27,10 @@ export function AppShell() {
   }, [palette]);
   const openEditor = useCallback((date: string, occurrence?: Occurrence, initialKind?: ItemKind) => setDialog({ type: "editor", date, occurrence, initialKind }), []);
   const openEvent = useCallback((item: Occurrence, confirmDelete = false) => setDialog({ type: "event", item, confirmDelete }), []);
+  const openHabits = useCallback((habitId?: string) => {
+    if (habitId) setSelectedHabitId(habitId);
+    setActiveScreen("habits");
+  }, []);
   const showSavedHabit = useCallback((firstOccurrenceDate: string) => {
     setWeek(weekStart(firstOccurrenceDate));
     setActiveScreen("calendar");
@@ -43,8 +48,8 @@ export function AppShell() {
         <AppHeader activeScreen={activeScreen} />
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
         {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
-        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={() => setActiveScreen("habits")} />
-        <HabitsScreen active={activeScreen === "habits"} onAdd={() => setDialog({ type: "create" })} onEdit={habitId => setDialog({ type: "habit", habitId })} />
+        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={openHabits} onAddHabit={() => setDialog({ type: "habit" })} />
+        <HabitsScreen active={activeScreen === "habits"} selectedHabitId={selectedHabitId} onSelectHabit={setSelectedHabitId} onAdd={() => setDialog({ type: "create" })} onEdit={habitId => setDialog({ type: "habit", habitId })} onRepeat={habitId => setDialog({ type: "habit", habitId, repeat: true })} />
         <CalendarScreen
           active={activeScreen === "calendar"}
           week={week}

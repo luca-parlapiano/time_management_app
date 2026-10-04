@@ -11,6 +11,7 @@ export const activityCovers: Record<EventIcon, ActivityCover> = {
   meal: { src: new URL("./assets/activity-covers/meal.jpg", import.meta.url).href, label: "Colazione e caffè", author: "Marco Palumbo", source: "https://unsplash.com/photos/-H2EGDd-r9g" },
   people: { src: new URL("./assets/activity-covers/people.jpg", import.meta.url).href, label: "Incontri tra amici", author: "Vitaly Gariev", source: "https://unsplash.com/photos/2VkUdNANwdA" },
   heart: { src: new URL("./assets/activity-covers/heart.svg", import.meta.url).href, label: "Cuore e benessere", author: "Illustrazione dell’app", source: "" },
+  gaming: { src: new URL("./assets/activity-covers/gaming.svg", import.meta.url).href, label: "Controller per videogiochi", author: "Illustrazione dell’app", source: "" },
 };
 
 /** Copertine dedicate ai blocchi fissi, distinte dalle immagini motivazionali. */
@@ -23,6 +24,7 @@ export const fixedEventCovers: Record<EventIcon, ActivityCover> = {
   meal: { src: new URL("./assets/fixed-event-covers/meal.jpg", import.meta.url).href, label: "Tavolo riservato", author: "Immagine generata per l’app", source: "" },
   people: { src: new URL("./assets/fixed-event-covers/people.jpg", import.meta.url).href, label: "Incontro al caffè", author: "Immagine generata per l’app", source: "" },
   heart: { src: new URL("./assets/fixed-event-covers/heart.jpg", import.meta.url).href, label: "Appuntamento per la salute", author: "Immagine generata per l’app", source: "" },
+  gaming: activityCovers.gaming,
 };
 
 /** Restituisce la copertina coerente con il tipo e l'icona dell'evento. */

@@ -100,6 +100,7 @@ export function validateItem(item: CalendarItem): void {
   if (item.habitId !== undefined && (typeof item.habitId !== "string" || !item.habitId || !item.recurrence)) {
     throw new Error("Collegamento all’abitudine non valido.");
   }
+  if (item.habitClosedOn !== undefined && (!item.habitId || !validDate(item.habitClosedOn))) throw new Error("Chiusura dell’abitudine non valida.");
   if (item.outcomes !== undefined) {
     if (!item.outcomes || typeof item.outcomes !== "object" || Array.isArray(item.outcomes)) throw new Error("Esiti non validi.");
     for (const [date, outcome] of Object.entries(item.outcomes)) {
@@ -167,6 +168,7 @@ function atDate(item: CalendarItem, date: string): ItemData {
 export function occurrences(items: CalendarItem[], from: string, through: string): Occurrence[] {
   const result: Occurrence[] = [];
   function include(item: CalendarItem, original: string, data: ItemData, exception: boolean) {
+    if (item.habitClosedOn && data.date > item.habitClosedOn) return;
     if (data.date <= through && (data.endDate > from || (data.endDate === from && data.end > "00:00"))) {
       const outcome = item.outcomes?.[original];
       result.push({ ...data, id: item.recurrence ? `${item.id}@${original}` : item.id,
@@ -179,7 +181,7 @@ export function occurrences(items: CalendarItem[], from: string, through: string
     // Con durata massima di 24 ore, basta il giorno precedente per includere gli eventi notturni.
     const first = addDays(from, -1);
     const offset = Math.max(0, Math.ceil((dateNumber(first) - dateNumber(item.date)) / (7 * DAY)));
-    for (let date = addDays(item.date, offset * 7); date <= through && (!item.recurrence.until || date <= item.recurrence.until); date = addDays(date, 7)) {
+    for (let date = addDays(item.date, offset * 7); date <= through && (!item.habitClosedOn || date <= item.habitClosedOn) && (!item.recurrence.until || date <= item.recurrence.until); date = addDays(date, 7)) {
       if (!Object.hasOwn(item.exceptions, date)) include(item, date, atDate(item, date), false);
     }
     // Cerca anche le eccezioni la cui data originale è fuori vista ma la destinazione è nel periodo.
@@ -201,6 +203,7 @@ export function findConflict(items: CalendarItem[], changedId: string): [Occurre
   for (const item of items) {
     dates.add(item.date);
     if (item.recurrence?.until) dates.add(item.recurrence.until);
+    if (item.habitClosedOn) dates.add(item.habitClosedOn);
     for (const [date, data] of Object.entries(item.exceptions)) {
       dates.add(date);
       if (data) dates.add(data.date);

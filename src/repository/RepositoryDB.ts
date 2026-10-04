@@ -1,6 +1,7 @@
-import { exportArchive, parseArchive, validateArchive } from "../domain/outcomeArchive";
+import { archiveForStorage, exportArchive, parseArchive, validateArchive } from "../domain/outcomeArchive";
+import { reconcileHabitCompletion } from "../domain/habitCompletion";
 import { emptyCalendar } from "../domain/calendar";
-import type { DatabaseBridge, DatabaseWrite, DBRepository } from "../model/database.js";
+import type { DatabaseBridge, DatabaseSnapshot, DatabaseWrite, DBRepository } from "../model/database.js";
 import type { PlannerArchive } from "../model/outcomeArchive.js";
 import type { Palette } from "../model/theme.js";
 
@@ -12,6 +13,20 @@ export class RepositoryDB implements DBRepository {
     const bridge = this.bridge();
     if (!bridge) throw new Error('Apri l’app desktop per utilizzare il database SQLite. Il browser non dispone del collegamento a Electron.');
     return bridge;
+  }
+  /**
+   * Prepara lo snapshot restituito dal bridge senza modificarlo né riscrivere SQLite.
+   * Valida archivio corrente e copia precedente e ricostruisce le chiusure dagli esiti;
+   * una copia precedente assente resta null, gli errori vengono propagati alla UI.
+   */
+  private prepareSnapshot(snapshot: DatabaseSnapshot): DatabaseSnapshot {
+    validateArchive(snapshot.archive);
+    if (snapshot.previous !== null) validateArchive(snapshot.previous);
+    return {
+      ...snapshot,
+      archive: reconcileHabitCompletion(snapshot.archive),
+      previous: snapshot.previous === null ? null : reconcileHabitCompletion(snapshot.previous),
+    };
   }
   /** Legge la preferenza del dispositivo da SQLite tramite il worker. */
   async loadPalette() { return this.connection().readPalette(); }
@@ -25,14 +40,19 @@ export class RepositoryDB implements DBRepository {
   async initialize() {
     const connection = this.connection();
     const existing = await connection.read();
-    if (existing) { validateArchive(existing.archive); return existing; }
+    if (existing) return this.prepareSnapshot(existing);
     const archive: PlannerArchive = {
       format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [],
     };
-    return connection.write({ archive, expectedRevision: null });
+    return this.prepareSnapshot(await connection.write({ archive, expectedRevision: null }));
   }
-  async save(input: DatabaseWrite) { validateArchive(input.archive); return this.connection().write(input); }
-  async reset(expectedRevision: number) { return this.connection().reset(expectedRevision); }
+  /** Invia solo dati persistenti al worker e ricostruisce la chiusura sullo snapshot confermato, anche con un worker già avviato. */
+  async save(input: DatabaseWrite) {
+    validateArchive(input.archive);
+    const saved = await this.connection().write({ ...input, archive: archiveForStorage(input.archive) });
+    return this.prepareSnapshot(saved);
+  }
+  async reset(expectedRevision: number) { return this.prepareSnapshot(await this.connection().reset(expectedRevision)); }
   async prepareImport(text: string) { return parseArchive(text); }
   async exportBackup(archive: PlannerArchive) { return exportArchive(archive); }
 }

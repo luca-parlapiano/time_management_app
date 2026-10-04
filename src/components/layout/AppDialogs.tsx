@@ -14,7 +14,7 @@ export type AppDialogState =
   | { type: "editor"; date: string; occurrence?: Occurrence; routine?: boolean; initialKind?: ItemKind }
   | { type: "create" }
   | { type: "preferences" }
-  | { type: "habit"; habitId?: string }
+  | { type: "habit"; habitId?: string; repeat?: boolean }
   | { type: "clear" }
   | { type: "reset-all" }
   | null;
@@ -77,7 +77,7 @@ export function AppDialogs({ dialog, onChange, onHabitSaved }: AppDialogsProps) 
   if (dialog.type === "preferences") {
     return <CalendarPreferences state={state} onSave={savePreferences} onClose={() => onChange(null)} />;
   }
-  if (dialog.type === "habit") return <HabitEditor habit={habits.find(habit => habit.id === dialog.habitId)} onClose={() => onChange(null)} onSaved={onHabitSaved} />;
+  if (dialog.type === "habit") return <HabitEditor repeat={dialog.repeat} habit={habits.find(habit => habit.id === dialog.habitId)} onClose={() => onChange(null)} onSaved={onHabitSaved} />;
   if (dialog.type === "clear") return <ClearCalendarDialog onClose={() => onChange(null)} />;
   return <ResetAllDialog onClose={() => onChange(null)} />;
 }

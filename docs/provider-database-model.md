@@ -56,6 +56,48 @@ Sono disponibili anche `saveItem`, `deleteItem`, `savePreferences`, `clearCalend
 
 Il Provider usa sempre lo stato corrente, impedisce salvataggi concorrenti nella stessa finestra e conserva lo stato visualizzato se una scrittura fallisce. SQLite verifica inoltre la revisione per evitare sovrascritture da altre finestre. Calendario e storico vengono salvati nella stessa transazione.
 
+### Snapshot confermati e completamento delle abitudini
+
+`DBRepository.initialize()`, `save()` e `reset()` restituiscono snapshot validati con
+le chiusure delle abitudini ricostruite dagli ultimi esiti. Il contratto comprende
+sia `archive` sia l’eventuale copia `previous`. `RepositoryDB` prepara i risultati
+del bridge in un unico punto; il Provider li pubblica senza normalizzarli di nuovo.
+`StatisticsRepository` e `habitDashboard` ricevono questi dati già preparati e non
+ricostruiscono le chiusure del calendario. Anche i repository usati nei test devono
+rispettare il contratto: le prove browser usano il repository reale su un bridge
+in memoria, senza accedere a Electron o al database dell’utente.
+
+`prepareImport()` restituisce invece un candidato validato, ancora da salvare.
+Il controllo preventivo delle modifiche nel Provider resta attivo: una correzione
+che riapre una serie deve verificare gli orari nuovamente occupati. SQLite ripete
+il controllo nella transazione, confrontando i dati realmente salvati. Questa
+verifica protegge anche dalle richieste che non passano dal Provider.
+
+`habitClosedOn` rimane un dato derivato in memoria, escluso da SQLite e dai backup.
+La preparazione dello snapshot non modifica gli oggetti ricevuti né riscrive il
+database all’apertura.
+
+### Indice condiviso degli esiti
+
+`StatisticsRepository` costruisce un `HabitOutcomeIndex` per ogni snapshot confermato.
+L’indice deduplica una volta lo storico per fonte/data originale, poi raggruppa
+gli esiti per identità dell’attività e ordina le date dei completamenti. Occorrenze
+diverse completate nello stesso giorno restano distinte, come le serie ripetute
+con lo stesso titolo. Le correzioni prevalgono prima del filtro temporale.
+
+Oggi, Abitudini/Archivio e sidebar usano `getHabitProgress`, `getHabitCompletionDate`
+e `getHabitTimeline` tramite `useDB`; la dashboard e le statistiche riutilizzano
+lo stesso indice. Le statistiche escludono ancora le fonti non monitorate, mentre
+il percorso dell’abitudine conserva gli esiti delle occasioni rimosse. La dashboard
+limita il progresso alla data richiesta; il dettaglio mantiene il progresso totale.
+Gli intervalli e l’ora corrente vengono applicati durante la lettura, quindi non
+sono congelati nella cache. Il Provider conserva l’indice durante un salvataggio
+pendente o fallito e lo sostituisce solo quando cambia l’archivio confermato.
+
+Anche la riconciliazione delle chiusure costruisce un solo indice per archivio,
+invece di deduplicare lo storico per ogni abitudine. L’indice resta in memoria:
+nessun nuovo campo in SQLite o nei backup, nessuna cache globale fra snapshot.
+
 ## Loading configurabile
 
 Da qualsiasi componente o hook discendente dal LoadingProvider:
@@ -107,7 +149,7 @@ Ogni abitudine da acquisire conserva soltanto identità, nome, motivazione, aspe
 traguardo da 1 a 12 step. Giorni, orario e durata appartengono alle serie del calendario;
 `habitId` le collega all'abitudine e `activityId` ne mantiene stabile il percorso nello
 storico. Creazione e modifica aggiornano abitudine e appuntamenti nella stessa revisione e
-transazione; un conflitto lascia invariato l'intero snapshot. Step e capitoli sono
+transazione; un conflitto lascia invariato l'intero snapshot. Step e completamento sono
 derivati dagli ultimi esiti confermati e non vengono salvati come totali.
 
 Una routine è invece una normale serie ricorrente del calendario. Non viene salvata
@@ -141,36 +183,33 @@ Per test di dominio, SQLite/worker, Provider e inizializzazione vedere le
 [procedure di verifica](code-quality.md#procedure-di-verifica). I risultati delle
 esecuzioni sono nello [stato del progetto](stato-progetto.md#evidenze-di-verifica).
 
-## Statistiche settimanali per attività
+## Lettura delle statistiche
 
-`StatisticsRepository` è il middleware di lettura tra l’archivio già caricato dal database e il DBProvider. Non esegue una seconda lettura SQLite durante il rendering e non salva totali derivati. Il Provider lo ricrea quando cambia l’archivio confermato dal repository: salvataggi, importazioni ed eliminazioni aggiornano così le statistiche.
+`StatisticsRepository` calcola i dati sull’archivio già caricato dal database. Non esegue una seconda lettura SQLite durante il rendering e non salva totali derivati. Il Provider lo ricrea quando cambia l’archivio confermato dal repository: salvataggi, importazioni ed eliminazioni aggiornano così le statistiche.
 
 La UI usa esclusivamente il Provider:
 
 ```tsx
-const { getWeeklyStatistics, getWeeklyActivities } = useDB();
-const statistics = getWeeklyStatistics(evento, "2026-09-23");
-const cards = getWeeklyActivities("2026-09-23");
+const { getDailyStatistics, getStatisticsActivities, getActivityYearStatistics } = useDB();
+const daily = getDailyStatistics("2026-09-23");
+const activities = getStatisticsActivities();
+const year = activities.length ? getActivityYearStatistics(activities[0].id, 2026, "2026-09-23") : null;
 ```
 
-La data è una data civile `YYYY-MM-DD`. La settimana va dal lunedì alla domenica inclusi. Il risultato contiene intervallo, sette riepiloghi giornalieri, totale appuntamenti, superati (`completed`), non superati (`skipped`), parziali, senza esito (`pending`), numero di esiti registrati e percentuale di superati sugli esiti registrati (`null` se non ci sono esiti). Gli appuntamenti senza esito non vengono considerati falliti.
-
-Il raggruppamento mantiene una card per attività con identità condivisa o titolo normalizzato, come nella barra laterale. L’ultimo esito per identità dell’occorrenza prevale sulle registrazioni precedenti. Si usa la data dell’appuntamento salvata nell’esito, non il giorno in cui viene premuto il pulsante; i dati storici restano validi anche dopo l’eliminazione dell’appuntamento. Gli appuntamenti notturni vengono contati una sola volta nel giorno di inizio. Le card mostrano le attività attualmente presenti nel calendario; le settimane senza appuntamenti mostrano zero.
-
-I modelli sono in `src/model/statistics.ts`; i test delle regole in `tests/weekly-statistics.test.cjs`.
+Le statistiche includono solo le abitudini e le routine ricorrenti attualmente monitorate. I metodi settimanali, privi di utilizzatori nell’interfaccia, sono stati rimossi. I modelli sono in `src/model/statistics.ts`; i test delle regole in `tests/statistics.test.cjs`.
 
 ## Statistiche giornaliere
 
-`useDB().getDailyStatistics("2026-09-23")` espone il nuovo metodo del middleware. Restituisce totale pianificato, conteggi per esito, `recorded`, `completionPercent` e segmenti `activities` con titolo, icona, colore, numero di appuntamenti, `completed` e `contributionPercent`. I modelli sono in `src/model/statistics.ts`.
+`useDB().getDailyStatistics("2026-09-23")` espone il riepilogo giornaliero. Restituisce totale pianificato, conteggi per esito, `recorded`, `completionPercent` e segmenti `activities` con titolo, icona, colore, numero di appuntamenti, `completed` e `contributionPercent`. I modelli sono in `src/model/statistics.ts`.
 
 Il grafico giornaliero rappresenta la composizione della giornata: conta una volta ogni appuntamento che occupa quella data, comprese le continuazioni dal giorno precedente; una fine a mezzanotte non occupa il giorno successivo. Il completamento è `completed / total * 100`; il contributo di ogni segmento è il numero di appuntamenti superati di quella attività diviso per tutti gli appuntamenti pianificati nella giornata. La quota non completata resta grigia: parziali, non superati e senza esito non valgono come superati. Non si usano pesi basati sulla durata né percentuali arbitrarie per gli esiti parziali. Titoli normalizzati uguali con lo stesso colore e icona condividono un segmento; colori diversi restano distinti.
 
-Le correzioni degli esiti vengono deduplicate per identità dell’occorrenza. Lo storico compare alla data dell’evento salvata, anche dopo l’eliminazione; quando presente nella stessa giornata, l’evento attuale fornisce colore e titolo aggiornati. Un evento spostato può comparire nella nuova giornata come appuntamento attuale e nella vecchia come storico. Per questo la somma dei grafici giornalieri non equivale al totale settimanale degli appuntamenti, che li attribuisce una sola volta alla data di inizio o alla data storica dell’esito.
+Le correzioni degli esiti vengono deduplicate per identità dell’occorrenza. Lo storico compare alla data dell’evento salvata, anche dopo l’eliminazione; quando presente nella stessa giornata, l’evento attuale fornisce colore e titolo aggiornati. Un evento spostato può comparire nella nuova giornata come appuntamento attuale e nella vecchia come storico. Per questo la somma dei grafici giornalieri può differire dai conteggi della vista per attività, che attribuisce ogni occorrenza una sola volta alla data di inizio o alla data storica dell’esito.
 
 I risultati sono memorizzati nel middleware fino al successivo aggiornamento del Provider. `DailyDoughnut` usa Chart.js e i colori degli eventi; il calendario mostra un grafico compatto con percentuale centrale solo se `recorded > 0`. Senza esiti mostra i pallini dei colori pianificati, senza grafico né percentuale; senza appuntamenti la cella resta vuota. Il clic sulla giornata apre il dettaglio con legenda dei contributi percentuali ed esiti. I canvas sono inizializzati solo quando visibili.
 
 ## Vista per attività
 
-La vista interna “Per attività” usa `getStatisticsActivities()` e `getActivityYearStatistics(id, year, referenceDate?)` tramite DBProvider. Mostra una voce per gruppo di attività, includendo le attività eliminate presenti nello storico. Le regole di identità e attribuzione alla data salvata seguono le statistiche settimanali; un appuntamento notturno conta nel giorno di inizio.
+La vista interna “Per attività” usa `getStatisticsActivities()` e `getActivityYearStatistics(id, year, referenceDate?)` tramite DBProvider. Mostra una voce per gruppo di attività attualmente monitorate, collegando le fonti per identità condivisa o titolo normalizzato, anche transitivamente. L’ultimo esito per identità originale dell’occorrenza prevale e viene attribuito alla data dell’evento salvata nello storico. Un appuntamento notturno conta nel giorno di inizio. Le attività interamente eliminate non sono elencate; il registro degli esiti resta conservato nell’archivio.
 
 Solo in questa vista un esito parziale vale 50%. La media include tutte le occorrenze pianificate nel giorno: superata = 1, parziale = 0,5, non superata o senza esito = 0. Senza alcun esito la cella resta neutra; senza appuntamenti resta vuota. Le date future mostrano il tratteggio, mai una percentuale. Le correzioni sono deduplicate prima del filtro per anno. La panoramica giornaliera conserva la sua formula basata solo sulle attività superate.

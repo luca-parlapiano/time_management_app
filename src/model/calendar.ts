@@ -2,7 +2,7 @@ export type ItemKind = "fixed" | "protected" | "flexible";
 
 export type ItemOutcome = "completed" | "skipped" | "partial";
 
-export type EventIcon = "activity" | "work" | "study" | "sport" | "rest" | "meal" | "people" | "heart";
+export type EventIcon = "activity" | "work" | "study" | "sport" | "rest" | "meal" | "people" | "heart" | "gaming";
 
 export type EventColor = "blue" | "green" | "purple" | "orange" | "pink" | "teal";
 
@@ -24,6 +24,8 @@ export interface CalendarItem extends ItemData {
   id: string;
   activityId?: string;
   habitId?: string;
+  /** Fine effettiva del percorso, ricalcolata dagli esiti confermati. */
+  habitClosedOn?: string;
   /** Identifica una routine monitorata, distinta da una normale serie del calendario. */
   routine?: true;
   outcomes?: Record<string, ItemOutcome>;

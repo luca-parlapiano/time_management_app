@@ -14,9 +14,21 @@ export const CALENDAR_EVENT_SLOT_MIN_HEIGHT = 64;
 export const CALENDAR_TIMELINE_PIXELS_PER_MINUTE = 0.5;
 export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto", partial: "Parziale" } as const satisfies Record<ItemOutcome, string>;
 
+// Riepilogo del percorso nella dashboard
+export const HABIT_DASHBOARD_DAYS = 28;
+export const HABIT_DASHBOARD_OCCASIONS = 7;
+export const HABIT_DASHBOARD_ROWS = 5;
+export const habitDashboardStates = {
+  completed: { label: "Completata", symbol: "✓" },
+  partial: { label: "Parziale", symbol: "◐" },
+  skipped: { label: "Non fatta", symbol: "×" },
+  pending: { label: "Senza esito", symbol: "○" },
+} as const;
+
 export const eventIcons = {
   activity: "Attività", work: "Lavoro", study: "Studio", sport: "Sport",
   rest: "Riposo", meal: "Pasti", people: "Incontri", heart: "Benessere",
+  gaming: "Videogiochi",
 } as const;
 
 export const eventColors = {
@@ -63,12 +75,8 @@ export const eventIconPaths: Record<IconName, string> = {
   meal: "M4 3v6c0 3 6 3 6 0V3M7 3v18M20 21V3c-5 2-5 11 0 11",
   people: "M9 7a3 3 0 1 0-6 0 3 3 0 0 0 6 0ZM2 21v-4a4 4 0 0 1 8 0v4M21 7a3 3 0 1 0-6 0 3 3 0 0 0 6 0Zm-7 14v-4a4 4 0 0 1 8 0v4",
   heart: "M20 5c-3-3-6-1-8 1-2-2-5-4-8-1s-1 7 8 15c9-8 11-12 8-15Z",
+  gaming: "M7 6h10a4 4 0 0 1 4 3l1 7a3 3 0 0 1-5 2l-3-3h-4l-3 3a3 3 0 0 1-5-2l1-7a4 4 0 0 1 4-3Z M7 9v4M5 11h4M16 10h.01M18 12h.01",
 };
-
-// Legenda e colori degli esiti settimanali
-export const weeklyOutcomeLabels = ['Superate', 'Non superate', 'Parziali', 'Senza esito'];
-
-export const weeklyOutcomeColors = ['#3b9f7c', '#dc6b77', '#e3ad4f', '#8994a7'];
 
 // Runtime AI locale: indirizzo, modello e timeout
 export const DEFAULT_SERVER_URL = "http://127.0.0.1:39281";

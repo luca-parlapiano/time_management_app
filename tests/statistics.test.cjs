@@ -8,57 +8,66 @@ const item=(id,date='2026-09-21',patch={})=>({id,title:'Palestra',date,endDate:d
 const archive=(items,history=[])=>({format:'time-planner-backup',version:2,calendar:{...c.emptyCalendar(),items},habits:[],history});
 function record(state,sourceId,date,outcome){const entry=c.occurrences(state.calendar.items,date,date).find(value=>value.sourceId===sourceId);return a.outcomeRecord(state.calendar,entry,outcome);}
 
-test('weekly statistics: groups repeated activities, seven days, outcomes and unrecorded appointments',()=>{
+test('activity statistics group normalized titles and preserve planned days and outcomes',()=>{
  const mon=item('mon'),wed=item('wed','2026-09-23',{title:'  PALESTRA  '}),sun=item('sun','2026-09-27'),next=item('next','2026-09-28');
  const data=archive([mon,wed,sun,next]);
  data.history=[record(data,'mon',mon.date,'completed'),record(data,'wed',wed.date,'partial')];
- const repo=new StatisticsRepository(data),stats=repo.getWeeklyStatistics(mon,'2026-09-24');
- assert.deepEqual([stats.from,stats.through],['2026-09-21','2026-09-27']);
- assert.deepEqual([stats.total,stats.completed,stats.partial,stats.skipped,stats.pending,stats.recorded,stats.completionRate],[3,1,1,0,1,2,50]);
- assert.equal(stats.days.length,7);assert.equal(stats.days[0].completed,1);assert.equal(stats.days[6].pending,1);
- assert.equal(repo.getWeeklyActivities('2026-09-24').length,1);
- assert.equal(repo.getWeeklyStatistics(mon,'2026-09-28').total,1);
+ const repo=new StatisticsRepository(data);
+ assert.equal(repo.getStatisticsActivities().length,1);
+ const days=repo.getActivityYearStatistics('mon',2026,'2026-09-30').days;
+ assert.deepEqual(days.filter(day=>day.total).map(day=>[day.date,day.completed,day.partial,day.pending,day.percent]),[
+  ['2026-09-21',1,0,0,100],['2026-09-23',0,1,0,50],['2026-09-27',0,0,1,null],['2026-09-28',0,0,1,null],
+ ]);
 });
 
-test('weekly statistics: last correction wins globally and deleted activities leave statistics',()=>{
+test('activity statistics apply the last correction before assigning an occurrence to its day',()=>{
  const event=item('work'),data=archive([event]);
  const first=record(data,event.id,event.date,'completed');
  data.history=[first,{...first,id:'correction',outcome:'skipped'},{...first,id:'moved',eventDate:'2026-09-28',outcome:'partial'}];
  const repo=new StatisticsRepository(data);
- assert.equal(repo.getWeeklyStatistics(event,'2026-09-21').total,0);
- const stats=repo.getWeeklyStatistics(event,'2026-09-28');assert.equal(stats.total,1);assert.equal(stats.partial,1);
- const deleted=new StatisticsRepository(archive([],data.history)).getWeeklyStatistics(event,'2026-09-28');
- assert.equal(deleted.total,0);assert.equal(deleted.pending,0);
+ const days=repo.getActivityYearStatistics(event.id,2026,'2026-09-30').days;
+ assert.equal(days.find(day=>day.date===event.date).total,0);
+ assert.deepEqual(days.filter(day=>day.total).map(day=>[day.date,day.total,day.partial,day.percent]),[['2026-09-28',1,1,50]]);
+ const deleted=new StatisticsRepository(archive([],data.history));
+ assert.deepEqual(deleted.getStatisticsActivities(),[]);
 });
 
-test('weekly statistics: shared activity IDs, moved and deleted recurrences, overnight counted on start day',()=>{
+test('activity statistics preserve shared IDs, moved and deleted recurrences, and overnight start dates',()=>{
  const mon=item('mon','2026-09-21',{activityId:'gym',recurrence:{},exceptions:{'2026-09-28':{...item('patch','2026-09-29'),title:'Palestra spostata'}}});
  const wed=item('wed','2026-09-23',{title:'Pesi',activityId:'gym',recurrence:{},exceptions:{'2026-09-30':null}});
  const overnight=item('night','2026-09-27',{start:'23:00',endDate:'2026-09-28',end:'01:00'});
  const repo=new StatisticsRepository(archive([mon,wed,overnight]));
- const stats=repo.getWeeklyStatistics(mon,'2026-09-30');assert.equal(stats.total,1);assert.equal(stats.days[1].pending,1);
- assert.equal(repo.getWeeklyActivities('2026-09-30').length,1);
- assert.equal(repo.getWeeklyStatistics(mon,'2026-09-27').total,3);
+ assert.equal(repo.getStatisticsActivities().length,1);
+ const days=repo.getActivityYearStatistics('mon',2026,'2026-09-30').days;
+ const total=date=>days.find(day=>day.date===date).total;
+ assert.equal(total('2026-09-27'),1);
+ assert.equal(total('2026-09-28'),0);
+ assert.equal(total('2026-09-29'),1);
+ assert.equal(total('2026-09-30'),0);
 });
 
-test('weekly statistics: year and daylight-saving boundaries, invalid dates and empty weeks',()=>{
- const event=item('a','2026-12-31'),repo=new StatisticsRepository(archive([event]));
- const year=repo.getWeeklyStatistics(event,'2027-01-01');
- assert.deepEqual([year.from,year.through],['2026-12-28','2027-01-03']);assert.equal(year.total,1);
- const dst=repo.getWeeklyStatistics(event,'2026-10-25');assert.equal(dst.days.length,7);assert.equal(dst.total,0);assert.equal(dst.completionRate,null);
- assert.deepEqual(dst.days.map(day=>day.date),['2026-10-19','2026-10-20','2026-10-21','2026-10-22','2026-10-23','2026-10-24','2026-10-25']);
- assert.throws(()=>repo.getWeeklyStatistics(event,'2026-02-30'),/Data non valida/);
- assert.throws(()=>repo.getWeeklyActivities('invalid'),/Data non valida/);
+test('activity statistics preserve civil dates across daylight-saving and year boundaries',()=>{
+ const repo=new StatisticsRepository(archive([item('year','2026-12-31'),item('dst','2026-10-25')]));
+ const current=repo.getActivityYearStatistics('year',2026,'2026-12-31');
+ assert.deepEqual(current.days.filter(day=>day.total).map(day=>day.date),['2026-10-25','2026-12-31']);
+ const next=repo.getActivityYearStatistics('year',2027,'2027-01-01');
+ assert.equal(next.days.length,365);
+ assert.equal(next.days.some(day=>day.total),false);
+ const leap=repo.getActivityYearStatistics('year',2024,'2024-12-31');
+ assert.equal(leap.days.length,366);
+ assert.equal(leap.days.filter(day=>day.date==='2024-02-29').length,1);
+ assert.throws(()=>repo.getActivityYearStatistics('year',2026,'2026-02-30'),/Periodo/);
 });
 
-test('weekly statistics: a renamed source retains its own audit without attributing it to another activity',()=>{
+test('activity statistics keep a renamed source audit separate from another activity with its old title',()=>{
  const original=item('renamed'),data=archive([original]);
  const oldRecord=record(data,original.id,original.date,'completed');
  const renamed={...original,title:'Allenamento'},different=item('other','2026-09-23');
  const repo=new StatisticsRepository(archive([renamed,different],[oldRecord]));
- assert.equal(repo.getWeeklyStatistics(renamed,'2026-09-21').completed,1);
- assert.equal(repo.getWeeklyStatistics(different,'2026-09-21').completed,0);
- assert.equal(repo.getWeeklyActivities('2026-09-21').length,2);
+ assert.equal(repo.getStatisticsActivities().length,2);
+ const completed=id=>repo.getActivityYearStatistics(id,2026,'2026-09-30').days.reduce((sum,day)=>sum+day.completed,0);
+ assert.equal(completed('renamed'),1);
+ assert.equal(completed('other'),0);
 });
 
 test('daily statistics: segments preserve event colors and count appointments, not duration',()=>{
@@ -154,7 +163,6 @@ test('statistics include only habits and recurring routines',()=>{
  data.history=[record(data,'routine',routine.date,'completed'),record(data,'fixed',fixed.date,'completed'),record(data,'protected',protectedBlock.date,'skipped'),record(data,'single',single.date,'partial'),record(data,'work-series',calendarSeries.date,'completed')];
  const repo=new StatisticsRepository(data);
  assert.deepEqual(repo.getStatisticsActivities().map(activity=>activity.id),['routine']);
- assert.equal(repo.getWeeklyActivities(routine.date).length,1);
  const daily=repo.getDailyStatistics(routine.date);
  assert.deepEqual([daily.total,daily.completed,daily.skipped,daily.partial],[1,1,0,0]);
 });

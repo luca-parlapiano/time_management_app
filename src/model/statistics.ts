@@ -1,29 +1,4 @@
-import type { CalendarItem, EventColor, EventIcon, ItemOutcome, Occurrence } from "./calendar.js";
-
-export type StatisticsEvent = CalendarItem | Occurrence;
-
-export interface WeeklyDayStatistics {
-  date: string;
-  total: number;
-  completed: number;
-  skipped: number;
-  partial: number;
-  pending: number;
-}
-
-export interface WeeklyActivityStatistics extends Omit<WeeklyDayStatistics, "date"> {
-  from: string;
-  through: string;
-  recorded: number;
-  /** Percentuale degli esiti superati sugli esiti registrati; nulla in assenza di esiti. */
-  completionRate: number | null;
-  days: WeeklyDayStatistics[];
-}
-
-export interface WeeklyActivitySummary {
-  event: CalendarItem;
-  statistics: WeeklyActivityStatistics;
-}
+import type { EventColor, EventIcon, ItemOutcome } from "./calendar.js";
 
 export interface StatisticsEntry {
   date: string;
@@ -66,7 +41,13 @@ export interface StatisticsActivity {
   icon: EventIcon;
 }
 
-export interface ActivityDayStatistics extends WeeklyDayStatistics {
+export interface ActivityDayStatistics {
+  date: string;
+  total: number;
+  completed: number;
+  skipped: number;
+  partial: number;
+  pending: number;
   percent: number | null;
   state: "empty" | "future" | "pending" | "recorded";
 }

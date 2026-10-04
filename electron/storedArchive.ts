@@ -1,3 +1,4 @@
+import { reconcileHabitCompletion } from '../src/domain/habitCompletion.js';
 import { isOccurrenceDate, occurrences, validDate } from '../src/domain/calendar.js';
 import { outcomeRecord, upgradeArchive, validateArchive } from '../src/domain/outcomeArchive.js';
 import type { PlannerArchive } from '../src/model/outcomeArchive.js';
@@ -73,5 +74,5 @@ export function readStoredArchive(value: unknown): PlannerArchive {
     }
   }
   validateArchive(archive);
-  return archive;
+  return reconcileHabitCompletion(archive);
 }

@@ -1,5 +1,27 @@
-import { isFiniteNumber } from "./numbers.js";
+import { isIntegerInRange } from "./numbers.js";
 import { positiveModulo } from "./math.js";
+
+/**
+ * Normalizza un orario digitato in HH:MM: accetta ore sole (9), HMM/HHMM
+ * (930, 1930) e H:MM/HH:MM. Ignora spazi esterni e restituisce undefined
+ * per input vuoti, incompleti o fuori da 00:00–23:59, senza arrotondamenti.
+ */
+export function normalizeTimeInput(value: string): string | undefined {
+  const text = value.trim();
+  let hours: number;
+  let minutes: number;
+  if (/^\d{1,2}$/.test(text)) {
+    hours = Number(text);
+    minutes = 0;
+  } else if (/^\d{3,4}$/.test(text)) {
+    hours = Number(text.slice(0, -2));
+    minutes = Number(text.slice(-2));
+  } else if (/^\d{1,2}:\d{2}$/.test(text)) {
+    [hours, minutes] = text.split(":").map(Number);
+  } else return undefined;
+  if (!isIntegerInRange(hours, 0, 23) || !isIntegerInRange(minutes, 0, 59)) return undefined;
+  return toTime(hours * 60 + minutes);
+}
 
 /**
  * Restituisce il saluto italiano per un’ora locale (0–23).
@@ -9,38 +31,6 @@ export function greetingForHour(hour: number): "Buongiorno" | "Buon pomeriggio" 
   if (hour >= 5 && hour < 12) return "Buongiorno";
   if (hour >= 12 && hour < 18) return "Buon pomeriggio";
   return "Buonasera";
-}
-
-/**
- * Formatta un orario con AM/PM e normalizza le ore nel ciclo di 24 ore.
- * Restituisce la stringa originale se ore o minuti non sono numeri finiti.
- * Non valida l’intervallo dei minuti: usare orari già validati.
- * @example formatTimeWithMeridiem("13:05") // "1:05 PM"
- */
-export function formatTimeWithMeridiem(time: string) {
-  const [rawHours, rawMinutes] = time.split(":");
-  const hours = Number(rawHours);
-  const minutes = Number(rawMinutes);
-
-  if (!isFiniteNumber(hours) || !isFiniteNumber(minutes)) {
-    return time;
-  }
-
-  const normalizedDayHours = positiveModulo(hours, 24);
-  const period = normalizedDayHours >= 12 ? "PM" : "AM";
-  const normalizedHours =
-    normalizedDayHours % 12 === 0 ? 12 : normalizedDayHours % 12;
-  const normalizedMinutes = minutes.toString().padStart(2, "0");
-
-  return `${normalizedHours}:${normalizedMinutes} ${period}`;
-}
-
-/**
- * Formatta inizio e fine con AM/PM, separandoli con un trattino.
- * Non calcola la durata e non verifica l’ordine cronologico degli orari.
- */
-export function formatTimeRange(start: string, end: string) {
-  return `${formatTimeWithMeridiem(start)} - ${formatTimeWithMeridiem(end)}`;
 }
 
 /**

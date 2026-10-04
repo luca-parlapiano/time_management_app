@@ -1,34 +1,70 @@
 import { ACTIVITY_PARTIAL_WEIGHT } from "../constants.js";
-import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry, StatisticsEvent, WeeklyActivityStatistics, WeeklyActivitySummary, WeeklyDayStatistics } from "../model/statistics.js";
+import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry } from "../model/statistics.js";
 import { isIntegerInRange } from "../utils/numbers.js";
 import { today } from "../utils/dates.js";
 import { percentage } from "../utils/math.js";
-import { addDays, eventAppearance, isProgressActivity, occurrences, validDate, weekStart } from '../domain/calendar.js';
-import { latestOutcomes, progressOutcomeHistory } from '../domain/outcomeArchive.js';
+import { addDays, eventAppearance, isProgressActivity, occurrences, validDate } from '../domain/calendar.js';
+import { indexHabitOutcomes } from '../domain/habitOutcomeIndex.js';
+import { habitCompletionDate } from '../domain/habitCompletion.js';
+import { habitJourneyProgress, habitTimeline } from '../domain/habitTimeline.js';
 import type { CalendarItem } from '../model/calendar.js';
 import type { PlannerArchive } from '../model/outcomeArchive.js';
+import { habitDashboard } from '../domain/habitDashboard.js';
 
 const normalizedTitle = (title: string) => title.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('it');
 const occurrenceKey = (sourceId: string, date: string) => JSON.stringify([sourceId, date]);
 
-/** Read model between the persisted archive and the UI. Never writes derived totals. */
+/** Calcola le statistiche dallo snapshot già preparato da DBRepository, senza normalizzarlo né salvare totali derivati. */
 export class StatisticsRepository {
+  private readonly habitOutcomes;
+  private readonly habitsById;
   private readonly latest;
   private readonly items;
   private readonly dailyCache = new Map<string, DailyStatistics>();
   constructor(private readonly archive: PlannerArchive) {
-    this.items = archive.calendar.items.filter(isProgressActivity);
-    this.latest = latestOutcomes(progressOutcomeHistory(archive.calendar, archive.history));
+    this.habitOutcomes = indexHabitOutcomes(archive.history);
+    this.habitsById = new Map((archive.habits ?? []).map(habit => [habit.id, habit]));
+    this.items = this.archive.calendar.items.filter(isProgressActivity);
+    const sources = new Map(this.items.map(item => [item.id, item]));
+    this.latest = this.habitOutcomes.latest.filter(record => {
+      const source = sources.get(record.sourceId);
+      return source && (!source.habitClosedOn || record.eventDate <= source.habitClosedOn);
+    });
   }
 
-  // Match the existing sidebar semantics: one activity per shared identity or normalized title.
-  private group(event: StatisticsEvent): CalendarItem[] {
-    const sourceId = 'sourceId' in event ? event.sourceId : event.id;
-    const source = this.items.find(item => item.id === sourceId);
-    if (!source) return [];
-    const ids = new Set([sourceId]);
-    const groups = new Set(source?.activityId ? [source.activityId] : []);
-    const names = new Set([normalizedTitle(source?.title ?? event.title)]);
+  /** Cerca l’abitudine nello snapshot corrente; rifiuta identità inesistenti o eliminate. */
+  private requireHabit(id: string) {
+    const habit = this.habitsById.get(id);
+    if (!habit) throw new Error("Abitudine non trovata.");
+    return habit;
+  }
+
+  /** Legge la chiusura dall’indice condiviso; restituisce undefined per una serie in corso. */
+  getHabitCompletionDate(id: string) {
+    return habitCompletionDate(this.habitOutcomes, this.requireHabit(id));
+  }
+
+  /** Restituisce gli step confermati dell’abitudine, compresi gli esiti di occasioni rimosse. */
+  getHabitProgress(id: string) {
+    return habitJourneyProgress(this.habitOutcomes, this.requireHabit(id));
+  }
+
+  /** Ricostruisce il periodo civile inclusivo dall’indice condiviso; rifiuta intervalli non validi. */
+  getHabitTimeline(id: string, from: string, through: string) {
+    if (!validDate(from) || !validDate(through) || from > through) throw new Error("Periodo del percorso non valido.");
+    return habitTimeline(this.archive.calendar, this.habitOutcomes, this.requireHabit(id), from, through);
+  }
+
+  /** Restituisce traguardi e occasioni recenti per data/orario civili, senza scritture. */
+  getHabitDashboard(date: string, time: string) {
+    return habitDashboard(this.archive, this.habitOutcomes, date, time);
+  }
+
+  /** Raggruppa una fonte monitorata con quelle collegate per identità o titolo normalizzato, anche transitivamente. */
+  private group(source: CalendarItem): CalendarItem[] {
+    const ids = new Set([source.id]);
+    const groups = new Set(source.activityId ? [source.activityId] : []);
+    const names = new Set([normalizedTitle(source.title)]);
     let changed = true;
     while (changed) {
       changed = false;
@@ -45,42 +81,6 @@ export class StatisticsRepository {
       }
     }
     return this.items.filter(item => ids.has(item.id));
-  }
-
-  getWeeklyStatistics(event: StatisticsEvent, dailyDate: string): WeeklyActivityStatistics {
-    if (!validDate(dailyDate)) throw new Error('Data non valida per le statistiche settimanali.');
-    const from = weekStart(dailyDate);
-    const through = addDays(from, 6);
-    const members = this.group(event);
-    const sourceId = 'sourceId' in event ? event.sourceId : event.id;
-    const sourceIds = new Set([sourceId, ...members.map(item => item.id)]);
-    const activityIds = new Set(members.map(item => item.activityId ?? item.id));
-    if ('activityId' in event && event.activityId) activityIds.add(event.activityId);
-    const names = new Set(members.length ? members.map(item => normalizedTitle(item.title)) : [normalizedTitle(event.title)]);
-    const knownSources = new Set(this.items.map(item => item.id));
-    const entries = new Map<string, StatisticsEntry>();
-    for (const item of occurrences(members, from, through)) {
-      // An overnight appointment belongs to its start day, and is counted once.
-      if (item.date >= from && item.date <= through) {
-        entries.set(occurrenceKey(item.sourceId, item.occurrenceDate), {date: item.date, outcome: item.outcome});
-      }
-    }
-    for (const record of this.latest) {
-      if (!sourceIds.has(record.sourceId) && !activityIds.has(record.activityId) && !( !knownSources.has(record.sourceId) && names.has(normalizedTitle(record.title)))) continue;
-      const key = occurrenceKey(record.sourceId, record.occurrenceDate);
-      // The saved event date is authoritative, even after moving or deleting an appointment.
-      entries.delete(key);
-      if (record.eventDate >= from && record.eventDate <= through) entries.set(key, {date: record.eventDate, outcome: record.outcome});
-    }
-    const days: WeeklyDayStatistics[] = Array.from({length: 7}, (_, index) => ({date: addDays(from, index), total: 0, completed: 0, skipped: 0, partial: 0, pending: 0}));
-    for (const entry of entries.values()) {
-      const day = days.find(day => day.date === entry.date)!;
-      day.total++;
-      day[entry.outcome ?? 'pending']++;
-    }
-    const totals = days.reduce((sum, day) => ({total: sum.total + day.total, completed: sum.completed + day.completed, skipped: sum.skipped + day.skipped, partial: sum.partial + day.partial, pending: sum.pending + day.pending}), {total: 0, completed: 0, skipped: 0, partial: 0, pending: 0});
-    const recorded = totals.completed + totals.skipped + totals.partial;
-    return {...totals, from, through, recorded, completionRate: recorded ? Math.round(percentage(totals.completed, recorded)) : null, days};
   }
 
   getDailyStatistics(date: string): DailyStatistics {
@@ -174,15 +174,4 @@ export class StatisticsRepository {
     return {activity, year, days: [...days.values()]};
   }
 
-  getWeeklyActivities(dailyDate: string): WeeklyActivitySummary[] {
-    if (!validDate(dailyDate)) throw new Error('Data non valida per le statistiche settimanali.');
-    const seen = new Set<string>();
-    const result: WeeklyActivitySummary[] = [];
-    for (const event of this.items) {
-      if (seen.has(event.id)) continue;
-      this.group(event).forEach(item => seen.add(item.id));
-      result.push({event, statistics: this.getWeeklyStatistics(event, dailyDate)});
-    }
-    return result;
-  }
 }

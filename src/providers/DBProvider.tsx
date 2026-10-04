@@ -1,3 +1,4 @@
+import { reconcileHabitCompletion } from "../domain/habitCompletion";
 import { StatisticsRepository } from "../repository/StatisticsRepository";
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -48,7 +49,8 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     try {
       await run(async () => {
         const base = current.current!;
-        const next = await repository.save({ archive: update(base.archive), expectedRevision: base.revision, replace });
+        const archive = reconcileHabitCompletion(update(base.archive), replace ? undefined : base.archive);
+        const next = await repository.save({ archive, expectedRevision: base.revision, replace });
         current.current = next; setSnapshot(next);
       }, {mode:'local', scope:'database:save', message:'Salvataggio…', ...loading});
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Salvataggio non riuscito.'); throw cause; }
@@ -68,11 +70,13 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
   }, [repository, run]);
   const statistics = useMemo(() => new StatisticsRepository(snapshot?.archive ?? emptyArchive), [snapshot?.archive]);
   const value = useMemo<DBContextValue>(() => ({
+    getHabitCompletionDate: id => statistics.getHabitCompletionDate(id),
+    getHabitProgress: id => statistics.getHabitProgress(id),
+    getHabitTimeline: (id, from, through) => statistics.getHabitTimeline(id, from, through),
+    getHabitDashboard: (date, time) => statistics.getHabitDashboard(date, time),
     getStatisticsActivities: () => statistics.getStatisticsActivities(),
     getActivityYearStatistics: (id, year, referenceDate) => statistics.getActivityYearStatistics(id, year, referenceDate),
     getDailyStatistics: date => statistics.getDailyStatistics(date),
-    getWeeklyStatistics: (event, date) => statistics.getWeeklyStatistics(event, date),
-    getWeeklyActivities: date => statistics.getWeeklyActivities(date),
     palette, paletteError,
     changePalette: async value => {
       try { await repository.savePalette(value); setPalette(value); setPaletteError(false); }
@@ -86,6 +90,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     recordOutcome: (item, outcome, loading) => mutate(archive => {
       const source = archive.calendar.items.find(entry => entry.id === item.sourceId);
       if (!source || !isProgressActivity(source)) throw new Error("Gli esiti sono disponibili solo per abitudini e routine ricorrenti.");
+      if (source.habitClosedOn && item.date > source.habitClosedOn) throw new Error("La serie è già completata. Usa Ripeti serie per iniziare un nuovo percorso.");
       return {...archive,
         calendar: setOccurrenceOutcome(archive.calendar, item.sourceId, item.occurrenceDate, outcome),
         history: [...archive.history, outcomeRecord(archive.calendar, item, outcome)],

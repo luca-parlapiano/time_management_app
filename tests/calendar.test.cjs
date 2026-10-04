@@ -415,7 +415,10 @@ test('cover photo choice persists and updates linked series and exceptions witho
 
 const archives = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/outcomeArchive.js'));
 const habits = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habits.js'));
-const { habitJourneyProgress, habitTimeline, nextHabitOccurrence } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habitTimeline.js'));
+const { habitJourneyProgress: indexedProgress, habitTimeline: indexedTimeline, nextHabitOccurrence } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habitTimeline.js'));
+const { indexHabitOutcomes } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habitOutcomeIndex.js'));
+const habitJourneyProgress = (history, habit) => indexedProgress(indexHabitOutcomes(history), habit);
+const habitTimeline = (calendar, history, habit, from, through) => indexedTimeline(calendar, indexHabitOutcomes(history), habit, from, through);
 const habitDraft = (patch={}) => ({ title:'Leggere',motivation:'Dopo cena',icon:'study',color:'teal',stepTarget:5,startsOn:'2026-09-28',weekdays:[0,2,4],start:'21:00',durationMinutes:20,...patch });
 test('habit creation links weekly occasions atomically and preserves their identity', () => {
   const draft = habitDraft();
@@ -450,15 +453,15 @@ test('habit collision identifies the occupied calendar event without changing it
   });
   assert.deepEqual(occupied, before);
 });
-test('habit journey advances only on latest completed outcomes and starts a new chapter', () => {
+test('habit journey advances only on latest completed outcomes and stops at its target', () => {
   const created = habits.createHabit(c.emptyCalendar(), [], habitDraft({weekdays:[0],stepTarget:2}), {habitId:'habit-reading'});
   const occurrences = c.occurrences(created.calendar.items,'2026-09-28','2026-10-19');
   const first = archives.outcomeRecord(created.calendar,occurrences[0],'completed');
   const secondPartial = archives.outcomeRecord(created.calendar,occurrences[1],'partial');
   const third = archives.outcomeRecord(created.calendar,occurrences[2],'completed');
-  assert.deepEqual(habitJourneyProgress([first,secondPartial,third],created.habits[0]),{completed:2,currentStep:2,chapter:1,milestonesReached:1,target:2});
+  assert.deepEqual(habitJourneyProgress([first,secondPartial,third],created.habits[0]),{completed:2,currentStep:2,milestonesReached:1,target:2});
   const secondCompleted = archives.outcomeRecord(created.calendar,occurrences[1],'completed');
-  assert.deepEqual(habitJourneyProgress([first,secondPartial,third,secondCompleted],created.habits[0]),{completed:3,currentStep:1,chapter:2,milestonesReached:1,target:2});
+  assert.deepEqual(habitJourneyProgress([first,secondPartial,third,secondCompleted],created.habits[0]),{completed:3,currentStep:2,milestonesReached:1,target:2});
   const firstCorrected = archives.outcomeRecord(created.calendar,occurrences[0],'skipped');
   assert.equal(habitJourneyProgress([first,secondPartial,third,secondCompleted,firstCorrected],created.habits[0]).completed,2);
 });
@@ -559,4 +562,82 @@ test('import accepts only the current backup and rejects foreign formats and unk
   for (const patch of [{ outcome: 'wrong' }, { eventDate: '2026-02-30' }, { recordedAt: 'yesterday' }]) {
     assert.throws(() => archives.validateArchive({ ...backup, history: [{ ...record, ...patch }] }), /Storico/);
   }
+});
+
+const { habitCompletionDate: indexedCompletion, reconcileHabitCompletion, repeatHabitDraft } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habitCompletion.js'));
+const habitCompletionDate = (history, habit) => indexedCompletion(indexHabitOutcomes(history), habit);
+const { StatisticsRepository: CompletionStatistics } = require(join(process.env.CALENDAR_TEST_BUILD, 'repository/StatisticsRepository.js'));
+function completedHabitFixture(stepTarget = 12, recorded = stepTarget) {
+  const created = habits.createHabit(c.emptyCalendar(), [], habitDraft({ stepTarget, weekdays: [0,1,2,3,4] }), { habitId: 'finite-habit' });
+  const archive = { format: 'time-planner-backup', version: 2, ...created, history: [] };
+  const entries = c.occurrences(archive.calendar.items, '2026-09-28', '2026-11-30').slice(0, recorded);
+  for (const entry of entries) {
+    archive.history.push(archives.outcomeRecord(archive.calendar, entry, 'completed'));
+    archive.calendar = c.setOccurrenceOutcome(archive.calendar, entry.sourceId, entry.occurrenceDate, 'completed');
+  }
+  return { archive, entries };
+}
+test('the twelfth completion closes every weekday, removes future denominators and survives export', () => {
+  const { archive, entries } = completedHabitFixture();
+  const before = structuredClone(archive);
+  const closed = reconcileHabitCompletion(archive);
+  const end = entries.at(-1).date;
+  assert.equal(habitCompletionDate(closed.history, closed.habits[0]), end);
+  assert.equal(c.occurrences(closed.calendar.items, c.addDays(end, 1), '2027-12-31').length, 0);
+  assert.equal(c.occurrences(closed.calendar.items, '2026-09-28', end).length, 12);
+  const stats = new CompletionStatistics(closed);
+  assert.equal(stats.getDailyStatistics(c.addDays(end, 1)).total, 0);
+  assert.equal(stats.getDailyStatistics(end).completed, 1);
+  assert.equal(stats.getHabitDashboard(c.addDays(end, 1), '23:00').totalHabits, 0);
+  assert.deepEqual(reconcileHabitCompletion(archives.parseArchive(archives.exportArchive(closed))), JSON.parse(JSON.stringify(closed)));
+  assert.deepEqual(archive, before);
+});
+test('legacy completions beyond the target stay in audit but do not extend the closed series', () => {
+  const { archive, entries } = completedHabitFixture(6, 20);
+  const closed = reconcileHabitCompletion(archive);
+  assert.equal(closed.history.length, 20);
+  assert.equal(habitCompletionDate(closed.history, closed.habits[0]), entries[5].date);
+  assert.equal(c.occurrences(closed.calendar.items, entries[6].date, '2027-12-31').length, 0);
+  assert.equal(new CompletionStatistics(closed).getDailyStatistics(entries[6].date).total, 0);
+  assert.equal(habitJourneyProgress(closed.history, closed.habits[0]).currentStep, 6);
+});
+test('repeat creates independent progress, preserves the closed series and allows its freed time slots', () => {
+  const { archive } = completedHabitFixture(1);
+  const closed = reconcileHabitCompletion(archive);
+  const draft = repeatHabitDraft(closed, closed.habits[0], '2026-09-28');
+  assert.equal(draft.startsOn, '2026-09-29');
+  const repeated = habits.createHabit(closed.calendar, closed.habits, draft, { habitId: 'second-series' });
+  const next = reconcileHabitCompletion({ ...closed, ...repeated });
+  archives.validateArchive(next);
+  assert.equal(habitJourneyProgress(next.history, next.habits[1]).currentStep, 0);
+  assert.equal(habitJourneyProgress(next.history, next.habits[0]).currentStep, 1);
+  assert.deepEqual(next.history, archive.history);
+  assert.ok(c.occurrences(next.calendar.items, '2026-09-29', '2026-10-30').every(entry => entry.habitId === 'second-series'));
+  assert.throws(() => repeatHabitDraft(next, next.habits[1], '2026-10-01'), /solo un’abitudine completata/);
+});
+test('correcting a completion reopens the original schedule without deleting its history', () => {
+  const { archive, entries } = completedHabitFixture(1);
+  const closed = reconcileHabitCompletion(archive);
+  const corrected = reconcileHabitCompletion({ ...closed,
+    calendar: c.setOccurrenceOutcome(closed.calendar, entries[0].sourceId, entries[0].occurrenceDate, 'partial'),
+    history: [...closed.history, archives.outcomeRecord(closed.calendar, entries[0], 'partial')],
+  });
+  assert.equal(habitCompletionDate(corrected.history, corrected.habits[0]), undefined);
+  assert.ok(corrected.calendar.items.every(item => item.habitClosedOn === undefined));
+  assert.ok(c.occurrences(corrected.calendar.items, '2026-10-01', '2026-11-30').length > 0);
+  assert.equal(corrected.history.length, 2);
+});
+test('closure uses moved event dates and suppresses unrecorded exceptions after the target', () => {
+  const { archive, entries } = completedHabitFixture(1);
+  const moved = entries[0];
+  const source = archive.calendar.items.find(item => item.id === moved.sourceId);
+  archive.calendar = c.putItem(archive.calendar, { ...source, date: '2026-09-27', endDate: '2026-09-27' }, user, target(source.id, moved.occurrenceDate));
+  archive.history.push({ ...archives.outcomeRecord(archive.calendar, moved, 'completed'), eventDate: '2026-09-27' });
+  const nextSource = archive.calendar.items.find(item => item.id !== source.id);
+  archive.calendar = c.putItem(archive.calendar, { ...nextSource, date: '2026-11-01', endDate: '2026-11-01' }, user, target(nextSource.id, nextSource.date));
+  const closed = reconcileHabitCompletion(archive);
+  assert.equal(habitCompletionDate(closed.history, closed.habits[0]), '2026-09-27');
+  const visible = c.occurrences(closed.calendar.items, '2026-09-27', '2027-01-01');
+  assert.equal(visible.length, 1);
+  assert.equal(visible[0].occurrenceDate, moved.occurrenceDate);
 });
