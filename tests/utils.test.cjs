@@ -6,6 +6,68 @@ const {isFiniteNumber, isPositiveNumber, isIntegerInRange, isNonNegativeSafeInte
 const {clamp, percentage, positiveModulo} = utils('math');
 const {toMinutes, toTime, formatTimeWithMeridiem, greetingForHour} = utils('time');
 const {validDate, addDays, weekStart} = utils('dates');
+const {agendaTimePosition} = utils('agendaTimeline');
+const {buildCalendarTimeline, calendarTimelineOffset} = utils('calendarTimeline');
+
+test('compact hourly grid preserves short headers without inflating a nine-hour event', () => {
+  const ranges = [{start:540,end:1080},{start:1080,end:1140},{start:1140,end:1160},{start:1160,end:1165}];
+  const timeline = buildCalendarTimeline(480,1200,ranges);
+  const offset = minute => calendarTimelineOffset(minute,timeline);
+  assert.equal(offset(1080)-offset(540),270);
+  for (const range of ranges) assert.ok(offset(range.end)-offset(range.start)>=64);
+  assert.ok(timeline.height<600);
+  assert.ok(Math.abs(offset(720)-120)<1e-9);
+  assert.ok(offset(1020)>offset(540)&&offset(1020)<offset(1080));
+  assert.equal(offset(0),0);
+  assert.equal(offset(1440),timeline.height);
+});
+
+test('compact hourly scale is shared across days and independent of event ordering or duplicates', () => {
+  const ranges = [{start:540,end:1080},{start:570,end:575},{start:600,end:660},{start:590,end:605}];
+  const timeline = buildCalendarTimeline(480,1200,ranges);
+  assert.deepEqual(buildCalendarTimeline(480,1200,[...ranges].reverse()),timeline);
+  assert.deepEqual(buildCalendarTimeline(480,1200,[...ranges,...ranges]),timeline);
+  for (const range of ranges) {
+    assert.ok(calendarTimelineOffset(range.end,timeline)-calendarTimelineOffset(range.start,timeline)>=64);
+  }
+  for (let minute=481;minute<=1200;minute++) {
+    assert.ok(calendarTimelineOffset(minute,timeline)>calendarTimelineOffset(minute-1,timeline));
+  }
+});
+
+test('compact hourly scale handles empty days, midnight and clipped multi-day events', () => {
+  const empty = buildCalendarTimeline(0,1440,[]);
+  assert.equal(empty.height,720);
+  assert.equal(calendarTimelineOffset(720,empty),360);
+  const night = buildCalendarTimeline(0,1440,[{start:-60,end:30},{start:1435,end:1500},{start:60,end:60}]);
+  assert.equal(calendarTimelineOffset(30,night),64);
+  assert.equal(night.height-calendarTimelineOffset(1435,night),64);
+});
+
+test('agenda clock follows the active card despite unequal event durations and card heights', () => {
+  const slots = [
+    {start:540,end:1080,top:30,bottom:170},
+    {start:1080,end:1140,top:178,bottom:318},
+    {start:1140,end:1160,top:326,bottom:526},
+  ];
+  const position = time => agendaTimePosition(toMinutes(time),480,1200,556,slots);
+  assert.equal(position('13:30'),100);
+  assert.equal(position('18:30'),248);
+  assert.equal(position('19:10'),426);
+  assert.ok(position('17:00') < slots[0].bottom);
+  assert.equal(position('08:00'),0);
+  assert.equal(position('20:00'),556);
+});
+
+test('agenda clock interpolates idle time, resizes with cards and handles empty days', () => {
+  const slots = [{start:540,end:600,top:30,bottom:130},{start:660,end:720,top:138,bottom:278}];
+  assert.equal(agendaTimePosition(630,480,1200,308,slots),134);
+  assert.equal(agendaTimePosition(630,480,1200,616,slots.map(slot=>({...slot,top:slot.top*2,bottom:slot.bottom*2}))),268);
+  assert.equal(agendaTimePosition(840,480,1200,200,[]),100);
+  assert.equal(agendaTimePosition(0,480,1200,200,[]),0);
+  assert.equal(agendaTimePosition(1440,480,1200,200,[]),200);
+  assert.equal(agendaTimePosition(15,0,1440,140,[{start:0,end:30,top:20,bottom:120}]),70);
+});
 
 test('numeric validation rejects coercion, non-finite values and unsafe revisions', () => {
   for (const value of ['12', '', null, undefined, true, {}, NaN, Infinity, -Infinity]) {

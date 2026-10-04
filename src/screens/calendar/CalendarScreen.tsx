@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { RoundButton } from "../../components/ui/RoundButton";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { addDays, displayDate, today, weekStart } from "../../domain/calendar";
@@ -17,10 +17,10 @@ interface CalendarScreenProps {
 /** Schermata settimanale del calendario e relativi comandi di navigazione. */
 export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent }: CalendarScreenProps) {
   const { state, saving, recordOutcome } = useDB();
+  const [view, setView] = useState<"agenda" | "timeline">("agenda");
   const addItem = useCallback((date: string) => onOpenEditor(date, undefined, "fixed"), [onOpenEditor]);
   const addActivity = useCallback(() => onOpenEditor(week === weekStart(today()) ? today() : week, undefined, "fixed"), [onOpenEditor, week]);
   const openItem = useCallback((item: Occurrence) => onOpenEvent(item, false), [onOpenEvent]);
-  const deleteItem = useCallback((item: Occurrence) => onOpenEvent(item, true), [onOpenEvent]);
   return (
     <section id="panel-calendar" className="app-screen" role="tabpanel" aria-labelledby="tab-calendar" tabIndex={0} hidden={!active}>
       <header className="calendar-header">
@@ -30,6 +30,10 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
           <p aria-live="polite">{displayDate(week, { year: "numeric" })} – {displayDate(addDays(week, 6), { year: "numeric" })}</p>
         </div>
         <div className="calendar-header-actions">
+          <div className="calendar-view-switch" role="group" aria-label="Vista calendario">
+            <StandardButton variant="ghost" aria-pressed={view === "agenda"} onClick={() => setView("agenda")}>Agenda</StandardButton>
+            <StandardButton variant="ghost" aria-pressed={view === "timeline"} onClick={() => setView("timeline")}>Griglia oraria</StandardButton>
+          </div>
           <nav className="week-navigation" aria-label="Navigazione settimane">
             <StandardButton variant="secondary" aria-label="Settimana precedente" onClick={() => onWeekChange(addDays(week, -7))}>← Precedente</StandardButton>
             <StandardButton variant="secondary" onClick={() => onWeekChange(weekStart(today()))}>Oggi</StandardButton>
@@ -40,12 +44,12 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
       </header>
       <div className="screen-content calendar-screen-content">
         <WeeklyCalendar
+          view={view}
           state={state}
           week={week}
           disabled={saving}
           onAdd={addItem}
           onEdit={openItem}
-          onDelete={deleteItem}
           onOutcome={recordOutcome}
         />
       </div>

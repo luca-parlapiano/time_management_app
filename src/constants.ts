@@ -8,6 +8,10 @@ import type { ItemOutcome, ItemKind, EventIcon as IconName } from "./model/calen
 export const DAY = 86_400_000;
 
 // Calendario: etichette, icone e colori
+/** Altezza minima di uno slot nella griglia, inclusi i 4 px di separazione fra eventi. */
+export const CALENDAR_EVENT_SLOT_MIN_HEIGHT = 64;
+/** Densità di base della griglia compatta: 30 px per ora, prima dello spazio minimo per gli header. */
+export const CALENDAR_TIMELINE_PIXELS_PER_MINUTE = 0.5;
 export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto", partial: "Parziale" } as const satisfies Record<ItemOutcome, string>;
 
 export const eventIcons = {

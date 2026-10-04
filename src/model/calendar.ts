@@ -56,6 +56,23 @@ export interface CalendarState {
   profile: CalendarProfile | null;
 }
 
+/** Intervallo di un evento nella giornata e limiti verticali della sua scheda in pixel. */
+export interface AgendaTimeSlot {
+  start: number;
+  end: number;
+  top: number;
+  bottom: number;
+}
+
+/** Intervallo civile, espresso in minuti dalla mezzanotte, da rappresentare nella griglia. */
+export interface CalendarTimeRange { start: number; end: number }
+
+/** Scala verticale condivisa dai giorni: punti di cambio densità e altezza minima in pixel. */
+export interface CalendarTimeline {
+  points: { minute: number; offset: number }[];
+  height: number;
+}
+
 export interface EditTarget { sourceId: string; occurrenceDate: string; scope: "occurrence" | "series"; applyAppearanceToSeries?: boolean; linkedSourceIds?: string[] }
 
 export interface EditAccess { actor: "user" | "engine" | "ai"; unlocked?: boolean }
