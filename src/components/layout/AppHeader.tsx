@@ -9,6 +9,7 @@ const sectionSummaries: Record<ScreenId, string> = {
   habits: "Il percorso delle tue abitudini",
   calendar: "I tuoi impegni nel tempo",
   statistics: "I tuoi progressi",
+  trophies: "I tuoi traguardi",
   settings: "Le tue preferenze",
 };
 

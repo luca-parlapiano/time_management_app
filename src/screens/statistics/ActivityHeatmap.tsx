@@ -1,16 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { useDB } from '../../hooks/useDB';
 import { eventColors, weekdayLabels } from '../../constants';
 import { dateNumber, displayDate, today } from '../../utils/dates';
-import type { ActivityDayStatistics } from '../../model/statistics.js';
-import { EventIcon } from '../../icons/EventIcon';
+import type { ActivityDayStatistics, ActivityYearStatistics } from '../../model/statistics.js';
 import { CalendarDialog } from '../../components/ui/CalendarDialog';
 
-interface ActivityHeatmapProps { year: number }
+interface ActivityHeatmapProps { statistics: ActivityYearStatistics }
 
 /** Descrive la cella senza affidare il significato al solo colore. */
-function dayDescription(day: ActivityDayStatistics): string {
+export function dayDescription(day: ActivityDayStatistics): string {
   if (day.state === 'empty') return 'Non pianificata';
   if (day.state === 'future') return `${day.total} occorrenze future`;
   if (day.state === 'pending') return `${day.total} occorrenze · Nessun esito`;
@@ -18,21 +16,12 @@ function dayDescription(day: ActivityDayStatistics): string {
 }
 
 /** Griglia mensile degli esiti di un’attività; i calcoli arrivano dal Provider. */
-export function ActivityHeatmap({year}: ActivityHeatmapProps) {
-  const {getStatisticsActivities, getActivityYearStatistics} = useDB();
-  const activities = useMemo(() => getStatisticsActivities(), [getStatisticsActivities]);
-  const [chosenId, setChosenId] = useState('');
+export function ActivityHeatmap({statistics}: ActivityHeatmapProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const activity = activities.find(item => item.id === chosenId) ?? activities[0];
+  const {activity, year} = statistics;
   const referenceDate = today();
-  const statistics = useMemo(() => activity ? getActivityYearStatistics(activity.id, year, referenceDate) : null, [activity, year, referenceDate, getActivityYearStatistics]);
-  if (!activity || !statistics) return <p>Nessuna attività disponibile. Crea un’attività nel calendario per iniziare.</p>;
   const selected = statistics.days.find(day => day.date === selectedDate);
   return <section className="activity-heatmap" aria-label="Statistiche per attività" style={{'--activity-color': eventColors[activity.color].value} as CSSProperties}>
-    <div className="activity-heatmap-heading">
-      <label>Attività<select value={activity.id} onChange={event => {setChosenId(event.target.value); setSelectedDate(null);}}>{activities.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
-      <span className="activity-heatmap-title"><EventIcon icon={activity.icon} /><strong>{activity.title}</strong></span>
-    </div>
     <p className="annual-hint">Ogni quadrato è un giorno. Superata = 100%, parziale = 50%, non superata = 0%. Con più occorrenze mostriamo la media sul totale pianificato, contando quelle senza esito come zero. I giorni futuri non mostrano risultati.</p>
     <div className="activity-heatmap-legend" aria-label="Legenda">
       <span><i className="heatmap-swatch empty" />Non pianificata</span>

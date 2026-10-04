@@ -171,7 +171,14 @@ export class StatisticsRepository {
       day.state = day.date > referenceDate ? 'future' : day.pending === day.total ? 'pending' : 'recorded';
       if (day.state === 'recorded') day.percent = percentage(day.completed + day.partial * ACTIVITY_PARTIAL_WEIGHT, day.total);
     }
-    return {activity, year, days: [...days.values()]};
+    const elapsedDays = [...days.values()].filter(day => day.date <= referenceDate && day.total > 0);
+    return {
+      activity, year, days: [...days.values()],
+      completed: elapsedDays.reduce((total, day) => total + day.completed, 0),
+      partial: elapsedDays.reduce((total, day) => total + day.partial, 0),
+      skipped: elapsedDays.reduce((total, day) => total + day.skipped, 0),
+      recentDays: elapsedDays.slice(-14),
+    };
   }
 
 }

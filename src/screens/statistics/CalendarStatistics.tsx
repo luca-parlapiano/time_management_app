@@ -1,4 +1,4 @@
-import { ActivityHeatmap } from "./ActivityHeatmap";
+import { ActivityStatisticsList } from "./ActivityStatisticsList";
 import { useDB } from "../../hooks/useDB";
 import { DailyDoughnut } from "./DailyDoughnut";
 import type { CSSProperties } from "react";
@@ -15,7 +15,7 @@ interface CalendarStatisticsProps { state: CalendarState; history: OutcomeRecord
 
 function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) {
   const { getDailyStatistics } = useDB();
-  const [view, setView] = useState<"overview" | "activity">("overview");
+  const [view, setView] = useState<"overview" | "activity">("activity");
   const [year, setYear] = useState(() => Number(today().slice(0, 4)));
   const [showHistory, setShowHistory] = useState(false);
   const [historyLimit, setHistoryLimit] = useState(50);
@@ -43,8 +43,8 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
 
   return <div className="annual-statistics">
     <div className="statistics-views" role="group" aria-label="Vista statistiche">
+      <StandardButton variant="secondary" type="button" aria-pressed={view === "activity"} onClick={() => setView("activity")}>Attività</StandardButton>
       <StandardButton variant="secondary" type="button" aria-pressed={view === "overview"} onClick={() => setView("overview")}>Panoramica</StandardButton>
-      <StandardButton variant="secondary" type="button" aria-pressed={view === "activity"} onClick={() => setView("activity")}>Per attività</StandardButton>
     </div>
     <div className="annual-toolbar">
       <nav className="annual-navigation" aria-label="Navigazione anni">
@@ -60,7 +60,7 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
         <StandardButton variant="secondary" type="button" onClick={() => { setHistoryLimit(50); setShowHistory(true); }}>Registro esiti</StandardButton>
       </div>}
     </div>
-    {view === "activity" ? <ActivityHeatmap year={year} /> : <>
+    {view === "activity" ? <ActivityStatisticsList year={year} /> : <>
     <p className="annual-hint">Le statistiche considerano soltanto abitudini e routine ricorrenti. Appuntamenti fissi, tempo protetto ed eventi singoli non vengono conteggiati.</p>
     <div className="annual-matrix-wrapper">
       <table className="annual-matrix annual-planner" aria-label={`Calendario annuale ${year}`}>

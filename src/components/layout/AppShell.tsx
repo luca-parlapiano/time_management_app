@@ -5,6 +5,7 @@ import { useLoading } from "../../hooks/useLoading";
 import type { ItemKind, Occurrence } from "../../model/calendar.js";
 import { CalendarScreen } from "../../screens/calendar/CalendarScreen";
 import { SettingsScreen } from "../../screens/settings/SettingsScreen";
+import { TrophiesScreen } from "../../screens/trophies/TrophiesScreen";
 import { StatisticsScreen } from "../../screens/statistics/StatisticsScreen";
 import { HabitsScreen } from "../../screens/habits/HabitsScreen";
 import { TodayScreen } from "../../screens/today/TodayScreen";
@@ -58,6 +59,7 @@ export function AppShell() {
           onOpenEvent={openEvent}
         />
         <StatisticsScreen active={activeScreen === "statistics"} />
+        <TrophiesScreen active={activeScreen === "trophies"} />
         <SettingsScreen active={activeScreen === "settings"} onOpenProfile={() => setDialog({ type: "preferences" })}
           onClearCalendar={() => setDialog({ type: "clear" })} onResetAll={() => setDialog({ type: "reset-all" })} />
       </main>

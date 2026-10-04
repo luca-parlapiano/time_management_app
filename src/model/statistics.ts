@@ -56,4 +56,8 @@ export interface ActivityYearStatistics {
   activity: StatisticsActivity;
   year: number;
   days: ActivityDayStatistics[];
+  completed: number;
+  partial: number;
+  skipped: number;
+  recentDays: ActivityDayStatistics[];
 }
