@@ -17,7 +17,7 @@ export class SQLiteStore {
     this.db = new DatabaseSync(filename);
     this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
     const version = (this.db.prepare('PRAGMA user_version').get() as {user_version:number}).user_version;
-    if (version > 3) { this.db.close(); throw new Error('Database creato da una versione più recente dell’app.'); }
+    if (version > 4) { this.db.close(); throw new Error('Database creato da una versione più recente dell’app.'); }
     this.db.exec(`BEGIN;
       CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS activities (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
@@ -28,7 +28,7 @@ export class SQLiteStore {
         source_id TEXT NOT NULL, activity_id TEXT NOT NULL,
         occurrence_date TEXT NOT NULL, event_date TEXT NOT NULL,
         title TEXT NOT NULL, icon TEXT NOT NULL, color TEXT NOT NULL,
-        outcome TEXT NOT NULL CHECK(outcome IN ('completed','skipped','partial')), recorded_at TEXT
+        outcome TEXT NOT NULL CHECK(outcome IN ('completed','skipped')), recorded_at TEXT
       );
       CREATE INDEX IF NOT EXISTS outcomes_event_date ON outcome_records(event_date);
       CREATE INDEX IF NOT EXISTS outcomes_occurrence ON outcome_records(source_id, occurrence_date);
@@ -40,6 +40,37 @@ export class SQLiteStore {
         PRAGMA user_version = 3;
         COMMIT;`);
     }
+    if (version < 4) {
+      try { this.migrateBinaryOutcomes(); }
+      catch (error) { this.db.close(); throw error; }
+    }
+  }
+  /** Converte gli archivi precedenti e restringe gli esiti SQL in una transazione, conservando audit e revisione. */
+  private migrateBinaryOutcomes(): void {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const snapshot = this.readSnapshot();
+      this.db.exec(`ALTER TABLE outcome_records RENAME TO legacy_outcome_records;
+        CREATE TABLE outcome_records (
+          id TEXT PRIMARY KEY, sequence INTEGER UNIQUE NOT NULL,
+          source_id TEXT NOT NULL, activity_id TEXT NOT NULL,
+          occurrence_date TEXT NOT NULL, event_date TEXT NOT NULL,
+          title TEXT NOT NULL, icon TEXT NOT NULL, color TEXT NOT NULL,
+          outcome TEXT NOT NULL CHECK(outcome IN ('completed','skipped')), recorded_at TEXT
+        );`);
+      if (snapshot) {
+        const insert = this.db.prepare('INSERT INTO outcome_records VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+        snapshot.archive.history.forEach((record, index) => insert.run(record.id,index,record.sourceId,record.activityId,record.occurrenceDate,record.eventDate,record.title,record.icon,record.color,record.outcome,record.recordedAt));
+        const update = this.db.prepare('UPDATE activities SET data=? WHERE id=?');
+        archiveForStorage(snapshot.archive).calendar.items.forEach(item => update.run(JSON.stringify(item), item.id));
+        if (snapshot.previous) this.putMetadata('previousImport', archiveForStorage(snapshot.previous));
+      } else this.db.exec(`INSERT INTO outcome_records SELECT id,sequence,source_id,activity_id,occurrence_date,event_date,title,icon,color,
+        CASE outcome WHEN 'partial' THEN 'skipped' ELSE outcome END,recorded_at FROM legacy_outcome_records;`);
+      this.db.exec(`DROP TABLE legacy_outcome_records;
+        CREATE INDEX outcomes_event_date ON outcome_records(event_date);
+        CREATE INDEX outcomes_occurrence ON outcome_records(source_id, occurrence_date);
+        PRAGMA user_version = 4; COMMIT`);
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
   private metadata(key: string): string | undefined { return (this.db.prepare('SELECT value FROM metadata WHERE key=?').get(key) as {value:string} | undefined)?.value; }
   private putMetadata(key: string, value: unknown) { this.db.prepare('INSERT OR REPLACE INTO metadata(key,value) VALUES (?,?)').run(key,JSON.stringify(value)); }

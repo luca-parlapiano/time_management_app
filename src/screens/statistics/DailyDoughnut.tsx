@@ -48,7 +48,7 @@ export function DailyDoughnut({statistics, compact = false}: DailyDoughnutProps)
     </span>
     {!compact && <span className="daily-chart-legend">
       {activities.map(item => <span key={item.key}><i style={{backgroundColor: eventColors[item.color].value}} aria-hidden="true" /><span>{item.title}</span><strong>{percent(item.contributionPercent)}</strong></span>)}
-      <small>{completed}/{total} attività superate · {statistics.partial} parziali · {statistics.skipped} non superate · {statistics.pending} senza esito. Le percentuali indicano il contributo al totale della giornata.</small>
+      <small>{completed}/{total} attività superate · {statistics.skipped} non superate · {statistics.pending} senza esito. Le percentuali indicano il contributo al totale della giornata.</small>
     </span>}
   </span>;
 }

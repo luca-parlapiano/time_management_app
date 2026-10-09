@@ -49,7 +49,7 @@ export function AgendaEventCard({ item, date, layout, top, height, disabled, onO
       {progressActivity && <div className="agenda-outcomes" role="group" aria-busy={pending} aria-label={`Esito ${item.title}`}>
         {(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <button key={outcome} type="button" disabled={disabled} aria-pressed={item.outcome === outcome} aria-label={`${outcomeLabels[outcome]}: ${item.title}`} title={outcomeLabels[outcome]} onClick={async () => {
           try { await onOutcome(item, outcome); setError(""); } catch (cause) { setError((cause as Error).message); }
-        }}><span aria-hidden="true">{outcome === "completed" ? "✓" : outcome === "partial" ? "◐" : "×"}</span><small>{outcomeLabels[outcome]}</small></button>)}
+        }}><span aria-hidden="true">{outcome === "completed" ? "✓" : "×"}</span><small>{outcomeLabels[outcome]}</small></button>)}
       </div>}
     </div>
     {error && <p role="alert" className="agenda-error">{error}</p>}

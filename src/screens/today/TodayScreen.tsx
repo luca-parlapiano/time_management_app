@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
-import { appearsOnTodayScreen, eventAppearance, eventColors, occurrences, today } from "../../domain/calendar";
+import { eventAppearance, eventColors, today, todayOccurrences } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
 import { useLocalMinute } from "../../hooks/useLocalMinute";
 import { EventIcon } from "../../icons/EventIcon";
@@ -18,7 +18,7 @@ export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit }: T
   const [outcomeError, setOutcomeError] = useState<{ id: string; message: string } | null>(null);
   const now = useLocalMinute();
   const date = today();
-  const events = occurrences(state.items, date, date).filter(item => item.date === date && appearsOnTodayScreen(item));
+  const events = todayOccurrences(state.items, date);
   const minutes = now.getHours() * 60 + now.getMinutes();
   const time = toTime(minutes);
   const progress = useMemo(() => getHabitDashboard(date, time), [getHabitDashboard, date, time]);
@@ -48,7 +48,6 @@ export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit }: T
                 {habit && <HabitJourney progress={getHabitProgress(habit.id)} compact />}
                 <div className="today-outcomes" role="group" aria-label={`Esito ${item.title}`}>
                   <button disabled={saving} aria-pressed={item.outcome === "completed"} onClick={() => void setOutcome(item, "completed")}>Fatto</button>
-                  <button disabled={saving} aria-pressed={item.outcome === "partial"} onClick={() => void setOutcome(item, "partial")}>Parziale</button>
                   <button disabled={saving} aria-pressed={item.outcome === "skipped"} onClick={() => void setOutcome(item, "skipped")}>Non fatto</button>
                 </div>
                 {outcomeError?.id === item.id && <p role="alert" className="capacity-warning">{outcomeError.message}</p>}
@@ -57,7 +56,7 @@ export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit }: T
           })}
         </ol>}
         </section>
-        <HabitProgressCard progress={progress} onOpenHabits={onOpenHabits} onAddHabit={onAddHabit} />
+        <HabitProgressCard progress={progress} onOpenHabits={id => onOpenHabits(id ?? (progress.totalHabits === 0 ? habits[0]?.id : undefined))} onAddHabit={onAddHabit} />
         </div>
       </div>
     </section>

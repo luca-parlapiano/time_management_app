@@ -87,8 +87,8 @@ check(seriesRejected&&db!.state.items.some(entry=>entry.id===habitSource.id),'Pr
  check(loading!.pending===1&&!loading!.isLoading('silent')&&!loading!.blocking,'Silent loading has no visual indicator');
  await act(async()=>{stop();});
  const occurrence=occurrences(db!.state.items,date,date).find(entry=>entry.sourceId===item.id)!;
- await act(async()=>{await db.recordOutcome(occurrence,'partial');});
- check(db!.archive.history.length===1&&db!.state.items[0].outcomes?.[date]==='partial','Provider commits calendar and audit together');
+ await act(async()=>{await db.recordOutcome(occurrence,'skipped');});
+ check(db!.archive.history.length===1&&db!.state.items[0].outcomes?.[date]==='skipped','Provider commits calendar and audit together');
  await act(async()=>{await db.recordOutcome(occurrence,'completed');});
  check(db!.archive.history.length===2&&loading!.pending===0,'Correction preserves history and releases loading');
  gate=new Promise<void>((_resolve,reject)=>{rejectGate=reject;});
@@ -164,14 +164,10 @@ check(seriesRejected&&db!.state.items.some(entry=>entry.id===habitSource.id),'Pr
  const repeated = db!.habits.find(habit => habit.title === finite.title && habit.id !== finite.id)!;
  check(!!repeated && !db!.archive.history.some(record=>record.activityId===repeated.id),'Repeating creates a new identity without inheriting completed steps');
  check(db!.getHabitProgress(repeated.id).completed===0&&db!.getHabitProgress(finite.id).completed===1,'Repeated habits with the same title keep separate indexed results');
- let reopenConflict = false;
- await act(async()=>{try { await db.recordOutcome(last,'partial'); } catch { reopenConflict = true; }});
- check(reopenConflict && db!.state.items.some(item=>item.habitId===finite.id && item.habitClosedOn),'A correction that reopens an occupied schedule fails atomically');
- check(db!.getHabitCompletionDate(finite.id)===date&&db!.getHabitProgress(finite.id).completed===1,'Rejected correction leaves the confirmed outcome index intact');
- await act(async()=>{await db.deleteHabit(repeated.id);});
- await act(async()=>{await db.recordOutcome(last,'partial');});
- check(occurrences(db!.state.items,addDays(date,1),addDays(date,30)).some(entry=>entry.habitId===finite.id),'Correcting the final completion reopens a conflict-free schedule');
- check(db!.getHabitCompletionDate(finite.id)===undefined&&db!.getHabitProgress(finite.id).completed===0&&db!.getHabitTimeline(finite.id,date,date)[0]?.outcome==='partial','Successful correction refreshes all indexed views together');
+ await act(async()=>{await db.recordOutcome(last,'skipped');});
+ check(!occurrences(db!.state.items,addDays(date,1),addDays(date,30)).some(entry=>entry.habitId===finite.id),'Correcting an outcome keeps the series concluded without adding new steps');
+ check(occurrences(db!.state.items,addDays(date,1),addDays(date,30)).filter(entry=>entry.habitId===repeated.id).length===1,'The repeated one-step series keeps exactly one independent appointment');
+ check(db!.getHabitCompletionDate(finite.id)===date&&db!.getHabitProgress(finite.id).completed===0&&db!.getHabitTimeline(finite.id,date,date)[0]?.outcome==='skipped','Successful correction refreshes all indexed views together');
  results.push('ALL PROVIDER AND REPOSITORY TESTS PASSED');
  await act(async()=>{root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><App/></DBProvider></LoadingProvider></StrictMode>);});
 } catch(error) {results.push(`FAIL ${error instanceof Error?error.stack:error}`);}

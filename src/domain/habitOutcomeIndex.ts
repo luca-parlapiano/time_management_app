@@ -11,17 +11,21 @@ import { latestOutcomes } from "./outcomeArchive.js";
 export function indexHabitOutcomes(history: OutcomeRecord[]): HabitOutcomeIndex {
   const latest = latestOutcomes(history);
   const byOccurrence = new Map<string, OutcomeRecord>();
-  const byActivity = new Map<string, { records: OutcomeRecord[]; completedDates: string[] }>();
+  const byActivity = new Map<string, { records: OutcomeRecord[]; completedDates: string[]; recordedDates: string[] }>();
   for (const record of latest) {
     byOccurrence.set(JSON.stringify([record.sourceId, record.occurrenceDate]), record);
     let activity = byActivity.get(record.activityId);
     if (!activity) {
-      activity = { records: [], completedDates: [] };
+      activity = { records: [], completedDates: [], recordedDates: [] };
       byActivity.set(record.activityId, activity);
     }
     activity.records.push(record);
+    activity.recordedDates.push(record.eventDate);
     if (record.outcome === "completed") activity.completedDates.push(record.eventDate);
   }
-  for (const activity of byActivity.values()) activity.completedDates.sort();
+  for (const activity of byActivity.values()) {
+    activity.completedDates.sort();
+    activity.recordedDates.sort();
+  }
   return { latest, byOccurrence, byActivity };
 }

@@ -27,7 +27,6 @@ export interface DailyStatistics {
   total: number;
   completed: number;
   skipped: number;
-  partial: number;
   pending: number;
   recorded: number;
   completionPercent: number;
@@ -46,7 +45,6 @@ export interface ActivityDayStatistics {
   total: number;
   completed: number;
   skipped: number;
-  partial: number;
   pending: number;
   percent: number | null;
   state: "empty" | "future" | "pending" | "recorded";
@@ -56,8 +54,12 @@ export interface ActivityYearStatistics {
   activity: StatisticsActivity;
   year: number;
   days: ActivityDayStatistics[];
+  /** Serie con tutti gli step valutati nell’anno, anche con step già confermati su date future. Null per routine senza traguardo. */
+  completedSeries: number | null;
+  /** Singoli eventi completati fino alla data di riferimento. */
   completed: number;
-  partial: number;
+  /** Esiti completati già salvati su date future dell’anno, esclusi dal totale maturato. */
+  futureCompleted: number;
   skipped: number;
   recentDays: ActivityDayStatistics[];
 }

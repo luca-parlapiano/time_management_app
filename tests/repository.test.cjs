@@ -48,19 +48,19 @@ test('confirmed snapshots keep calendar, statistics and dashboard aligned across
   assert.equal(imported.archive.calendar.items[0].habitClosedOn, '2026-10-05');
   assert.equal(imported.previous.calendar.items[0].habitClosedOn, '2026-10-05');
   const corrected = { ...imported.archive,
-    calendar: setOccurrenceOutcome(imported.archive.calendar, entry.sourceId, entry.occurrenceDate, 'partial'),
-    history: [...imported.archive.history, outcomeRecord(imported.archive.calendar, entry, 'partial')],
+    calendar: setOccurrenceOutcome(imported.archive.calendar, entry.sourceId, entry.occurrenceDate, 'skipped'),
+    history: [...imported.archive.history, outcomeRecord(imported.archive.calendar, entry, 'skipped')],
   };
   const reopened = await repository.save({ archive: corrected, expectedRevision: imported.revision });
-  assert.equal(Object.hasOwn(reopened.archive.calendar.items[0], 'habitClosedOn'), false);
+  assert.equal(Object.hasOwn(reopened.archive.calendar.items[0], 'habitClosedOn'), true);
   assert.equal(imported.archive.calendar.items[0].habitClosedOn, '2026-10-05');
   assert.equal(reopened.previous.calendar.items[0].habitClosedOn, '2026-10-05');
   assert.equal(reopened.archive.history.length, 2);
   const reopenedStats = new StatisticsRepository(reopened.archive);
-  assert.equal(occurrences(reopened.archive.calendar.items, '2026-10-12', '2026-10-12').length, 1);
-  assert.equal(reopenedStats.getDailyStatistics('2026-10-12').pending, 1);
+  assert.equal(occurrences(reopened.archive.calendar.items, '2026-10-12', '2026-10-12').length, 0);
+  assert.equal(reopenedStats.getDailyStatistics('2026-10-12').pending, 0);
   assert.equal(reopenedStats.getHabitDashboard('2026-10-12', '23:00').featured, null);
-  assert.equal(reopenedStats.getHabitDashboard('2026-10-12', '23:00').totalHabits, 1);
+  assert.equal(reopenedStats.getHabitDashboard('2026-10-12', '23:00').totalHabits, 0);
   assert.deepEqual((await repository.initialize()).archive, reopened.archive);
   const reset = await repository.reset(reopened.revision);
   assert.deepEqual(reset.archive, emptyArchive());
@@ -165,4 +165,17 @@ test('saving to an already running worker omits derived closure fields and resto
   assert.equal(exportArchive(archive).includes('habitClosedOn'), false);
   const broken = new RepositoryDB(() => ({write: async () => {throw new Error('Disk failure');}}));
   await assert.rejects(broken.save({archive, expectedRevision:7}), /Disk failure/);
+});
+
+test('repository converts outcomes from an older running worker without mutating its snapshot', async () => {
+  const item={id:'old',title:'Test',date:'2026-10-08',endDate:'2026-10-08',start:'10:00',end:'11:00',kind:'flexible',notes:'',exceptions:{},outcomes:{'2026-10-08':'partial'}};
+  const old={...emptyArchive(),calendar:{...emptyCalendar(),items:[item]},history:[{id:'old-result',sourceId:'old',activityId:'old',occurrenceDate:item.date,eventDate:item.date,title:item.title,icon:'sport',color:'green',outcome:'partial',recordedAt:null}]};
+  const original=structuredClone(old);
+  const repo=new RepositoryDB(()=>({read:async()=>({archive:old,previous:old,revision:7})}));
+  const loaded=await repo.initialize();
+  assert.equal(loaded.archive.history[0].outcome,'skipped');
+  assert.equal(loaded.archive.calendar.items[0].outcomes[item.date],'skipped');
+  assert.equal(loaded.previous.history[0].outcome,'skipped');
+  assert.equal(loaded.revision,7);
+  assert.deepEqual(old,original);
 });

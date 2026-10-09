@@ -88,7 +88,7 @@ function CreationChoiceDialog({ onClose, onHabit, onRoutine }: { onClose: () => 
     <div className="creation-choice">
       <button type="button" onClick={onHabit}>
         <strong>Nuova abitudine</strong>
-        <span>Impara un comportamento con un piccolo traguardo da 1 a 12 completamenti.</span>
+        <span>Impara un comportamento con un piccolo traguardo da 1 a 12 eventi.</span>
       </button>
       <button type="button" onClick={onRoutine}>
         <strong>Nuova routine</strong>

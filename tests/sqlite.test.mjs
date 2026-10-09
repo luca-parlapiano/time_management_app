@@ -19,7 +19,7 @@ test('SQLite: persistence, audit corrections, backup, import recovery and stale 
   store=new SQLiteStore(filename); assert.equal(store.read(),null);
   let saved=store.write({archive:initial(),expectedRevision:null});
   const occurrence=occurrences(saved.archive.calendar.items,item.date,item.date)[0];
-  for(const outcome of ['partial','completed','skipped']) {
+  for(const outcome of ['skipped','completed','skipped']) {
    const archive={...saved.archive,calendar:setOccurrenceOutcome(saved.archive.calendar,item.id,item.date,outcome),history:[...saved.archive.history,outcomeRecord(saved.archive.calendar,occurrence,outcome)]};
    saved=store.write({archive,expectedRevision:saved.revision});
   }
@@ -135,7 +135,7 @@ test('SQLite upgrades a version 1 database with an empty habits table', () => {
   assert.equal(store.read(),null);
   store.close();store=undefined;
   const migrated=new DatabaseSync(filename);
-  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,3);
+  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,4);
   assert.ok(migrated.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='habits'").get());
   migrated.close();
  } finally {store?.close();rmSync(dir,{recursive:true,force:true});}
@@ -155,7 +155,7 @@ test('SQLite version 3 migration removes legacy habits and their linked appointm
   legacy.close();
   store=new SQLiteStore(filename);store.close();store=undefined;
   const migrated=new DatabaseSync(filename);
-  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,3);
+  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,4);
   assert.equal(migrated.prepare('SELECT count(*) AS total FROM activities').get().total,0);
   assert.equal(migrated.prepare('SELECT count(*) AS total FROM habits').get().total,0);
   migrated.close();
@@ -181,23 +181,23 @@ test('SQLite: legacy saved fields recover on read, retain history and import und
   const saved=store.write({archive:initial(),expectedRevision:null});
   const legacy={...initial(),calendar:{...emptyCalendar(),items:[
    {...item,status:'completed'},
-   {...item,id:'series',recurrence:{},status:'todo',outcomes:{'2026-09-29':'partial'},completedDates:{'2026-09-22':true,'2026-09-29':true,'2026-10-06':false},exceptions:{
+   {...item,id:'series',recurrence:{},status:'todo',outcomes:{'2026-09-29':'skipped'},completedDates:{'2026-09-22':true,'2026-09-29':true,'2026-10-06':false},exceptions:{
     '2026-09-29':{...Object.fromEntries(Object.entries(item).filter(([key])=>!['id','exceptions'].includes(key))),date:'2026-09-30',endDate:'2026-09-30',status:'skipped'},
     '2026-10-13':null,
    }},
   ]}};
-  const historical={id:'audit',sourceId:'series',activityId:'series',occurrenceDate:'2026-09-29',eventDate:'2026-09-30',title:'Titolo storico',icon:'sport',color:'green',outcome:'partial',recordedAt:null};
+  const historical={id:'audit',sourceId:'series',activityId:'series',occurrenceDate:'2026-09-29',eventDate:'2026-09-30',title:'Titolo storico',icon:'sport',color:'green',outcome:'skipped',recordedAt:null};
   legacy.history=[historical];
   const db=new DatabaseSync(filename);
   db.exec('DELETE FROM activities');
   for(const [index,entry] of legacy.calendar.items.entries()) db.prepare('INSERT INTO activities VALUES (?,?,?)').run(entry.id,index,JSON.stringify(entry));
-  db.prepare('INSERT INTO outcome_records VALUES (?,?,?,?,?,?,?,?,?,?,?)').run('audit',0,'series','series','2026-09-29','2026-09-30','Titolo storico','sport','green','partial',null);
+  db.prepare('INSERT INTO outcome_records VALUES (?,?,?,?,?,?,?,?,?,?,?)').run('audit',0,'series','series','2026-09-29','2026-09-30','Titolo storico','sport','green','skipped',null);
   db.prepare('UPDATE metadata SET value=? WHERE key=?').run(JSON.stringify(legacy),'previousImport');db.close();
   store.close();store=new SQLiteStore(filename);
   const recovered=store.read();
   assert.equal(recovered.revision,saved.revision);
   assert.deepEqual(recovered.archive.calendar.items[0].outcomes,{'2026-09-22':'completed'});
-  assert.deepEqual(recovered.archive.calendar.items[1].outcomes,{'2026-09-22':'completed','2026-09-29':'partial'});
+  assert.deepEqual(recovered.archive.calendar.items[1].outcomes,{'2026-09-22':'completed','2026-09-29':'skipped'});
   assert.deepEqual(recovered.archive.history[0],historical);
   assert.equal(recovered.archive.history.length,3);
   assert.deepEqual(recovered.previous,recovered.archive);
@@ -246,4 +246,42 @@ test('SQLite: completed habits close on read and remain closed after reopening w
   assert.deepEqual(legacy, JSON.parse(JSON.stringify(saved)));
   assert.equal(legacy.revision, saved.revision);
  } finally { store?.close(); rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('SQLite v4 converts legacy outcomes atomically and preserves audit, previous import and revision', () => {
+ const dir=mkdtempSync(join(tmpdir(),'agenda-binary-')),filename=join(dir,'agenda.sqlite');let store;
+ try {
+  store=new SQLiteStore(filename);
+  const saved=store.write({archive:initial(),expectedRevision:null});
+  store.close();store=undefined;
+  const legacy={...initial(),calendar:{...emptyCalendar(),items:[{...item,notes:'partial is a note, not an outcome',outcomes:{[item.date]:'partial'}}]},history:[]};
+  const entry={id:'old-result',sourceId:item.id,activityId:item.id,occurrenceDate:item.date,eventDate:item.date,title:item.title,icon:'sport',color:'green',outcome:'partial',recordedAt:null};
+  legacy.history=[{...entry,id:'first-result',outcome:'completed'},entry];
+  const db=new DatabaseSync(filename);
+  db.exec(`DROP TABLE outcome_records;
+    CREATE TABLE outcome_records (id TEXT PRIMARY KEY, sequence INTEGER UNIQUE NOT NULL, source_id TEXT NOT NULL, activity_id TEXT NOT NULL, occurrence_date TEXT NOT NULL, event_date TEXT NOT NULL, title TEXT NOT NULL, icon TEXT NOT NULL, color TEXT NOT NULL, outcome TEXT NOT NULL, recorded_at TEXT);
+    PRAGMA user_version = 3;`);
+  db.prepare('UPDATE activities SET data=? WHERE id=?').run(JSON.stringify(legacy.calendar.items[0]),item.id);
+  for(const [i,r] of legacy.history.entries())db.prepare('INSERT INTO outcome_records VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(r.id,i,r.sourceId,r.activityId,r.occurrenceDate,r.eventDate,r.title,r.icon,r.color,r.outcome,r.recordedAt);
+  db.prepare('UPDATE metadata SET value=? WHERE key=?').run(JSON.stringify(legacy),'previousImport');db.close();
+  const untouched=structuredClone(legacy);
+  const imported=parseArchive(JSON.stringify(legacy));
+  assert.deepEqual(imported.history.map(r=>r.outcome),['completed','skipped']);
+  assert.equal(imported.calendar.items[0].outcomes[item.date],'skipped');
+  assert.deepEqual(legacy,untouched);
+  store=new SQLiteStore(filename);
+  const migrated=store.read();
+  assert.equal(migrated.revision,saved.revision);
+  assert.deepEqual(migrated.archive,imported);
+  assert.deepEqual(migrated.previous,imported);
+  assert.equal(migrated.archive.calendar.items[0].notes,legacy.calendar.items[0].notes);
+  store.close();store=new SQLiteStore(filename);
+  assert.deepEqual(store.read(),migrated);
+  const persisted=new DatabaseSync(filename);
+  assert.equal(persisted.prepare('PRAGMA user_version').get().user_version,4);
+  assert.deepEqual(persisted.prepare('SELECT outcome FROM outcome_records ORDER BY sequence').all().map(r=>r.outcome),['completed','skipped']);
+  assert.equal(JSON.parse(persisted.prepare('SELECT data FROM activities').get().data).outcomes[item.date],'skipped');
+  assert.throws(()=>persisted.prepare('UPDATE outcome_records SET outcome=?').run('partial'),/CHECK/);
+  persisted.close();
+ } finally {store?.close();rmSync(dir,{recursive:true,force:true});}
 });

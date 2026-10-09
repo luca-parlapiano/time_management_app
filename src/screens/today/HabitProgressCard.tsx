@@ -18,12 +18,12 @@ export function HabitProgressCard({ progress, onOpenHabits, onAddHabit }: HabitP
   return <section className="today-card today-progress" aria-labelledby="today-progress-title">
     <header className="today-card-heading">
       <div><p className="eyebrow">Un passo alla volta</p><h3 id="today-progress-title">Il tuo percorso</h3></div>
-      {progress.milestonesReached > 0 && <span className="today-milestone-count">{progress.milestonesReached} {progress.milestonesReached === 1 ? "traguardo" : "traguardi"}</span>}
+      {progress.milestonesReached > 0 && <span className="today-milestone-count">{progress.milestonesReached} {progress.milestonesReached === 1 ? "serie conclusa" : "serie concluse"}</span>}
     </header>
     {progress.totalHabits === 0 ? <div className="today-progress-empty">
-      <h4>{progress.milestonesReached ? "Tutte le abitudini sono completate" : "Da un piccolo gesto nasce un percorso"}</h4>
-      <p>{progress.milestonesReached ? "Non hai altre abitudini da completare. Vuoi ripetere una serie?" : "Scegli un’abitudine e un traguardo alla tua portata. Qui vedrai i passi che costruisci nel tempo."}</p>
-      {progress.milestonesReached > 0 && <StandardButton variant="secondary" onClick={() => onOpenHabits()}>Vedi le serie completate</StandardButton>}
+      <h4>{progress.milestonesReached ? "Tutte le serie sono concluse" : "Da un piccolo gesto nasce un percorso"}</h4>
+      <p>{progress.milestonesReached ? "Tutti gli eventi delle serie hanno un esito. Vuoi ripetere una serie?" : "Scegli un’abitudine e un traguardo alla tua portata. Qui vedrai i passi che costruisci nel tempo."}</p>
+      {progress.milestonesReached > 0 && <StandardButton variant="secondary" onClick={() => onOpenHabits()}>Vedi le serie concluse</StandardButton>}
       <StandardButton onClick={onAddHabit}>Crea un’abitudine</StandardButton>
     </div> : <>
       {featured ? <div className="today-milestone" style={{ "--event-color": eventColors[featured.habit.color].value } as CSSProperties}>
@@ -31,9 +31,9 @@ export function HabitProgressCard({ progress, onOpenHabits, onAddHabit }: HabitP
         <button className="today-habit-link" onClick={() => onOpenHabits(featured.habit.id)}>
           <EventIcon icon={featured.habit.icon} /><strong>{featured.habit.title}</strong><span aria-hidden="true">↗</span>
         </button>
-        <p>{featured.remaining === 1 ? "Manca un completamento al prossimo traguardo." : `Mancano ${featured.remaining} completamenti al prossimo traguardo.`}</p>
+        <p>{featured.remaining === 1 ? "Manca un evento da valutare per concludere la serie." : `Mancano ${featured.remaining} eventi da valutare per concludere la serie.`}</p>
         <HabitJourney progress={featured.journey} compact />
-      </div> : <div className="today-milestone today-milestone-intro"><h4>Il percorso inizia dal primo completamento</h4><p>Ogni volta che pratichi aggiungi uno step. Un’occasione saltata non cancella quelli raggiunti.</p></div>}
+      </div> : <div className="today-milestone today-milestone-intro"><h4>Il percorso inizia dal primo esito</h4><p>Segna Fatto o Non fatto per ogni evento: entrambi fanno avanzare la serie. Gli eventi fatti sono conteggiati separatamente.</p></div>}
       <div className="today-recent-heading"><h4>Il tuo ritmo recente</h4><p>Fino a {HABIT_DASHBOARD_OCCASIONS} occasioni per abitudine · ultimi {HABIT_DASHBOARD_DAYS} giorni</p></div>
       <ul className="today-progress-list">{progress.rows.map(row => <HabitProgressRow key={row.habit.id} row={row} onOpen={() => onOpenHabits(row.habit.id)} />)}</ul>
       <ul className="today-progress-legend" aria-label="Legenda degli esiti">{Object.entries(habitDashboardStates).map(([state, { label, symbol }]) => <li key={state}><span className={`today-outcome-mark ${state}`} aria-hidden="true">{symbol}</span>{label}</li>)}</ul>
@@ -48,7 +48,6 @@ function HabitProgressRow({ row, onOpen }: { row: HabitDashboardRow; onOpen: () 
   const { habit, entries, counts } = row;
   const summary = [
     counts.completed && `${counts.completed} ${counts.completed === 1 ? "completata" : "completate"}`,
-    counts.partial && `${counts.partial} ${counts.partial === 1 ? "parziale" : "parziali"}`,
     counts.skipped && `${counts.skipped} ${counts.skipped === 1 ? "non fatta" : "non fatte"}`,
     counts.pending && `${counts.pending} senza esito`,
   ].filter(Boolean).join(" · ");

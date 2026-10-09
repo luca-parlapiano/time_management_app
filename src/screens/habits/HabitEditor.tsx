@@ -58,10 +58,10 @@ export function HabitEditor({ habit: sourceHabit, repeat = false, onClose, onSav
           }
         }
       }}>
-        {repeat && <p className="editor-hint">Inizia una nuova serie da zero. La serie completata e i suoi esiti restano nello storico; puoi cambiare giorni, orario e traguardo prima di confermare.</p>}
+        {repeat && <p className="editor-hint">Inizia una nuova serie da zero. La serie conclusa e i suoi esiti restano nello storico; puoi cambiare giorni, orario e traguardo prima di confermare.</p>}
         <label>Quale abitudine vuoi acquisire?<input autoFocus value={title} onChange={event => setTitle(event.target.value)} placeholder="Es. Leggere 20 minuti" /></label>
         <label>Perché vuoi acquisirla?<textarea value={motivation} onChange={event => setMotivation(event.target.value)} placeholder="Una motivazione facoltativa" /></label>
-        <fieldset><legend>Piccolo traguardo</legend><p className="editor-hint">Scegli da 1 a 12 completamenti. Ogni esito positivo vale uno step; le occasioni saltate non cancellano quelli raggiunti. Al traguardo la serie si chiude.</p><div className="habit-step-options">
+        <fieldset><legend>Piccolo traguardo</legend><p className="editor-hint">Scegli da 1 a 12 eventi. Ogni esito, Fatto o Non fatto, vale uno step. La serie si conclude quando tutti gli eventi hanno un esito.</p><div className="habit-step-options">
           {stepTargets.map(value => <button key={value} type="button" aria-pressed={stepTarget === value} onClick={() => setStepTarget(value)}>{value}</button>)}
         </div></fieldset>
         <fieldset><legend>Giorni</legend><div className="habit-weekdays">

@@ -56,7 +56,6 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
       {view === "overview" && <div className="outcome-summary" aria-live="polite">
         <span>{yearOutcomes.filter(record => record.outcome === "completed").length} superate</span>
         <span>{yearOutcomes.filter(record => record.outcome === "skipped").length} non superate</span>
-        <span>{yearOutcomes.filter(record => record.outcome === "partial").length} parziali</span>
         <StandardButton variant="secondary" type="button" onClick={() => { setHistoryLimit(50); setShowHistory(true); }}>Registro esiti</StandardButton>
       </div>}
     </div>

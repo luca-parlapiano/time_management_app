@@ -17,8 +17,7 @@ Tre tipi distinti:
 - impegno fisso, protetto da lucchetto;
 - tempo protetto, protetto da lucchetto.
 
-Gli appuntamenti possono avere esito superato (`completed`), non superato (`skipped`)
-o parziale (`partial`); l’assenza di esito è distinta da un risultato negativo.
+Gli appuntamenti possono avere esito fatto (`completed`) o non fatto (`skipped`); l’assenza di esito è distinta da un risultato negativo.
 Registrare un esito non richiede lo sblocco dell’orario di un vincolo.
 
 Titolo, inizio, fine, note e collegamento a un obiettivo appartengono all'elemento.

@@ -10,9 +10,9 @@ const { indexHabitOutcomes } = require(join(build, 'domain/habitOutcomeIndex.js'
 const { reconcileHabitCompletion } = require(join(build, 'domain/habitCompletion.js'));
 // Le fixture di dominio preparano lo snapshot come farebbe DBRepository.
 const dashboard = (archive, date, time) => habitDashboard(reconcileHabitCompletion(archive), indexHabitOutcomes(archive.history), date, time);
-const draft = { title: 'Lettura', motivation: '', icon: 'study', color: 'teal', stepTarget: 3, startsOn: '2026-09-01', weekdays: [0,1,2,3,4,5,6], start: '10:00', durationMinutes: 20 };
-function fixture() {
-  const { calendar, habits } = createHabit(c.emptyCalendar(), [], draft, { habitId: 'reading' });
+const draft = { title: 'Lettura', motivation: '', icon: 'study', color: 'teal', stepTarget: 3, startsOn: '2026-10-01', weekdays: [0,1,2,3,4,5,6], start: '10:00', durationMinutes: 20 };
+function fixture(patch = {}) {
+  const { calendar, habits } = createHabit(c.emptyCalendar(), [], { ...draft, ...patch }, { habitId: 'reading' });
   return { format: 'time-planner-backup', version: 2, calendar, habits, history: [] };
 }
 function record(archive, date, outcome) {
@@ -22,14 +22,14 @@ function record(archive, date, outcome) {
   return occurrence;
 }
 
-test('dashboard separates missing, partial and skipped outcomes and excludes future appointments', () => {
-  const archive = fixture();
+test('dashboard separates missing, completed and skipped outcomes and excludes future appointments', () => {
+  const archive = fixture({startsOn:'2026-09-27',stepTarget:9});
   record(archive, '2026-10-01', 'completed');
-  record(archive, '2026-10-02', 'partial');
+  record(archive, '2026-10-02', 'skipped');
   record(archive, '2026-10-03', 'skipped');
   const before = JSON.stringify(archive);
   const morning = dashboard(archive, '2026-10-04', '09:00');
-  assert.deepEqual(morning.rows[0].counts, { completed: 1, partial: 1, skipped: 1, pending: 4 });
+  assert.deepEqual(morning.rows[0].counts, { completed: 1, skipped: 2, pending: 4 });
   assert.equal(morning.rows[0].entries.at(-1).date, '2026-10-03');
   const afternoon = dashboard(archive, '2026-10-04', '11:00');
   assert.equal(afternoon.rows[0].entries.at(-1).date, '2026-10-04');
@@ -38,21 +38,36 @@ test('dashboard separates missing, partial and skipped outcomes and excludes fut
   record(archive, '2026-10-04', 'completed');
   assert.equal(dashboard(archive, '2026-10-04', '09:00').rows[0].entries.at(-1).outcome, 'completed');
   record(archive, '2026-10-05', 'completed');
-  assert.equal(dashboard(archive, '2026-10-04', '11:00').totalHabits, 0);
+  assert.equal(dashboard(archive, '2026-10-04', '11:00').totalHabits, 1);
 });
 
-test('corrections reopen a completed series; completed series are excluded from active counts', () => {
+test('today hides concluded series on their final day and preserves corrected results', () => {
+  const archive = fixture();
+  for (const day of ['01','02']) record(archive, `2026-10-${day}`, 'completed');
+  const date = '2026-10-03';
+  const agenda = () => c.todayOccurrences(reconcileHabitCompletion(archive).calendar.items, date);
+  assert.equal(agenda().length, 1);
+  record(archive, date, 'skipped');
+  assert.deepEqual(agenda(), []);
+  record(archive, date, 'completed');
+  assert.deepEqual(agenda(), []);
+  const closed = reconcileHabitCompletion(archive);
+  assert.equal(c.occurrences(closed.calendar.items, date, date)[0].outcome, 'completed');
+  assert.deepEqual(c.todayOccurrences(closed.calendar.items, '2026-10-04'), []);
+  record(archive, date, 'skipped');
+  assert.deepEqual(agenda(), []);
+});
+
+test('corrections change the result without returning concluded series to the dashboard', () => {
   const archive = fixture();
   for (const day of ['01','02','03']) record(archive, `2026-10-${day}`, 'completed');
   assert.equal(dashboard(archive, '2026-10-04', '11:00').totalHabits, 0);
-  record(archive, '2026-10-03', 'partial');
+  record(archive, '2026-10-03', 'skipped');
   const corrected = dashboard(archive, '2026-10-04', '11:00');
-  assert.equal(corrected.featured.remaining, 1);
-  assert.equal(corrected.milestonesReached, 0);
-  assert.equal(corrected.rows[0].counts.completed, 2);
-  assert.equal(corrected.rows[0].counts.partial, 1);
+  assert.equal(corrected.featured, null);
+  assert.equal(corrected.milestonesReached, 1);
+  assert.equal(corrected.rows.length, 0);
   record(archive, '2026-10-03', 'completed');
-  record(archive, '2026-10-04', 'completed');
   const next = dashboard(archive, '2026-10-04', '11:00');
   assert.equal(next.featured, null);
   assert.equal(next.totalHabits, 0);
@@ -73,12 +88,12 @@ test('moved occasions retain their identity and do not leave a historical ghost 
 
 test('schedule changes keep recorded history without inventing missed old occasions', () => {
   const archive = fixture();
-  record(archive, '2026-09-01', 'completed');
+  record(archive, '2026-10-02', 'completed');
   record(archive, '2026-10-01', 'completed');
   const changed = updateHabit(archive.calendar, archive.habits, 'reading', { ...draft, startsOn: '2026-10-05', weekdays: [0], start: '11:00' });
   Object.assign(archive, changed);
   const row = dashboard(archive, '2026-10-04', '11:00').rows[0];
-  assert.equal(row.entries.length, 1);
+  assert.equal(row.entries.length, 2);
   assert.equal(row.entries[0].date, '2026-10-01');
   assert.equal(row.entries[0].removed, true);
   assert.equal(row.journey.completed, 2);

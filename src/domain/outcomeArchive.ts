@@ -33,12 +33,18 @@ export function latestOutcomes(history: OutcomeRecord[]): OutcomeRecord[] {
 }
 
 /**
- * Seleziona gli esiti delle sole abitudini e routine ancora presenti nel calendario.
- * I record esclusi restano nell'archivio di audit e nei backup, ma non alimentano le statistiche.
+ * Seleziona gli esiti delle abitudini e routine ancora presenti nel calendario.
+ * Per un’abitudine conserva anche le fonti rimosse cambiando i giorni pianificati,
+ * tramite la sua identità stabile. Una fonte esistente ma non monitorata resta esclusa.
+ * Le attività eliminate del tutto restano solo nell’archivio di audit e nei backup.
  */
-export function progressOutcomeHistory(calendar: CalendarState, history: OutcomeRecord[]): OutcomeRecord[] {
-  const sourceIds = new Set(calendar.items.filter(isProgressActivity).map(item => item.id));
-  return history.filter(record => sourceIds.has(record.sourceId));
+export function progressOutcomeHistory(calendar: CalendarState, history: readonly OutcomeRecord[]): OutcomeRecord[] {
+  const sources = new Map(calendar.items.map(item => [item.id, item]));
+  const habitIds = new Set(calendar.items.filter(isProgressActivity).flatMap(item => item.habitId ? [item.habitId] : []));
+  return history.filter(record => {
+    const source = sources.get(record.sourceId);
+    return source ? isProgressActivity(source) : habitIds.has(record.activityId);
+  });
 }
 /** Richiede un oggetto con soli campi dichiarati, senza eliminare silenziosamente dati estranei. */
 function requireFields(value: unknown, allowed: readonly string[], path: string): asserts value is Record<string, unknown> {
@@ -48,19 +54,32 @@ function requireFields(value: unknown, allowed: readonly string[], path: string)
 }
 
 /**
- * Converte un backup v1 nel nuovo formato eliminando le vecchie abitudini e i loro
- * appuntamenti. Calendario indipendente, profilo, obiettivi e storico restano intatti.
+ * Converte i formati precedenti senza modificare l’input. Gli esiti dismessi diventano
+ * non fatti, conservando identità e ordine dello storico. Per v1 elimina le vecchie abitudini.
  */
 export function upgradeArchive(value: unknown): unknown {
   const cloned: unknown = structuredClone(value);
   if (!cloned || typeof cloned !== "object" || Array.isArray(cloned)) return cloned;
   const archive = cloned as Record<string, unknown>;
-  if (archive.format !== "time-planner-backup" || archive.version !== 1) return cloned;
+  if (archive.format !== "time-planner-backup" || (archive.version !== 1 && archive.version !== 2)) return cloned;
   if (archive.calendar && typeof archive.calendar === "object" && !Array.isArray(archive.calendar)) {
     const calendar = archive.calendar as Record<string, unknown>;
-    if (Array.isArray(calendar.items)) calendar.items = calendar.items.filter(item => !item || typeof item !== "object" || Array.isArray(item) || !("habitId" in item));
+    if (Array.isArray(calendar.items)) {
+      if (archive.version === 1) calendar.items = calendar.items.filter(item => !item || typeof item !== "object" || Array.isArray(item) || !("habitId" in item));
+      for (const item of calendar.items as unknown[]) {
+        if (!item || typeof item !== "object" || !("outcomes" in item)) continue;
+        const outcomes = item.outcomes;
+        if (!outcomes || typeof outcomes !== "object" || Array.isArray(outcomes)) continue;
+        for (const [date, outcome] of Object.entries(outcomes)) {
+          if (outcome === "partial") (outcomes as Record<string, unknown>)[date] = "skipped";
+        }
+      }
+    }
   }
-  archive.habits = [];
+  if (Array.isArray(archive.history)) for (const record of archive.history as unknown[]) {
+    if (record && typeof record === "object" && "outcome" in record && record.outcome === "partial") record.outcome = "skipped";
+  }
+  if (archive.version === 1) archive.habits = [];
   archive.version = 2;
   return archive;
 }
@@ -72,7 +91,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   if (!Array.isArray(calendar.items) || !Array.isArray(calendar.goals)) throw new Error('Archivio calendario non riconosciuto.');
   const dataFields = ['coverImage', 'icon', 'color', 'title', 'date', 'endDate', 'start', 'end', 'kind', 'notes', 'goalId'];
   for (const item of calendar.items) {
-    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'habitClosedOn', 'routine', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
+    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'habitClosedOn', 'habitPlannedUntil', 'routine', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
     if (item.recurrence !== undefined) requireFields(item.recurrence, ['until'], 'Ricorrenza');
     if (!item.exceptions || typeof item.exceptions !== 'object' || Array.isArray(item.exceptions)) throw new Error('Eccezioni non valide.');
     for (const exception of Object.values(item.exceptions)) {
@@ -126,15 +145,16 @@ export function parseArchive(text: string): PlannerArchive {
   return { format: "time-planner-backup", version: 2, calendar: parsed.calendar, habits: parsed.habits ?? [], history: parsed.history };
 }
 /**
- * Prepara i dati per IPC, SQLite e backup eliminando la sola chiusura derivata.
- * Il traguardo e gli esiti restano intatti: la chiusura si ricalcola alla lettura.
+ * Prepara i dati per IPC, SQLite e backup eliminando chiusura e limite pianificato derivati.
+ * Il traguardo e gli esiti restano intatti: i limiti si ricalcolano alla lettura.
  * Non modifica l'archivio ricevuto e conserva gli altri campi per la validazione.
  */
 export function archiveForStorage(archive: PlannerArchive): PlannerArchive {
   return { ...archive, calendar: { ...archive.calendar, items: archive.calendar.items.map(item => {
-    if (item.habitClosedOn === undefined) return item;
+    if (item.habitClosedOn === undefined && item.habitPlannedUntil === undefined) return item;
     const stored = { ...item };
     delete stored.habitClosedOn;
+    delete stored.habitPlannedUntil;
     return stored;
   }) } };
 }

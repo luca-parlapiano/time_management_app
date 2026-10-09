@@ -8,6 +8,7 @@ export interface HabitOutcomeIndex {
   readonly byActivity: ReadonlyMap<string, {
     readonly records: readonly OutcomeRecord[];
     readonly completedDates: readonly string[];
+    readonly recordedDates: readonly string[];
   }>;
 }
 
@@ -45,7 +46,9 @@ export interface HabitTimelineEntry {
 }
 
 export interface HabitJourneyProgress {
+  /** Eventi fatti; non determina la chiusura della serie. */
   completed: number;
+  /** Eventi con esito registrato, limitati al numero di step scelti. */
   currentStep: number;
   milestonesReached: number;
   target: HabitStepTarget;

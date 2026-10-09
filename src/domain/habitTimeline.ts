@@ -4,17 +4,19 @@ import { occurrences } from "./calendar.js";
 
 /**
  * Calcola il percorso dall’indice confermato, eventualmente fino alla data civile through.
- * Il filtro temporale avviene dopo le correzioni; senza limite include tutti i completamenti.
- * Parziali e salti non aggiungono step; senza esiti restituisce un progresso nullo.
+ * Il filtro temporale avviene dopo le correzioni; senza limite include tutti gli esiti.
+ * Fatto e Non fatto avanzano gli step; il numero di eventi fatti resta separato.
  */
 export function habitJourneyProgress(index: HabitOutcomeIndex, habit: Habit, through?: string): HabitJourneyProgress {
   const dates = index.byActivity.get(habit.id)?.completedDates ?? [];
   const completed = through === undefined ? dates.length : dates.filter(date => date <= through).length;
-  const currentStep = Math.min(completed, habit.stepTarget);
+  const recordedDates = index.byActivity.get(habit.id)?.recordedDates ?? [];
+  const recorded = through === undefined ? recordedDates.length : recordedDates.filter(date => date <= through).length;
+  const currentStep = Math.min(recorded, habit.stepTarget);
   return {
     completed,
     currentStep,
-    milestonesReached: completed >= habit.stepTarget ? 1 : 0,
+    milestonesReached: recorded >= habit.stepTarget ? 1 : 0,
     target: habit.stepTarget,
   };
 }

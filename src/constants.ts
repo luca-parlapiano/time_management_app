@@ -12,7 +12,7 @@ export const DAY = 86_400_000;
 export const CALENDAR_EVENT_SLOT_MIN_HEIGHT = 64;
 /** Densità di base della griglia compatta: 30 px per ora, prima dello spazio minimo per gli header. */
 export const CALENDAR_TIMELINE_PIXELS_PER_MINUTE = 0.5;
-export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto", partial: "Parziale" } as const satisfies Record<ItemOutcome, string>;
+export const outcomeLabels = { completed: "Fatto", skipped: "Non fatto" } as const satisfies Record<ItemOutcome, string>;
 
 // Riepilogo del percorso nella dashboard
 export const HABIT_DASHBOARD_DAYS = 28;
@@ -20,7 +20,6 @@ export const HABIT_DASHBOARD_OCCASIONS = 7;
 export const HABIT_DASHBOARD_ROWS = 5;
 export const habitDashboardStates = {
   completed: { label: "Completata", symbol: "✓" },
-  partial: { label: "Parziale", symbol: "◐" },
   skipped: { label: "Non fatta", symbol: "×" },
   pending: { label: "Senza esito", symbol: "○" },
 } as const;
@@ -45,7 +44,7 @@ export const kindLabels: Record<ItemKind, string> = {
 };
 
 // Esiti delle attività
-export const statisticsOutcomeLabels: Record<ItemOutcome, string> = { completed: "Superata", skipped: "Non superata", partial: "Parziale" };
+export const statisticsOutcomeLabels: Record<ItemOutcome, string> = { completed: "Superata", skipped: "Non superata" };
 
 // Temi e preferenze
 export const palettes = [
@@ -86,6 +85,3 @@ export const DEFAULT_MODEL_REPOSITORY = "Qwen/Qwen3-4B-GGUF:Q4_K_M";
 export const STARTUP_TIMEOUT_MS = 5 * 60 * 1_000;
 
 export const REQUEST_TIMEOUT_MS = 60_000;
-
-/** Peso dell’esito parziale nella sola vista annuale per attività. */
-export const ACTIVITY_PARTIAL_WEIGHT = 0.5;

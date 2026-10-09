@@ -437,7 +437,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .today-outcome-strip > li { flex: 1; min-width: 0; max-width: 38px; }
 .today-outcome-mark { position: relative; display: grid; place-items: center; width: 100%; height: 32px; border: 1px solid rgba(var(--ink-rgb), .22); border-radius: 8px; background: rgba(var(--ink-rgb), .04); color: var(--text-secondary); font-size: 18px; font-weight: 700; }
 .today-outcome-mark.completed { border-color: var(--event-color, rgb(var(--accent-rgb))); background: var(--event-color, rgb(var(--accent-rgb))); color: white; }
-.today-outcome-mark.partial { border-color: var(--event-color, rgb(var(--accent-rgb))); background: color-mix(in srgb, var(--event-color, rgb(var(--accent-rgb))) 15%, rgb(var(--surface-rgb))); color: var(--text); }
 .today-outcome-mark.skipped { background: rgba(var(--ink-rgb), .1); color: var(--text); }
 .today-outcome-mark.pending { border-style: dashed; background: transparent; }
 .today-outcome-tooltip { display: none; position: absolute; z-index: 3; bottom: calc(100% + 8px); left: 0; width: max-content; max-width: 200px; padding: 8px 10px; border: 1px solid rgba(var(--ink-rgb), .2); border-radius: 8px; background: rgb(var(--surface-rgb)); color: var(--text); font-size: 12px; font-weight: 400; line-height: 1.5; box-shadow: 0 4px 15px rgba(var(--ink-rgb), .12); pointer-events: none; }
@@ -597,7 +596,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 
 .event-outcome-options { border: 0; margin: 24px 0 12px; padding: 0; min-width: 0; }
 .event-outcome-options legend { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
-.event-outcome-options > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.event-outcome-options > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .event-outcome-options button { min-height: 48px; padding: 12px 6px; }
 .event-outcome-options button[aria-pressed="true"] { outline: 2px solid rgb(var(--accent-rgb)); background: rgba(var(--accent-rgb), 0.2); }
 .event-menu-actions { display: grid; gap: 8px; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(var(--ink-rgb), 0.15); }
@@ -825,7 +824,7 @@ button.heatmap-swatch { cursor: pointer; }
 .agenda-body { flex: 1; min-height: 0; overflow: hidden; padding: 8px; background: repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--event-color) 5%, transparent) 9px 10px); }
 .agenda-body p { margin: 0; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .agenda-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 3px; padding: 5px; font-size: 9px; }
-.agenda-outcomes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; padding: 4px; border-top: 1px solid color-mix(in srgb, var(--event-color) 22%, transparent); }
+.agenda-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 4px; border-top: 1px solid color-mix(in srgb, var(--event-color) 22%, transparent); }
 .agenda-outcomes button { display: flex; align-items: center; justify-content: center; flex-direction: column; min-width: 0; min-height: 30px; padding: 3px 0; border: 0; border-radius: 5px; color: inherit; background: transparent; cursor: pointer; }
 .agenda-outcomes button:hover { background: color-mix(in srgb, var(--event-color) 15%, #fff); }
 .agenda-outcomes button[aria-pressed="true"] { background: #244f3c; color: #fff; }

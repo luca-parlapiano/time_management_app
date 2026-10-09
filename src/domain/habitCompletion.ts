@@ -2,29 +2,36 @@ import type { Habit, HabitDraft, HabitOutcomeIndex } from "../model/habit.js";
 import type { PlannerArchive } from "../model/outcomeArchive.js";
 import { CalendarConflictError, findConflict } from "./calendar.js";
 import { indexHabitOutcomes } from "./habitOutcomeIndex.js";
-import { habitDraft } from "./habits.js";
+import { habitDraft, habitPlanEnd } from "./habits.js";
 import { addDays, validDate } from "../utils/dates.js";
 
-/** Legge dall’indice la data del traguardo; senza completamenti sufficienti restituisce undefined. */
+/** Restituisce la data dell’ultimo step valutato, fatto o non fatto; senza esiti sufficienti restituisce undefined. */
 export function habitCompletionDate(index: HabitOutcomeIndex, habit: Habit): string | undefined {
-  return index.byActivity.get(habit.id)?.completedDates[habit.stepTarget - 1];
+  return index.byActivity.get(habit.id)?.recordedDates[habit.stepTarget - 1];
 }
 
 /**
- * Ricalcola la fine dei percorsi dagli esiti confermati, anche per archivi precedenti.
- * Mantiene pianificazione originale, eccezioni e storico: una correzione può riaprire
- * il percorso. Con uno stato precedente, rifiuta riaperture in conflitto.
+ * Ricalcola il limite degli appuntamenti dal numero di step e la chiusura dagli esiti,
+ * anche per archivi precedenti con pianificazioni illimitate.
+ * Mantiene pianificazione originale, eccezioni e storico: cambiare Fatto in Non fatto
+ * non riapre la serie. Un aumento degli step può riaprirla, salvo conflitti.
  * Non modifica l'input e non salva contatori derivati.
  */
 export function reconcileHabitCompletion(archive: PlannerArchive, previous?: PlannerArchive): PlannerArchive {
   const index = indexHabitOutcomes(archive.history);
   const ends = new Map((archive.habits ?? []).map(habit => [habit.id, habitCompletionDate(index, habit)]));
+  const plannedEnds = new Map((archive.habits ?? []).map(habit => [habit.id, habitPlanEnd(
+    archive.calendar.items.filter(item => item.habitId === habit.id).map(item => item.date), habit.stepTarget,
+  )]));
   const result = { ...archive, calendar: { ...archive.calendar, items: archive.calendar.items.map(item => {
     const end = item.habitId ? ends.get(item.habitId) : undefined;
-    if (item.habitClosedOn === end) return item;
+    const plannedEnd = item.habitId ? plannedEnds.get(item.habitId) : undefined;
+    if (item.habitClosedOn === end && item.habitPlannedUntil === plannedEnd) return item;
     const next = { ...item };
     if (end) next.habitClosedOn = end;
     else delete next.habitClosedOn;
+    if (plannedEnd) next.habitPlannedUntil = plannedEnd;
+    else delete next.habitPlannedUntil;
     return next;
   }) } };
   if (previous) {
@@ -43,6 +50,6 @@ export function reconcileHabitCompletion(archive: PlannerArchive, previous?: Pla
 /** Prepara una nuova serie indipendente, dalla data richiesta o dal giorno dopo la chiusura; rifiuta percorsi ancora attivi. */
 export function repeatHabitDraft(archive: PlannerArchive, habit: Habit, date: string): HabitDraft {
   const end = habitCompletionDate(indexHabitOutcomes(archive.history), habit);
-  if (!end || !validDate(date)) throw new Error("Puoi ripetere solo un’abitudine completata, da una data valida.");
+  if (!end || !validDate(date)) throw new Error("Puoi ripetere solo una serie conclusa, da una data valida.");
   return { ...habitDraft(archive.calendar, habit), startsOn: date > end ? date : addDays(end, 1) };
 }

@@ -10,9 +10,8 @@
 Il modello corrente distingue due intenzioni. Un'abitudine è un comportamento da
 acquisire: ha un traguardo obbligatorio da 1 a 12 step e una pianificazione settimanale
 modificabile. Una routine è invece una normale attività ricorrente del calendario,
-senza step né percorso dedicato. Un esito positivo dell'abitudine fa avanzare il
-percorso permanente; parziali, salti e tempo trascorso non
-sottraggono step. La migrazione SQLite v2→v3 e il backup v2 eliminano il precedente
+senza step né percorso dedicato. Ogni esito dell'abitudine, fatto o non fatto, fa avanzare il
+percorso; il solo tempo trascorso non aggiunge step. La migrazione SQLite v2→v3 e il backup v2 eliminano il precedente
 modello di abitudini e i suoi appuntamenti, preservando gli altri dati e lo storico.
 
 **Da implementare:** l'occasione autonoma generata dal piano, inizialmente «da
@@ -33,7 +32,7 @@ Le routine sono promemoria ricorrenti e rimangono nel Calendario, senza avanzame
 
 Esempio di riferimento: «Leggere 20 minuti il lunedì, mercoledì e venerdì alle 21».
 La prima versione deve permettere di crearla, vedere le tre occasioni nelle rispettive
-giornate, spostarne una, registrarla come completata/parziale/saltata e distinguere
+giornate, spostarne una, registrarla come completata/saltata e distinguere
 il piano precedente dopo un cambio di frequenza o orario.
 
 ## Modello corrente
@@ -108,7 +107,7 @@ l'app, esportare/importare e ritrovare piano ed esiti invariati.
   limitata a intervalli: le serie senza scadenza non si espandono all'infinito.
 - Permettere modifica del piano con data di decorrenza, pausa/ripresa e correzione
   di un esito. Mostrare avanzamento rispetto alle occasioni previste nel periodo,
-  con conteggi distinti per completate, parziali, saltate e da registrare. Nessuna
+  con conteggi distinti per completate, saltate e da registrare. Nessuna
   promessa del tipo «abitudine formata dopo N giorni».
 
 **Uscita:** l'utente capisce cosa ha previsto, cosa è successo e cosa cambierà con

@@ -10,7 +10,7 @@ import { habitJourneyProgress, habitTimeline } from "./habitTimeline.js";
  * dal relativo indice degli esiti e da data/orario civili HH:MM.
  * Non ricostruisce le chiusure del calendario né deduplica nuovamente lo storico.
  * Mostra al massimo sette occasioni disponibili negli ultimi 28 giorni per riga;
- * esclude il futuro senza esito e conserva distinti parziali, salti e assenze.
+ * esclude il futuro senza esito e conserva distinti esiti non fatti e assenze.
  * Le correzioni prevalgono, senza ricostruire piani storici non più disponibili.
  * Rifiuta date/orari non validi e non modifica né salva l'archivio ricevuto.
  */
@@ -35,13 +35,13 @@ export function habitDashboard(archive: PlannerArchive, index: HabitOutcomeIndex
         return entry.date < date || !!entry.outcome || !!entry.start && entry.start < time;
       })
       .slice(-HABIT_DASHBOARD_OCCASIONS);
-    const counts = { completed: 0, partial: 0, skipped: 0, pending: 0 };
+    const counts = { completed: 0, skipped: 0, pending: 0 };
     for (const entry of entries) counts[entry.outcome ?? "pending"]++;
     return { habit, journey, remaining: journey.target - journey.currentStep, entries, counts };
   });
   // A parità di distanza resta l'ordine delle abitudini attive.
-  // Senza completamenti il messaggio resta introduttivo.
-  const featured = rows.some(row => row.journey.completed > 0)
+  // Senza esiti registrati il messaggio resta introduttivo.
+  const featured = rows.some(row => row.journey.currentStep > 0)
     ? rows.reduce<HabitDashboardRow | null>((best, row) => !best || row.remaining < best.remaining ? row : best, null)
     : null;
   return {

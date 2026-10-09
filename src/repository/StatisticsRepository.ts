@@ -1,4 +1,3 @@
-import { ACTIVITY_PARTIAL_WEIGHT } from "../constants.js";
 import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry } from "../model/statistics.js";
 import { isIntegerInRange } from "../utils/numbers.js";
 import { today } from "../utils/dates.js";
@@ -10,6 +9,7 @@ import { habitJourneyProgress, habitTimeline } from '../domain/habitTimeline.js'
 import type { CalendarItem } from '../model/calendar.js';
 import type { PlannerArchive } from '../model/outcomeArchive.js';
 import { habitDashboard } from '../domain/habitDashboard.js';
+import { progressOutcomeHistory } from '../domain/outcomeArchive.js';
 
 const normalizedTitle = (title: string) => title.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('it');
 const occurrenceKey = (sourceId: string, date: string) => JSON.stringify([sourceId, date]);
@@ -25,11 +25,8 @@ export class StatisticsRepository {
     this.habitOutcomes = indexHabitOutcomes(archive.history);
     this.habitsById = new Map((archive.habits ?? []).map(habit => [habit.id, habit]));
     this.items = this.archive.calendar.items.filter(isProgressActivity);
-    const sources = new Map(this.items.map(item => [item.id, item]));
-    this.latest = this.habitOutcomes.latest.filter(record => {
-      const source = sources.get(record.sourceId);
-      return source && (!source.habitClosedOn || record.eventDate <= source.habitClosedOn);
-    });
+    // La chiusura ferma la pianificazione, senza cancellare risultati già confermati.
+    this.latest = progressOutcomeHistory(archive.calendar, this.habitOutcomes.latest);
   }
 
   /** Cerca l’abitudine nello snapshot corrente; rifiuta identità inesistenti o eliminate. */
@@ -100,7 +97,7 @@ export class StatisticsRepository {
       const existing = entries.get(key);
       entries.set(key, {title: record.title, color: record.color, icon: record.icon, ...existing, outcome: record.outcome});
     }
-    const result: DailyStatistics = {date, total: entries.size, completed: 0, skipped: 0, partial: 0, pending: 0, recorded: 0, completionPercent: 0, activities: []};
+    const result: DailyStatistics = {date, total: entries.size, completed: 0, skipped: 0, pending: 0, recorded: 0, completionPercent: 0, activities: []};
     const segments = new Map<string, DailyActivitySegment>();
     for (const event of entries.values()) {
       result[event.outcome ?? 'pending']++;
@@ -113,7 +110,7 @@ export class StatisticsRepository {
       } else segments.set(key, {key, title: event.title, color: event.color, icon: event.icon, count: 1, completed: event.outcome === 'completed' ? 1 : 0, contributionPercent: 0});
     }
     result.activities = [...segments.values()];
-    result.recorded = result.completed + result.skipped + result.partial;
+    result.recorded = result.completed + result.skipped;
     result.completionPercent = percentage(result.completed, result.total);
     result.activities.forEach(segment => { segment.contributionPercent = percentage(segment.completed, result.total); });
     this.dailyCache.set(date, result);
@@ -132,34 +129,40 @@ export class StatisticsRepository {
     return result;
   }
 
-  /** Calcola l’anno per attività: parziale vale 50% solo in questa vista.
+  /** Calcola l’anno per attività usando il rapporto fra eventi fatti e pianificati.
    * Ogni occorrenza conta nel giorno di inizio; lo storico usa la data salvata.
    * Le occorrenze senza esito pesano zero nella media, ma restano distinguibili.
+   * I totali arrivano alla data di riferimento; i completamenti futuri già salvati sono separati.
+   * Le serie contano una volta quando tutti gli step hanno un esito, nell’anno dello step finale,
+   * anche se già confermato su una data futura, come la chiusura del percorso.
    */
   getActivityYearStatistics(id: string, year: number, referenceDate = today()): ActivityYearStatistics {
     if (!isIntegerInRange(year, 1900, 9998) || !validDate(referenceDate)) throw new Error('Periodo non valido.');
-    const activity = this.getStatisticsActivities().find(item => item.id === id);
-    if (!activity) throw new Error('Attività non trovata.');
     const source = this.items.find(item => item.id === id);
-    const members = source ? this.group(source) : [];
+    if (!source) throw new Error('Attività non trovata.');
+    const activity = { id: source.id, title: source.title, ...eventAppearance(source) };
+    const members = this.group(source);
     const sourceIds = new Set([id, ...members.map(item => item.id)]);
     const activityIds = new Set(members.map(item => item.activityId ?? item.id));
-    const names = new Set([normalizedTitle(activity.title), ...members.map(item => normalizedTitle(item.title))]);
-    const knownSources = new Set(this.items.map(item => item.id));
     const from = `${year}-01-01`, through = `${year}-12-31`;
+    const habitIds = new Set(members.flatMap(item => item.habitId ? [item.habitId] : []));
+    const completedSeries = habitIds.size ? [...habitIds].filter(habitId => {
+      const closedOn = this.getHabitCompletionDate(habitId);
+      return closedOn !== undefined && closedOn >= from && closedOn <= through;
+    }).length : null;
     const entries = new Map<string, StatisticsEntry>();
     for (const event of occurrences(members, from, through)) {
       if (event.date >= from && event.date <= through) entries.set(occurrenceKey(event.sourceId, event.occurrenceDate), {date: event.date, outcome: event.outcome});
     }
     for (const record of this.latest) {
-      if (!sourceIds.has(record.sourceId) && !activityIds.has(record.activityId) && !( !knownSources.has(record.sourceId) && names.has(normalizedTitle(record.title)))) continue;
+      if (!sourceIds.has(record.sourceId) && !activityIds.has(record.activityId)) continue;
       const key = occurrenceKey(record.sourceId, record.occurrenceDate);
       entries.delete(key);
       if (record.eventDate >= from && record.eventDate <= through) entries.set(key, {date: record.eventDate, outcome: record.outcome});
     }
     const days = new Map<string, ActivityDayStatistics>();
     for (let date = from; date <= through; date = addDays(date, 1)) {
-      days.set(date, {date, total: 0, completed: 0, partial: 0, skipped: 0, pending: 0, percent: null, state: 'empty'});
+      days.set(date, {date, total: 0, completed: 0, skipped: 0, pending: 0, percent: null, state: 'empty'});
     }
     for (const entry of entries.values()) {
       const day = days.get(entry.date)!;
@@ -169,13 +172,13 @@ export class StatisticsRepository {
     for (const day of days.values()) {
       if (!day.total) continue;
       day.state = day.date > referenceDate ? 'future' : day.pending === day.total ? 'pending' : 'recorded';
-      if (day.state === 'recorded') day.percent = percentage(day.completed + day.partial * ACTIVITY_PARTIAL_WEIGHT, day.total);
+      if (day.state === 'recorded') day.percent = percentage(day.completed, day.total);
     }
     const elapsedDays = [...days.values()].filter(day => day.date <= referenceDate && day.total > 0);
     return {
-      activity, year, days: [...days.values()],
+      activity, year, days: [...days.values()], completedSeries,
       completed: elapsedDays.reduce((total, day) => total + day.completed, 0),
-      partial: elapsedDays.reduce((total, day) => total + day.partial, 0),
+      futureCompleted: [...days.values()].filter(day => day.date > referenceDate).reduce((total, day) => total + day.completed, 0),
       skipped: elapsedDays.reduce((total, day) => total + day.skipped, 0),
       recentDays: elapsedDays.slice(-14),
     };

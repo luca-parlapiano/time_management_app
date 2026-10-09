@@ -14,18 +14,20 @@ export function ActivityStatisticsList({ year }: { year: number }) {
   const activities = useMemo(() => getStatisticsActivities().map(activity => getActivityYearStatistics(activity.id, year, referenceDate)), [getStatisticsActivities, getActivityYearStatistics, year, referenceDate]);
   if (!activities.length) return <p>Nessuna attività monitorata. Crea un’abitudine o una routine per iniziare.</p>;
   return <div className="activity-statistics-list">
-    <p className="annual-hint">I tuoi completamenti nell’anno, per abitudine e routine. Apri il calendario per esplorare i singoli giorni.</p>
+    <p className="annual-hint">Ogni serie conta una volta quando tutti gli step scelti hanno un esito, Fatto o Non fatto, nell’anno dell’ultimo step. Sono inclusi gli esiti già registrati su date future. Per le routine senza traguardo contiamo i singoli eventi fino a oggi. Apri il calendario per esplorare i singoli giorni.</p>
     {activities.map(statistics => {
-      const { activity, completed, partial, skipped, recentDays } = statistics;
+      const { activity, completedSeries, completed, futureCompleted, skipped, recentDays } = statistics;
       const expanded = expandedId === activity.id;
       return <article className="activity-statistics-card" key={activity.id} style={{ '--activity-color': eventColors[activity.color].value } as CSSProperties}>
         <div className="activity-statistics-row">
           <div className="activity-statistics-identity"><span className="activity-medallion"><EventIcon icon={activity.icon} /></span><h3>{activity.title}</h3></div>
-          <div className="activity-completed"><strong>{completed}</strong><span>completamenti</span></div>
+          <div className="activity-completed"><strong>{completedSeries ?? completed}</strong><span>{completedSeries !== null ? (completedSeries === 1 ? 'serie conclusa' : 'serie concluse') : (completed === 1 ? 'evento completato' : 'eventi completati')}</span></div>
           <div className="activity-recent"><span>Ultimi giorni pianificati</span><div className="activity-recent-days" aria-label={`Esiti recenti di ${activity.title}`}>
             {recentDays.map(day => <span key={day.date} className={`heatmap-swatch ${day.state}`} style={{ '--completion': `${day.percent ?? 0}%` } as CSSProperties} title={`${displayDate(day.date)} · ${dayDescription(day)}`} role="img" aria-label={`${displayDate(day.date)}: ${dayDescription(day)}`} />)}
             {!recentDays.length && <small>Nessun giorno trascorso nell’anno</small>}
-          </div><small>{partial} parziali · {skipped} non superate</small></div>
+          </div><small>{skipped} non superate</small>
+            {completedSeries === null && futureCompleted > 0 && <small>{futureCompleted} {futureCompleted === 1 ? 'evento già segnato su una data futura, escluso' : 'eventi già segnati su date future, esclusi'} dal totale.</small>}
+          </div>
           <button className="secondary-button" type="button" aria-expanded={expanded} aria-controls={`activity-calendar-${activity.id}`} onClick={() => setExpandedId(expanded ? null : activity.id)}>{expanded ? 'Chiudi calendario' : 'Apri calendario'}</button>
         </div>
         <div id={`activity-calendar-${activity.id}`} hidden={!expanded}>{expanded && <ActivityHeatmap key={`${activity.id}-${year}`} statistics={statistics} />}</div>

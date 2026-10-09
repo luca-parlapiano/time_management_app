@@ -1,6 +1,6 @@
 export type ItemKind = "fixed" | "protected" | "flexible";
 
-export type ItemOutcome = "completed" | "skipped" | "partial";
+export type ItemOutcome = "completed" | "skipped";
 
 export type EventIcon = "activity" | "work" | "study" | "sport" | "rest" | "meal" | "people" | "heart" | "gaming";
 
@@ -26,6 +26,8 @@ export interface CalendarItem extends ItemData {
   habitId?: string;
   /** Fine effettiva del percorso, ricalcolata dagli esiti confermati. */
   habitClosedOn?: string;
+  /** Ultima data originale pianificata per gli step della serie; derivata dal traguardo. */
+  habitPlannedUntil?: string;
   /** Identifica una routine monitorata, distinta da una normale serie del calendario. */
   routine?: true;
   outcomes?: Record<string, ItemOutcome>;

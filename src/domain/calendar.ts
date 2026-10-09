@@ -40,6 +40,17 @@ export function appearsOnTodayScreen(item: Pick<Occurrence, "kind" | "habitId" |
 }
 
 /**
+ * Restituisce il piano operativo della data civile richiesta dallo snapshot confermato.
+ * Esclude le serie di abitudini chiuse, anche il giorno del traguardo, conservando
+ * le occorrenze con esito delle serie ancora attive e delle routine.
+ * Non modifica lo storico consultabile nel calendario.
+ */
+export function todayOccurrences(items: CalendarItem[], date: string): Occurrence[] {
+  const active = items.filter(item => !item.habitId || !item.habitClosedOn);
+  return occurrences(active, date, date).filter(item => item.date === date && appearsOnTodayScreen(item));
+}
+
+/**
  * Crea un calendario v2 vuoto con array nuovi a ogni chiamata.
  * Non legge archivi e non impone la compilazione del profilo.
  */
@@ -101,6 +112,7 @@ export function validateItem(item: CalendarItem): void {
     throw new Error("Collegamento all’abitudine non valido.");
   }
   if (item.habitClosedOn !== undefined && (!item.habitId || !validDate(item.habitClosedOn))) throw new Error("Chiusura dell’abitudine non valida.");
+  if (item.habitPlannedUntil !== undefined && (!item.habitId || !validDate(item.habitPlannedUntil))) throw new Error("Fine pianificata dell’abitudine non valida.");
   if (item.outcomes !== undefined) {
     if (!item.outcomes || typeof item.outcomes !== "object" || Array.isArray(item.outcomes)) throw new Error("Esiti non validi.");
     for (const [date, outcome] of Object.entries(item.outcomes)) {
@@ -168,6 +180,7 @@ function atDate(item: CalendarItem, date: string): ItemData {
 export function occurrences(items: CalendarItem[], from: string, through: string): Occurrence[] {
   const result: Occurrence[] = [];
   function include(item: CalendarItem, original: string, data: ItemData, exception: boolean) {
+    if (item.habitPlannedUntil && original > item.habitPlannedUntil) return;
     if (item.habitClosedOn && data.date > item.habitClosedOn) return;
     if (data.date <= through && (data.endDate > from || (data.endDate === from && data.end > "00:00"))) {
       const outcome = item.outcomes?.[original];
@@ -181,7 +194,7 @@ export function occurrences(items: CalendarItem[], from: string, through: string
     // Con durata massima di 24 ore, basta il giorno precedente per includere gli eventi notturni.
     const first = addDays(from, -1);
     const offset = Math.max(0, Math.ceil((dateNumber(first) - dateNumber(item.date)) / (7 * DAY)));
-    for (let date = addDays(item.date, offset * 7); date <= through && (!item.habitClosedOn || date <= item.habitClosedOn) && (!item.recurrence.until || date <= item.recurrence.until); date = addDays(date, 7)) {
+    for (let date = addDays(item.date, offset * 7); date <= through && (!item.habitPlannedUntil || date <= item.habitPlannedUntil) && (!item.habitClosedOn || date <= item.habitClosedOn) && (!item.recurrence.until || date <= item.recurrence.until); date = addDays(date, 7)) {
       if (!Object.hasOwn(item.exceptions, date)) include(item, date, atDate(item, date), false);
     }
     // Cerca anche le eccezioni la cui data originale è fuori vista ma la destinazione è nel periodo.
@@ -204,6 +217,7 @@ export function findConflict(items: CalendarItem[], changedId: string): [Occurre
     dates.add(item.date);
     if (item.recurrence?.until) dates.add(item.recurrence.until);
     if (item.habitClosedOn) dates.add(item.habitClosedOn);
+    if (item.habitPlannedUntil) dates.add(item.habitPlannedUntil);
     for (const [date, data] of Object.entries(item.exceptions)) {
       dates.add(date);
       if (data) dates.add(data.date);
@@ -248,7 +262,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
   if (access.actor !== "user" && proposed.kind !== "flexible") throw new Error("Il motore e l’AI possono inserire solo attività flessibili.");
   validateData(proposed);
   let replacement: CalendarItem = { ...dataOf(proposed), id: proposed.id, recurrence: proposed.recurrence, exceptions: proposed.exceptions, title: proposed.title.trim(),
-    ...(proposed.habitId ? { habitId: proposed.habitId } : {}), ...(proposed.routine ? { routine: true } : {}) };
+    ...(proposed.habitId ? { habitId: proposed.habitId, habitPlannedUntil: proposed.habitPlannedUntil } : {}), ...(proposed.routine ? { routine: true } : {}) };
   if (existing) {
     if (existing.recurrence && target?.scope === "occurrence") {
       if (!isOccurrenceDate(existing, target.occurrenceDate)) throw new Error("Occorrenza non valida.");
@@ -256,7 +270,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
       replacement = { ...existing, exceptions: { ...existing.exceptions, [target.occurrenceDate]: dataOf(replacement) } };
     } else {
       if (existing.recurrence && (replacement.date !== existing.date || !replacement.recurrence)) throw new Error("La data di inizio e la frequenza della serie sono stabili. Modifica una singola occorrenza per spostarla.");
-      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, habitId: existing.habitId, outcomes: existing.outcomes, exceptions: existing.exceptions };
+      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, habitId: existing.habitId, habitPlannedUntil: existing.habitPlannedUntil, habitClosedOn: existing.habitClosedOn, outcomes: existing.outcomes, exceptions: existing.exceptions };
       // Negli eventi singoli la data stessa è la chiave dell’esito e segue lo spostamento.
       if (!existing.recurrence && existing.outcomes && replacement.date !== existing.date) {
         replacement.outcomes = existing.outcomes[existing.date] === undefined ? {} : { [replacement.date]: existing.outcomes[existing.date] };

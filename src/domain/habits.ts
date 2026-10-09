@@ -27,6 +27,17 @@ export function firstHabitOccurrenceDate(input: Pick<HabitDraft, "startsOn" | "w
   return first;
 }
 
+/**
+ * Calcola la data originale dell’ultimo step dalle prime date settimanali e dal traguardo.
+ * Conta gli appuntamenti in ordine civile, anche a cavallo d’anno; non modifica le date ricevute.
+ * Richiede almeno una data valida e un traguardo da 1 a 12.
+ */
+export function habitPlanEnd(firstDates: string[], stepTarget: HabitStepTarget): string {
+  if (!firstDates.length || firstDates.some(date => !validDate(date)) || !isHabitStepTarget(stepTarget)) throw new Error("Pianificazione dell’abitudine non valida.");
+  const dates = firstDates.flatMap(date => Array.from({ length: stepTarget }, (_, index) => addDays(date, index * 7))).sort();
+  return dates[stepTarget - 1];
+}
+
 /** Valida identità, motivazione, traguardo e pianificazione di un'abitudine da acquisire. */
 export function validateHabitDraft(input: HabitDraft): void {
   if (!input || typeof input.title !== "string" || !input.title.trim()) throw new Error("Inserisci il nome dell’abitudine.");
@@ -47,6 +58,10 @@ function proposedItem(draft: HabitDraft, habitId: string): CalendarItem {
   return {
     id: habitId,
     habitId,
+    habitPlannedUntil: habitPlanEnd(draft.weekdays.map(day => {
+      const date = addDays(weekStart(draft.startsOn), day);
+      return date < draft.startsOn ? addDays(date, 7) : date;
+    }), draft.stepTarget),
     title: draft.title.trim(),
     notes: draft.motivation,
     icon: draft.icon,

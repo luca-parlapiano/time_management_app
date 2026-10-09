@@ -12,7 +12,7 @@ export function dayDescription(day: ActivityDayStatistics): string {
   if (day.state === 'empty') return 'Non pianificata';
   if (day.state === 'future') return `${day.total} occorrenze future`;
   if (day.state === 'pending') return `${day.total} occorrenze · Nessun esito`;
-  return `${Math.round(day.percent ?? 0)}% · ${day.completed} superate, ${day.partial} parziali, ${day.skipped} non superate, ${day.pending} senza esito`;
+  return `${Math.round(day.percent ?? 0)}% · ${day.completed} superate, ${day.skipped} non superate, ${day.pending} senza esito`;
 }
 
 /** Griglia mensile degli esiti di un’attività; i calcoli arrivano dal Provider. */
@@ -22,7 +22,7 @@ export function ActivityHeatmap({statistics}: ActivityHeatmapProps) {
   const referenceDate = today();
   const selected = statistics.days.find(day => day.date === selectedDate);
   return <section className="activity-heatmap" aria-label="Statistiche per attività" style={{'--activity-color': eventColors[activity.color].value} as CSSProperties}>
-    <p className="annual-hint">Ogni quadrato è un giorno. Superata = 100%, parziale = 50%, non superata = 0%. Con più occorrenze mostriamo la media sul totale pianificato, contando quelle senza esito come zero. I giorni futuri non mostrano risultati.</p>
+    <p className="annual-hint">Ogni quadrato è un giorno. Fatto = 100%, non fatto = 0%. Con più occorrenze mostriamo la media sul totale pianificato, contando quelle senza esito come zero. I giorni futuri non mostrano risultati.</p>
     <div className="activity-heatmap-legend" aria-label="Legenda">
       <span><i className="heatmap-swatch empty" />Non pianificata</span>
       <span><i className="heatmap-swatch pending" />Senza esito</span>
@@ -47,7 +47,7 @@ export function ActivityHeatmap({statistics}: ActivityHeatmapProps) {
     {selected && <CalendarDialog title={`${activity.title} · ${displayDate(selected.date, {year:'numeric'})}`} onClose={() => setSelectedDate(null)}>
       <p>{dayDescription(selected)}</p>
       {selected.total > 0 && <p>{selected.total} occorrenze pianificate nella giornata.</p>}
-      {selected.state === 'recorded' && <p>La percentuale include tutte le occorrenze: una parziale vale metà di una superata; quelle senza esito restano da valutare.</p>}
+      {selected.state === 'recorded' && <p>La percentuale è il rapporto tra eventi fatti e totale pianificato; quelli senza esito restano da valutare.</p>}
     </CalendarDialog>}
   </section>;
 }

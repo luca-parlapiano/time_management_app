@@ -1,4 +1,4 @@
-import { archiveForStorage, exportArchive, parseArchive, validateArchive } from "../domain/outcomeArchive";
+import { archiveForStorage, exportArchive, parseArchive, upgradeArchive, validateArchive } from "../domain/outcomeArchive";
 import { reconcileHabitCompletion } from "../domain/habitCompletion";
 import { emptyCalendar } from "../domain/calendar";
 import type { DatabaseBridge, DatabaseSnapshot, DatabaseWrite, DBRepository } from "../model/database.js";
@@ -20,12 +20,14 @@ export class RepositoryDB implements DBRepository {
    * una copia precedente assente resta null, gli errori vengono propagati alla UI.
    */
   private prepareSnapshot(snapshot: DatabaseSnapshot): DatabaseSnapshot {
-    validateArchive(snapshot.archive);
-    if (snapshot.previous !== null) validateArchive(snapshot.previous);
+    const archive = upgradeArchive(snapshot.archive);
+    const previous = snapshot.previous === null ? null : upgradeArchive(snapshot.previous);
+    validateArchive(archive);
+    if (previous !== null) validateArchive(previous);
     return {
       ...snapshot,
-      archive: reconcileHabitCompletion(snapshot.archive),
-      previous: snapshot.previous === null ? null : reconcileHabitCompletion(snapshot.previous),
+      archive: reconcileHabitCompletion(archive),
+      previous: previous === null ? null : reconcileHabitCompletion(previous),
     };
   }
   /** Legge la preferenza del dispositivo da SQLite tramite il worker. */

@@ -46,7 +46,7 @@ export function AppSidebar({ expanded, onToggle, onAddHabit, onOpenHabits }: App
         </div>
         {activeHabits.length === 0 ? (
           expanded ? <div className="sidebar-habits-empty">
-            <p>Nessuna abitudine attiva. Puoi crearne una o ripetere un percorso completato.</p>
+            <p>Nessuna abitudine attiva. Puoi crearne una o ripetere una serie conclusa.</p>
             <button type="button" onClick={onAddHabit}>Crea</button>
           </div> : <RoundButton variant="secondary" icon="habits" label="Apri abitudini" onClick={onOpenHabits} />
         ) : (
