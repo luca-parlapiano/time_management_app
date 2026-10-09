@@ -50,6 +50,8 @@ export interface HabitJourneyProgress {
   completed: number;
   /** Eventi con esito registrato, limitati al numero di step scelti. */
   currentStep: number;
+  /** Esiti degli step valutati in ordine di data, limitati al traguardo. */
+  stepOutcomes: ItemOutcome[];
   milestonesReached: number;
   target: HabitStepTarget;
 }

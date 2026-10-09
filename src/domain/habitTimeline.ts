@@ -13,9 +13,15 @@ export function habitJourneyProgress(index: HabitOutcomeIndex, habit: Habit, thr
   const recordedDates = index.byActivity.get(habit.id)?.recordedDates ?? [];
   const recorded = through === undefined ? recordedDates.length : recordedDates.filter(date => date <= through).length;
   const currentStep = Math.min(recorded, habit.stepTarget);
+  const stepOutcomes = [...(index.byActivity.get(habit.id)?.records ?? [])]
+    .filter(record => through === undefined || record.eventDate <= through)
+    .sort((a, b) => a.eventDate.localeCompare(b.eventDate) || a.occurrenceDate.localeCompare(b.occurrenceDate) || a.sourceId.localeCompare(b.sourceId))
+    .slice(0, habit.stepTarget)
+    .map(record => record.outcome);
   return {
     completed,
     currentStep,
+    stepOutcomes,
     milestonesReached: recorded >= habit.stepTarget ? 1 : 0,
     target: habit.stepTarget,
   };

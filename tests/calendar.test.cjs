@@ -453,16 +453,16 @@ test('habit collision identifies the occupied calendar event without changing it
   });
   assert.deepEqual(occupied, before);
 });
-test('habit journey advances on assessed outcomes and stops at its target', () => {
+test('habit journey preserves ordered outcomes and stops at its target', () => {
   const created = habits.createHabit(c.emptyCalendar(), [], habitDraft({weekdays:[0],stepTarget:2}), {habitId:'habit-reading'});
   // Simula uno storico precedente al limite degli step.
   const occurrences = c.occurrences(created.calendar.items.map(item => ({...item,habitPlannedUntil:undefined})),'2026-09-28','2026-10-19');
   const first = archives.outcomeRecord(created.calendar,occurrences[0],'completed');
   const secondSkipped = archives.outcomeRecord(created.calendar,occurrences[1],'skipped');
   const third = archives.outcomeRecord(created.calendar,occurrences[2],'completed');
-  assert.deepEqual(habitJourneyProgress([third,first,secondSkipped],created.habits[0]),{completed:2,currentStep:2,milestonesReached:1,target:2});
+  assert.deepEqual(habitJourneyProgress([third,first,secondSkipped],created.habits[0]),{completed:2,currentStep:2,stepOutcomes:['completed','skipped'],milestonesReached:1,target:2});
   const secondCompleted = archives.outcomeRecord(created.calendar,occurrences[1],'completed');
-  assert.deepEqual(habitJourneyProgress([first,secondSkipped,third,secondCompleted],created.habits[0]),{completed:3,currentStep:2,milestonesReached:1,target:2});
+  assert.deepEqual(habitJourneyProgress([first,secondSkipped,third,secondCompleted],created.habits[0]),{completed:3,currentStep:2,stepOutcomes:['completed','completed'],milestonesReached:1,target:2});
   const firstCorrected = archives.outcomeRecord(created.calendar,occurrences[0],'skipped');
   assert.equal(habitJourneyProgress([first,secondSkipped,third,secondCompleted,firstCorrected],created.habits[0]).completed,2);
 });

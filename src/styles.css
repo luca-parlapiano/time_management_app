@@ -500,6 +500,7 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .habit-journey-track ol { display: flex; gap: 5px; margin: 0; padding: 0; list-style: none; }
 .habit-journey-track li { flex: 1; height: 12px; border: 1px solid color-mix(in srgb, var(--event-color) 45%, transparent); border-radius: 4px; background: rgb(var(--surface-rgb)); }
 .habit-journey-track li.completed { background: var(--event-color); }
+.habit-journey-track li.skipped { border: 2px solid #b6535d; background: #fff; }
 .habit-journey p, .habit-journey small { margin: 0; }
 .habit-journey p { font-size: 13px; }
 .habit-journey small { color: var(--text-secondary); font-size: 12px; }
