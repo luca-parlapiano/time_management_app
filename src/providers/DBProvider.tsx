@@ -2,11 +2,11 @@ import { reconcileHabitCompletion } from "../domain/habitCompletion";
 import { StatisticsRepository } from "../repository/StatisticsRepository";
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { clearCalendar, deleteItem, emptyCalendar, isProgressActivity, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
+import { clearCalendar, deleteItem, emptyCalendar, isProgressActivity, occurrences, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
 import { outcomeRecord } from "../domain/outcomeArchive";
 import { createHabit, deleteHabit, updateHabit } from "../domain/habits";
 import { useLoading } from "../hooks/useLoading";
-import type { ItemData } from "../model/calendar.js";
+import type { ItemData, ItemOutcome, Occurrence } from "../model/calendar.js";
 import type { DBContextValue, DatabaseSnapshot, DBRepository } from "../model/database.js";
 import type { LoadingOptions } from "../model/loading.js";
 import type { PlannerArchive } from "../model/outcomeArchive.js";
@@ -69,6 +69,37 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     finally { locked.current = false; setSaving(false); }
   }, [repository, run]);
   const statistics = useMemo(() => new StatisticsRepository(snapshot?.archive ?? emptyArchive), [snapshot?.archive]);
+  const recordOutcome = useCallback((item: Occurrence, outcome: ItemOutcome, loading?: LoadingOptions) => mutate(archive => {
+    const source = archive.calendar.items.find(entry => entry.id === item.sourceId);
+    if (!source || !isProgressActivity(source)) throw new Error("Gli esiti sono disponibili solo per abitudini e routine ricorrenti.");
+    if (source.habitClosedOn && item.date > source.habitClosedOn) throw new Error("La serie è già conclusa. Usa Ripeti serie per iniziare un nuovo percorso.");
+    return { ...archive,
+      calendar: setOccurrenceOutcome(archive.calendar, item.sourceId, item.occurrenceDate, outcome),
+      history: [...archive.history, outcomeRecord(archive.calendar, item, outcome)],
+    };
+  }, false, loading ?? { scope: `outcome:${item.id}` }), [mutate]);
+  /**
+   * Applica lo stesso comando della UI in ordine di data, rileggendo ogni snapshot confermato.
+   * Salta esiti identici e occasioni non più pianificate (per esempio dopo il traguardo).
+   * Non è una transazione unica: in caso di errore indica quante scritture sono già riuscite.
+   */
+  const recordOutcomes = useCallback(async (items: readonly Occurrence[], outcome: ItemOutcome) => {
+    let saved = 0, skipped = 0;
+    let lastDate: string | undefined;
+    for (const requested of [...items].sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start))) {
+      try {
+        if (!current.current) throw new Error("Database non disponibile.");
+        const live = occurrences(current.current.archive.calendar.items, requested.date, requested.date)
+          .find(item => item.sourceId === requested.sourceId && item.occurrenceDate === requested.occurrenceDate && item.date === requested.date);
+        if (!live || live.outcome === outcome) { skipped++; continue; }
+        await recordOutcome(live, outcome);
+        saved++; lastDate = live.date;
+      } catch (cause) {
+        throw new Error(`Operazione interrotta dopo ${saved} esiti salvati. ${cause instanceof Error ? cause.message : "Salvataggio non riuscito."}`, { cause });
+      }
+    }
+    return { saved, skipped, lastDate };
+  }, [recordOutcome]);
   const value = useMemo<DBContextValue>(() => ({
     getHabitCompletionDate: id => statistics.getHabitCompletionDate(id),
     getHabitProgress: id => statistics.getHabitProgress(id),
@@ -87,15 +118,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     archive: snapshot?.archive ?? emptyArchive,
     previous: snapshot?.previous ?? null,
     ready: snapshot !== null, error, saving, retry,
-    recordOutcome: (item, outcome, loading) => mutate(archive => {
-      const source = archive.calendar.items.find(entry => entry.id === item.sourceId);
-      if (!source || !isProgressActivity(source)) throw new Error("Gli esiti sono disponibili solo per abitudini e routine ricorrenti.");
-      if (source.habitClosedOn && item.date > source.habitClosedOn) throw new Error("La serie è già conclusa. Usa Ripeti serie per iniziare un nuovo percorso.");
-      return {...archive,
-        calendar: setOccurrenceOutcome(archive.calendar, item.sourceId, item.occurrenceDate, outcome),
-        history: [...archive.history, outcomeRecord(archive.calendar, item, outcome)],
-      };
-    }, false, loading ?? {scope:`outcome:${item.id}`}),
+    recordOutcome, recordOutcomes,
     saveHabit: (input, loading) => mutate(archive => {
       const result = createHabit(archive.calendar, archive.habits ?? [], input, { habitId: crypto.randomUUID() });
       return { ...archive, calendar: result.calendar, habits: result.habits };
@@ -130,6 +153,6 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       if (!archive) throw new Error('Backup non disponibile.');
       return repository.exportBackup(archive);
     }, {mode:'local',scope:'backup',message:'Preparazione backup…'}),
-  }), [snapshot,error,saving,retry,mutate,resetAll,repository,run,palette,paletteError,statistics]);
+  }), [snapshot,error,saving,retry,mutate,resetAll,repository,run,palette,paletteError,statistics,recordOutcome,recordOutcomes]);
   return <DBContext.Provider value={value}>{children}</DBContext.Provider>;
 }

@@ -61,6 +61,7 @@ export interface DBContextValue {
   saving: boolean;
   retry(): Promise<void>;
   recordOutcome(item: Occurrence, outcome: ItemOutcome, loading?: LoadingOptions): Promise<void>;
+  recordOutcomes(items: readonly Occurrence[], outcome: ItemOutcome): Promise<{ saved: number; skipped: number; lastDate?: string }>;
   saveHabit(input: HabitDraft, loading?: LoadingOptions): Promise<void>;
   updateHabit(id: string, input: HabitDraft, loading?: LoadingOptions): Promise<void>;
   deleteHabit(id: string, loading?: LoadingOptions): Promise<void>;

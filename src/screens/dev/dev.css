@@ -1,0 +1,42 @@
+/* Laboratorio: comandi e letture condividono lo stesso snapshot in memoria. */
+.dev-standalone { padding: 20px; max-width: 1500px; margin: auto; height: 100dvh; display: flex; flex-direction: column; }
+.dev-standalone > .app-screen { display: flex; flex-direction: column; min-height: 0; }
+.dev-screen { overflow: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 24px; }
+.dev-workbench { display: flex; flex-direction: column; gap: 16px; }
+.dev-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.dev-banner h2, .dev-card h3 { margin: 0 0 8px; }
+.dev-banner p:last-child { flex-basis: 100%; margin: 0; }
+.dev-badge { border-radius: 20px; padding: 6px 12px; background: rgba(var(--accent-rgb), .16); font-weight: 700; }
+.dev-card { min-width: 0; padding: 20px; border: 1px solid rgba(var(--ink-rgb), .15); border-radius: 16px; background: rgba(var(--surface-rgb), .8); }
+.dev-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dev-actions button[aria-pressed="true"] { background: rgba(var(--accent-rgb), .25); border-color: rgb(var(--accent-rgb)); }
+.dev-note { color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.dev-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.dev-controls label { display: grid; gap: 6px; font-size: 13px; }
+.dev-controls input, .dev-controls select { min-width: 0; width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid rgba(var(--ink-rgb), .2); border-radius: 10px; background: rgb(var(--surface-rgb)); color: var(--text); font: inherit; }
+.dev-controls .dev-note { grid-column: 1 / -1; margin: 0; }
+.dev-columns { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; gap: 16px; }
+.dev-inspector { position: sticky; top: 0; }
+.dev-plan { margin-top: 16px; }
+.dev-plan .dev-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dev-plan-table { margin-top: 16px; }
+.dev-plan-table button { padding: 7px 10px; font-size: 12px; }
+.dev-plan-table td { vertical-align: top; }
+.dev-plan-table td small { display: block; margin-top: 5px; color: var(--text-secondary); }
+.dev-date-link { border: 0; background: transparent; color: var(--text); text-decoration: underline; font: inherit; cursor: pointer; }
+.dev-metrics { margin: 0 0 16px; }
+.dev-metrics > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid rgba(var(--ink-rgb), .12); }
+.dev-metrics dt { color: var(--text-secondary); }
+.dev-metrics dd { margin: 0; font-weight: 700; text-align: right; }
+.dev-inspector details { margin-top: 16px; }
+.dev-card summary { cursor: pointer; font-weight: 600; }
+.dev-card li { line-height: 1.5; }
+.dev-table-wrap { overflow: auto; max-height: 360px; }
+.dev-table-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dev-table-wrap th, .dev-table-wrap td { text-align: left; padding: 8px; border-bottom: 1px solid rgba(var(--ink-rgb), .15); }
+.dev-json { max-height: 360px; overflow: auto; font-size: 12px; }
+@media (max-width: 1100px) {
+  .dev-columns { grid-template-columns: minmax(0, 1fr); }
+  .dev-inspector { position: static; }
+  .dev-controls { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,6 +1,6 @@
 import { AppIcon } from "../../icons/AppIcon";
 
-export type ScreenId = "today" | "habits" | "calendar" | "statistics" | "trophies" | "settings";
+export type ScreenId = "today" | "habits" | "calendar" | "statistics" | "trophies" | "settings" | "dev";
 
 interface ScreenTabsProps {
   activeScreen: ScreenId;
@@ -14,6 +14,7 @@ const screens: ReadonlyArray<{ id: ScreenId; label: string }> = [
   { id: "statistics", label: "Statistiche" },
   { id: "trophies", label: "Trofei" },
   { id: "settings", label: "Impostazioni" },
+  { id: "dev", label: "Dev" },
 ];
 
 /** Navigazione accessibile tra le schermate principali dell’app. */

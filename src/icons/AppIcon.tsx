@@ -1,4 +1,4 @@
-export type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'today' | 'habits' | 'calendar' | 'statistics' | 'trophies' | 'settings';
+export type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'today' | 'habits' | 'calendar' | 'statistics' | 'trophies' | 'settings' | 'dev';
 
 interface AppIconProps {
   name: AppIconName;
@@ -20,6 +20,7 @@ export function AppIcon({ name, size = 22 }: AppIconProps) {
     statistics: <path d="M4 20V10h4v10m2 0V4h4v16m2 0v-7h4v7M2 20h20" />,
     trophies: <><path d="M8 3h8v6a4 4 0 0 1-8 0V3ZM8 5H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4M12 13v5m-4 3h8m-6-3h4v3" /></>,
     settings: <><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="rgb(var(--surface-rgb))" /><circle cx="15" cy="17" r="3" fill="rgb(var(--surface-rgb))" /></>,
+    dev: <path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18" />,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === 'add' ? 2 : 1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name]}</svg>;
 }

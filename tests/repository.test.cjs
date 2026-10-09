@@ -4,6 +4,30 @@ const { join } = require('node:path');
 const { RepositoryDB } = require(join(process.env.CALENDAR_TEST_BUILD, 'repository/RepositoryDB.js'));
 const { emptyCalendar } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/calendar.js'));
 const emptyArchive = () => ({ format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [] });
+const { createDevRepository } = require(join(process.env.CALENDAR_TEST_BUILD, 'repository/DevRepository.js'));
+
+test('Dev repositories isolate sessions and snapshots, reject stale writes and reset only their own data', async () => {
+  const first = createDevRepository(), second = createDevRepository();
+  const initial = await first.initialize();
+  await second.initialize();
+  const data = emptyArchive();
+  data.calendar.profile = {name:'Copia di prova',notes:''};
+  const saved = await first.save({archive:data,expectedRevision:initial.revision,replace:true});
+  data.calendar.profile.name = 'Mutazione esterna';
+  saved.archive.calendar.profile.name = 'Mutazione dello snapshot restituito';
+  const reopened = await first.initialize();
+  assert.equal(reopened.archive.calendar.profile.name,'Copia di prova');
+  assert.equal((await second.initialize()).archive.calendar.profile,null);
+  await assert.rejects(first.save({archive:emptyArchive(),expectedRevision:initial.revision}), /Revisione/);
+  assert.equal((await first.initialize()).revision,reopened.revision);
+  await first.savePalette('night');
+  assert.equal(await second.loadPalette(),'natural');
+  const reset = await first.reset(reopened.revision);
+  assert.equal(reset.archive.calendar.profile,null);
+  assert.equal(reset.previous,null);
+  assert.equal(await first.loadPalette(),'natural');
+  assert.equal((await second.initialize()).revision,0);
+});
 
 test('confirmed snapshots keep calendar, statistics and dashboard aligned across reopen, import and correction', async () => {
   const { createHabit } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/habits.js'));
