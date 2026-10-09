@@ -9,7 +9,6 @@ import { TrophiesScreen } from "../../screens/trophies/TrophiesScreen";
 import { StatisticsScreen } from "../../screens/statistics/StatisticsScreen";
 import { HabitsScreen } from "../../screens/habits/HabitsScreen";
 import { TodayScreen } from "../../screens/today/TodayScreen";
-import { DevScreen } from "../../screens/dev/DevScreen";
 import { AppHeader } from "./AppHeader";
 import { AppDialogs, type AppDialogState } from "./AppDialogs";
 import { AppSidebar } from "./AppSidebar";
@@ -17,7 +16,7 @@ import { ScreenTabs, type ScreenId } from "./ScreenTabs";
 
 /** Layout principale e solo stato condiviso tra più schermate. */
 export function AppShell() {
-  const { palette, saving, archive } = useDB();
+  const { palette, saving } = useDB();
   const { isLoading } = useLoading();
   const [sidebarExpanded, setSidebarExpanded] = useState(() => window.matchMedia("(min-width: 721px)").matches);
   const [activeScreen, setActiveScreen] = useState<ScreenId>("today");
@@ -63,7 +62,6 @@ export function AppShell() {
         <TrophiesScreen active={activeScreen === "trophies"} />
         <SettingsScreen active={activeScreen === "settings"} onOpenProfile={() => setDialog({ type: "preferences" })}
           onClearCalendar={() => setDialog({ type: "clear" })} onResetAll={() => setDialog({ type: "reset-all" })} />
-        <DevScreen active={activeScreen === "dev"} sourceArchive={archive} />
       </main>
       <AppDialogs dialog={dialog} onChange={setDialog} onHabitSaved={showSavedHabit} />
     </div>

@@ -11,7 +11,6 @@ const sectionSummaries: Record<ScreenId, string> = {
   statistics: "I tuoi progressi",
   trophies: "I tuoi traguardi",
   settings: "Le tue preferenze",
-  dev: "Prove interattive su dati isolati",
 };
 
 /** Saluto condiviso sopra le schede, con descrizione e data locale su righe distinte. */

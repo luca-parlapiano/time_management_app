@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { RoundButton } from "../../components/ui/RoundButton";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { addDays, displayDate, today, weekStart } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
@@ -19,7 +18,6 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
   const { state, saving, recordOutcome } = useDB();
   const [view, setView] = useState<"agenda" | "timeline">("agenda");
   const addItem = useCallback((date: string) => onOpenEditor(date, undefined, "fixed"), [onOpenEditor]);
-  const addActivity = useCallback(() => onOpenEditor(week === weekStart(today()) ? today() : week, undefined, "fixed"), [onOpenEditor, week]);
   const openItem = useCallback((item: Occurrence) => onOpenEvent(item, false), [onOpenEvent]);
   return (
     <section id="panel-calendar" className="app-screen" role="tabpanel" aria-labelledby="tab-calendar" tabIndex={0} hidden={!active}>
@@ -39,7 +37,6 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
             <StandardButton variant="secondary" onClick={() => onWeekChange(weekStart(today()))}>Oggi</StandardButton>
             <StandardButton variant="secondary" aria-label="Settimana successiva" onClick={() => onWeekChange(addDays(week, 7))}>Successiva →</StandardButton>
           </nav>
-          <RoundButton variant="primary" icon="add" iconSize={26} label="Nuovo appuntamento fisso" disabled={saving} onClick={addActivity} />
         </div>
       </header>
       <div className="screen-content calendar-screen-content">

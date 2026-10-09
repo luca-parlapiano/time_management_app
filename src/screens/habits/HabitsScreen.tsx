@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { addDays, displayDate, eventColors, today } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
+import { AppIcon } from "../../icons/AppIcon";
 import { EventIcon } from "../../icons/EventIcon";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { HabitJourney } from "./HabitJourney";
@@ -44,7 +45,10 @@ export function HabitsScreen({ active, selectedHabitId, onSelectHabit, onAdd, on
         </div> : <>
           <nav className="habit-list" aria-label={view === "archive" ? "Abitudini archiviate" : "Abitudini in corso"}>{visibleHabits.map(habit => {
             const weeklyOccurrences = state.items.filter(item => item.habitId === habit.id).length;
-            return <button key={habit.id} aria-current={habit.id === selected?.id ? "true" : undefined} onClick={() => onSelectHabit(habit.id)} style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}><span><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{completionDates.get(habit.id) ? "Conclusa" : `${weeklyOccurrences} ${weeklyOccurrences === 1 ? "volta" : "volte"} a settimana`} · {habit.stepTarget} step</small></button>;
+            const completedOn = completionDates.get(habit.id);
+            const progress = view === "archive" ? getHabitProgress(habit.id) : null;
+            const allStepsDone = progress?.stepOutcomes.length === habit.stepTarget && progress.stepOutcomes.every(outcome => outcome === "completed");
+            return <button key={habit.id} aria-current={habit.id === selected?.id ? "true" : undefined} onClick={() => onSelectHabit(habit.id)} style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{completedOn ? `Conclusa - ${displayDate(completedOn, { day: "2-digit", month: "2-digit", year: "numeric" })}` : `${weeklyOccurrences} ${weeklyOccurrences === 1 ? "volta" : "volte"} a settimana · ${habit.stepTarget} step`}</small>{allStepsDone && <span className="habit-list-trophy" role="img" aria-label="Tutti gli step fatti" title="Tutti gli step fatti"><AppIcon name="trophies" size={20} /></span>}</button>;
           })}</nav>
           {selected && journey && <article className="habit-detail" style={{ "--event-color": eventColors[selected.color].value } as CSSProperties}>
             <header><span className="habit-detail-icon"><EventIcon icon={selected.icon} /></span><div><h3>{selected.title}</h3>{selected.motivation && <p>{selected.motivation}</p>}</div><StandardButton variant="ghost" onClick={() => onEdit(selected.id)}>Modifica</StandardButton></header>
