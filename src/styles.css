@@ -374,11 +374,36 @@ h1 {
 .color-option[aria-pressed="true"] { border-color: var(--text); }
 .calendar-dialog { border: 1px solid rgba(var(--ink-rgb), 0.2); color: var(--text); width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
 .calendar-dialog::backdrop { background: rgba(var(--backdrop-rgb), 0.55); backdrop-filter: blur(4px); }
-.creation-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 12px 0 20px; }
-.creation-choice button { display: grid; align-content: start; gap: 8px; min-height: 150px; padding: 22px; border: 1px solid rgba(var(--ink-rgb), 0.16); border-radius: 18px; background: rgb(var(--surface-rgb)); color: var(--text); text-align: left; cursor: pointer; }
-.creation-choice button:hover, .creation-choice button:focus-visible { border-color: rgb(var(--accent-rgb)); background: color-mix(in srgb, rgb(var(--accent-rgb)) 8%, rgb(var(--surface-rgb))); }
-.creation-choice strong { font-size: 18px; }
-.creation-choice span { color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+.creation-dialog .modal-header { flex-direction: row; align-items: center; gap: 12px; }
+.creation-dialog .modal-header h3 { margin: 0; font-size: clamp(22px, 3vw, 28px); letter-spacing: -0.7px; }
+.creation-intro { margin: 0 0 24px; max-width: 46ch; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
+.creation-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 0 0 12px; }
+.creation-method { --method-rgb: var(--accent-rgb); display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 22px; border: 1px solid rgba(var(--method-rgb), 0.3); border-radius: 22px; background: linear-gradient(145deg, rgba(var(--method-rgb), 0.12), transparent 75%), rgb(var(--surface-rgb)); color: var(--text); text-align: left; cursor: pointer; animation: creation-method-enter 360ms ease-out both; transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease; }
+.creation-method-routine { --method-rgb: var(--info-rgb); animation-delay: 70ms; }
+.creation-method:hover { transform: translateY(-3px); border-color: rgb(var(--method-rgb)); box-shadow: 0 12px 26px rgba(var(--shadow-rgb), 0.09); }
+.creation-method:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
+.creation-method-art { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 76px; margin-bottom: 24px; color: rgb(var(--method-rgb)); }
+.creation-method-icon { display: grid; place-items: center; flex: 0 0 72px; height: 72px; border: 1px solid rgba(var(--method-rgb), 0.2); border-radius: 23px; background: rgba(var(--method-rgb), 0.12); transform: rotate(-6deg); transition: transform 220ms ease; }
+.creation-method:hover .creation-method-icon, .creation-method:focus-visible .creation-method-icon { transform: rotate(0); }
+.creation-step-trail { display: flex; align-items: flex-end; gap: 7px; height: 44px; margin-right: 4px; }
+.creation-step-trail i { width: 15px; height: 14px; border-radius: 5px; background: rgba(var(--method-rgb), 0.18); }
+.creation-step-trail i:nth-child(2) { height: 28px; background: rgba(var(--method-rgb), 0.3); }
+.creation-step-trail i:nth-child(3) { height: 42px; background: rgba(var(--method-rgb), 0.5); }
+.creation-routine-orbit { width: 44px; height: 44px; margin-right: 8px; border: 9px dotted rgba(var(--method-rgb), 0.35); border-radius: 50%; }
+.creation-method-label { margin-bottom: 8px; color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+.creation-method strong { font-size: 20px; line-height: 1.3; letter-spacing: -0.4px; }
+.creation-method-description { margin: 12px 0 22px; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.creation-method-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(var(--method-rgb), 0.2); font-size: 13px; font-weight: 700; }
+.creation-method-action svg { transition: transform 180ms ease; }
+.creation-method:hover .creation-method-action svg { transform: translateX(3px); }
+@keyframes creation-method-enter {
+  from { opacity: 0; translate: 0 10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .creation-method, .creation-method-icon, .creation-method-action svg { animation: none; transition: none; }
+  .creation-method:hover, .creation-method .creation-method-icon, .creation-method:hover .creation-method-action svg { transform: none; }
+}
 .editor-fields { border: 0; padding: 0; min-width: 0; }
 .editor-fields:disabled { opacity: 0.65; }
 .form-grid textarea { resize: vertical; border: 1px solid rgba(var(--ink-rgb), 0.16); border-radius: 14px; padding: 12px; background: rgb(var(--surface-rgb)); }
@@ -389,7 +414,11 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
   .continuous-calendar { grid-template-columns: repeat(7, minmax(230px, 82vw)); scroll-snap-type: x proximity; }
   .continuous-calendar .day-column { scroll-snap-align: start; }
   .creation-choice { grid-template-columns: 1fr; }
-  .creation-choice button { min-height: 0; }
+  .creation-method { padding: 18px; }
+  .creation-method-art { height: 48px; margin-bottom: 16px; }
+  .creation-method-icon { flex-basis: 48px; height: 48px; border-radius: 16px; }
+  .creation-method-icon svg { width: 28px; height: 28px; }
+  .creation-method-description { margin: 8px 0 16px; }
 }
 
 /* Shared activity details, independent appointment completion. */

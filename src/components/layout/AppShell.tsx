@@ -49,7 +49,7 @@ export function AppShell() {
         <AppHeader activeScreen={activeScreen} />
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
         {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
-        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={openHabits} onAddHabit={() => setDialog({ type: "habit" })} />
+        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={openHabits} onAddHabit={() => setDialog({ type: "create" })} />
         <HabitsScreen active={activeScreen === "habits"} selectedHabitId={selectedHabitId} onSelectHabit={setSelectedHabitId} onAdd={() => setDialog({ type: "create" })} onEdit={habitId => setDialog({ type: "habit", habitId })} onRepeat={habitId => setDialog({ type: "habit", habitId, repeat: true })} />
         <CalendarScreen
           active={activeScreen === "calendar"}

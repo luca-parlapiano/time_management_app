@@ -1,4 +1,4 @@
-export type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'today' | 'habits' | 'calendar' | 'statistics' | 'trophies' | 'settings';
+export type AppIconName = 'sidebar-open' | 'sidebar-close' | 'add' | 'profile' | 'trash' | 'delete-event' | 'today' | 'habits' | 'calendar' | 'statistics' | 'trophies' | 'settings' | 'steps' | 'repeat' | 'arrow-right';
 
 interface AppIconProps {
   name: AppIconName;
@@ -11,6 +11,9 @@ export function AppIcon({ name, size = 22 }: AppIconProps) {
     'sidebar-open': <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16M13 9l3 3-3 3" /></>,
     'sidebar-close': <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16M16 9l-3 3 3 3" /></>,
     add: <path d="M12 5v14M5 12h14" />,
+    steps: <><path d="M3 20h6v-6h6V8h6M17 3h4v5" /><path d="m4 11 6-6m-6 0h6v6" /></>,
+    repeat: <><path d="M20 8a8 8 0 0 0-14-2L3 9m0-5v5h5M4 16a8 8 0 0 0 14 2l3-3m0 5v-5h-5" /></>,
+    'arrow-right': <path d="M4 12h16m-6-6 6 6-6 6" />,
     profile: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
     trash: <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7" />,
     'delete-event': <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />,

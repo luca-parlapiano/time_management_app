@@ -5,6 +5,10 @@
 > riferimento per ciò che è implementato; la
 > [strategia](strategia-prodotto-e-benchmark.md) spiega la direzione di prodotto.
 
+> Per l’evoluzione delle routine in sequenze di azioni su desktop e Android/iOS,
+> consultare il [piano Routine del 9 ottobre 2026](piano-implementazione-routine.md).
+> Le descrizioni delle routine in questo documento riguardano il modello precedente.
+
 ## Stato di avanzamento
 
 Il modello corrente distingue due intenzioni. Un'abitudine è un comportamento da

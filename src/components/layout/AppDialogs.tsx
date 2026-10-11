@@ -8,6 +8,7 @@ import { HabitEditor } from "../../screens/habits/HabitEditor";
 import { CalendarDialog } from "../ui/CalendarDialog";
 import { StandardButton } from "../ui/StandardButton";
 import { today } from "../../domain/calendar";
+import { AppIcon } from "../../icons/AppIcon";
 
 export type AppDialogState =
   | { type: "event"; item: Occurrence; confirmDelete: boolean }
@@ -82,17 +83,24 @@ export function AppDialogs({ dialog, onChange, onHabitSaved }: AppDialogsProps) 
   return <ResetAllDialog onClose={() => onChange(null)} />;
 }
 
-/** Distingue subito un percorso di apprendimento da un semplice promemoria ricorrente. */
+/** Presenta i metodi disponibili e apre l’editor scelto, senza creare dati alla selezione. */
 function CreationChoiceDialog({ onClose, onHabit, onRoutine }: { onClose: () => void; onHabit: () => void; onRoutine: () => void }) {
-  return <CalendarDialog title="Cosa vuoi creare?" onClose={onClose}>
+  return <CalendarDialog title="Come vuoi imparare?" className="creation-dialog" onClose={onClose}>
+    <p className="creation-intro">Ogni abitudine inizia da un piccolo gesto. Scegli il modo che fa per te.</p>
     <div className="creation-choice">
-      <button type="button" onClick={onHabit}>
-        <strong>Nuova abitudine</strong>
-        <span>Impara un comportamento con un piccolo traguardo da 1 a 12 eventi.</span>
+      <button className="creation-method creation-method-steps" type="button" onClick={onHabit} aria-labelledby="creation-steps-title" aria-describedby="creation-steps-description">
+        <span className="creation-method-art" aria-hidden="true"><span className="creation-method-icon"><AppIcon name="steps" size={36} /></span><span className="creation-step-trail"><i /><i /><i /></span></span>
+        <span className="creation-method-label">Abitudine a step</span>
+        <strong id="creation-steps-title">Un passo alla volta</strong>
+        <span className="creation-method-description" id="creation-steps-description">Parti da un piccolo traguardo: da 1 a 12 eventi per allenare una nuova abitudine.</span>
+        <span className="creation-method-action" aria-hidden="true">Scegli gli step <AppIcon name="arrow-right" size={18} /></span>
       </button>
-      <button type="button" onClick={onRoutine}>
-        <strong>Nuova routine</strong>
-        <span>Ricorda un’attività da svolgere regolarmente, senza step né percorso.</span>
+      <button className="creation-method creation-method-routine" type="button" onClick={onRoutine} aria-labelledby="creation-routine-title" aria-describedby="creation-routine-description">
+        <span className="creation-method-art" aria-hidden="true"><span className="creation-method-icon"><AppIcon name="repeat" size={36} /></span><span className="creation-routine-orbit" /></span>
+        <span className="creation-method-label">Routine</span>
+        <strong id="creation-routine-title">Con un ritmo costante</strong>
+        <span className="creation-method-description" id="creation-routine-description">Fai spazio a un’attività che si ripete nei tuoi giorni, senza un traguardo di step.</span>
+        <span className="creation-method-action" aria-hidden="true">Crea una routine <AppIcon name="arrow-right" size={18} /></span>
       </button>
     </div>
     <div className="modal-actions"><StandardButton type="button" variant="secondary" onClick={onClose}>Annulla</StandardButton></div>

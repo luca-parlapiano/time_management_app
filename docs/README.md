@@ -16,6 +16,7 @@ Questi documenti descrivono obiettivi e ipotesi, non funzionalità tutte disponi
 
 - [Strategia prodotto e benchmark](strategia-prodotto-e-benchmark.md): pubblico, valore e ipotesi da validare. I dati sui concorrenti non sono stati rivalidati nel riallineamento.
 - [Piano di implementazione Oggi e Abitudini](piano-implementazione-oggi-abitudini.md): sequenza di lavoro proposta, contratti, criteri di accettazione e preparazione al mobile.
+- [Piano di implementazione Routine](piano-implementazione-routine.md): sequenze nel calendario, esperienza mobile, persistenza, Android/iOS negli store e continuità fra dispositivi.
 - [AI e personalizzazione locale](ai-modello-personalizzazione-locale.md): possibile evoluzione, subordinata a validazione e conferma dell’utente.
 
 Lo [stato del progetto](stato-progetto.md) tiene separato ciò che esiste da queste proposte.
