@@ -1,5 +1,5 @@
 import { weeklyTimeProgress } from "../domain/weeklyTime.js";
-import { timeSeriesResults, seriesAtDate } from "../domain/timeSeries.js";
+import { timeSeriesResults, seriesForSession } from "../domain/timeSeries.js";
 import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry } from "../model/statistics.js";
 import { isIntegerInRange } from "../utils/numbers.js";
 import { today } from "../utils/dates.js";
@@ -31,15 +31,16 @@ export class StatisticsRepository {
     this.latest = progressOutcomeHistory(archive.calendar, this.habitOutcomes.latest);
   }
 
-  /** Restituisce il progresso a minuti senza mescolarlo agli esiti binari delle altre attività. */
-  getWeeklyTimeProgress(id: string, date: string, referenceDate = today()) {
-    return weeklyTimeProgress(this.archive, id, date, referenceDate);
+  /** Restituisce il progresso per data o seriesId esplicito, necessario per consultare serie concluse nello stesso giorno. */
+  getWeeklyTimeProgress(id: string, date: string, referenceDate = today(), seriesId?: string) {
+    return weeklyTimeProgress(this.archive, id, date, referenceDate, seriesId);
   }
 
-  /** Legge il diario inclusivo in ordine di data; conserva le sessioni rimosse per consentirne il ripristino. */
-  getTimeSessions(id: string, from: string, through: string) {
+  /** Legge il diario tra due date inclusive; seriesId separa serie contemporanee. Conserva le sessioni rimosse per il ripristino. */
+  getTimeSessions(id: string, from: string, through: string, seriesId?: string) {
     if (!validDate(from) || !validDate(through) || from > through) throw new Error("Periodo non valido.");
-    return (this.archive.timeSessions ?? []).filter(session => session.habitId === id && session.date >= from && session.date <= through)
+    const habit = this.archive.weeklyTimeHabits?.find(entry => entry.id === id);
+    return (this.archive.timeSessions ?? []).filter(session => session.habitId === id && session.date >= from && session.date <= through && (!seriesId || (habit && seriesForSession(habit, session)?.id === seriesId)))
       .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
   }
 
@@ -49,7 +50,7 @@ export class StatisticsRepository {
     const habit = this.archive.weeklyTimeHabits?.find(entry => entry.id === id);
     const series = habit?.series?.at(-1);
     const current = new Map((this.archive.timeSessions ?? [])
-      .filter(session => session.habitId === id && !session.removed && session.date <= referenceDate && (!series || seriesAtDate(habit!, session.date)?.id === series.id))
+      .filter(session => session.habitId === id && !session.removed && session.date <= referenceDate && (!series || seriesForSession(habit!, session)?.id === series.id))
       .map(session => [session.id, session]));
     const insertionOrder = new Set((this.archive.timeSessionHistory ?? []).map(record => record.session.id));
     return [...insertionOrder].reverse().flatMap(sessionId => {

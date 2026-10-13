@@ -357,5 +357,13 @@ test('SQLite time series: monthly result, repeat decision and isolated totals su
   assert.equal(results[1].series.startsOn,'2026-10-13');
   assert.equal(results[1].series.endsOn,'2026-10-31');
   assert.deepEqual(parseArchive(exportArchive(saved.archive)),saved.archive);
+  archive=saveTimeSession(saved.archive,{commandId:'early',session:{id:'early',habitId:'monthly',date:'2026-10-13',minutes:1200,notes:'Obiettivo raggiunto oggi',removed:false}},'2026-10-13','2026-10-13T18:00:00Z');
+  archive=resolveTimeSeries(archive,'monthly','october',true,'october-again','2026-10-13');
+  archive=saveTimeSession(archive,{commandId:'restart',session:{id:'restart',habitId:'monthly',date:'2026-10-13',minutes:30,notes:'Nuova serie',removed:false}},'2026-10-13','2026-10-13T19:00:00Z');
+  saved=store.write({archive,expectedRevision:saved.revision});
+  store.close();store=new SQLiteStore(filename);
+  assert.deepEqual(store.read(),saved);
+  assert.deepEqual(timeSeriesResults(store.read().archive,'2026-10-13').map(result=>result.completedMinutes),[1320,1200,30]);
+  assert.deepEqual(parseArchive(exportArchive(saved.archive)),saved.archive);
  } finally {store.close();rmSync(dir,{recursive:true,force:true});}
 });

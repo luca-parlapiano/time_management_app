@@ -21,33 +21,37 @@ interface Props extends WeeklyTimeActions { selectedId?: string; onSelect: (id: 
 /** Consulta le serie isolate e il loro diario. Le serie confermate rimangono nello storico in sola lettura. */
 export function WeeklyTimeHabits({ selectedId, onSelect, onEditWeekly, onAddTime, onPlanTime, onReviewSeries }: Props) {
   const { weeklyTimeHabits, getWeeklyTimeProgress, getTimeSessions, getTimeSeriesResults, saving, saveTimeSession } = useDB();
-  const [archive, setArchive] = useState(false);
+  const [view, setView] = useState(() => ({ selectedId, archived: Boolean(weeklyTimeHabits.find(habit => habit.id === selectedId)?.archivedOn) }));
   const [seriesId, setSeriesId] = useState('');
   const [error, setError] = useState('');
   const requested = weeklyTimeHabits.find(habit => habit.id === selectedId);
-  const archived = requested ? Boolean(requested.archivedOn) : archive;
-  const visible = weeklyTimeHabits.filter(habit => Boolean(habit.archivedOn) === archived);
+  const archived = view.selectedId === selectedId ? view.archived : Boolean(requested?.archivedOn);
+  const completed = weeklyTimeHabits.filter(habit => habit.series?.some(entry => entry.decision));
+  const ongoing = weeklyTimeHabits.filter(habit => !habit.archivedOn && habit.series?.some(entry => !entry.decision));
+  const visible = archived ? completed : ongoing;
   const selected = visible.find(habit => habit.id === selectedId) ?? visible[0];
-  const series = selected?.series?.find(entry => entry.id === seriesId) ?? selected?.series?.at(-1);
-  const sessions = selected && series ? getTimeSessions(selected.id, series.startsOn, series.endsOn) : [];
+  const visibleSeries = selected?.series?.filter(entry => Boolean(entry.decision) === archived) ?? [];
+  const series = visibleSeries.find(entry => entry.id === seriesId) ?? visibleSeries.at(-1);
+  const sessions = selected && series ? getTimeSessions(selected.id, series.startsOn, series.endsOn, series.id) : [];
   const result = getTimeSeriesResults().find(entry => entry.series.id === series?.id && entry.habit.id === selected?.id);
   const ended = Boolean(series && series.endsOn < today());
+  const canConclude = ended || Boolean(result?.reached);
   const run = async (action: () => Promise<void>) => { try { await action(); setError(''); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Operazione non riuscita.'); } };
-  function choose(id: string) { onSelect(id); setSeriesId(''); setError(''); }
+  function choose(id: string, showArchive = archived) { setView({ selectedId: id, archived: showArchive }); onSelect(id); setSeriesId(''); setError(''); }
   return <div className="weekly-habits">
     <div className="calendar-view-switch" role="group" aria-label="Stato degli obiettivi a ore">
-      <StandardButton variant="ghost" aria-pressed={!archived} onClick={() => { setArchive(false); choose(weeklyTimeHabits.find(habit => !habit.archivedOn)?.id ?? ''); }}>In corso</StandardButton>
-      <StandardButton variant="ghost" aria-pressed={archived} onClick={() => { setArchive(true); choose(weeklyTimeHabits.find(habit => habit.archivedOn)?.id ?? ''); }}>Archivio</StandardButton>
+      <StandardButton variant="ghost" aria-pressed={!archived} onClick={() => choose(ongoing.find(habit => habit.id === selectedId)?.id ?? ongoing[0]?.id ?? '', false)}>In corso</StandardButton>
+      <StandardButton variant="ghost" aria-pressed={archived} onClick={() => choose(completed.find(habit => habit.id === selectedId)?.id ?? completed[0]?.id ?? '', true)}>Archivio</StandardButton>
     </div>
-    {!selected ? <div className="habit-empty"><h3>{archived ? 'Nessun obiettivo archiviato' : 'Fai spazio a ciò che vuoi imparare'}</h3><p>Scegli le ore da raggiungere in una settimana o in un mese.</p>{!archived && <p className="editor-hint">Usa Crea nell’header per iniziare un nuovo percorso.</p>}</div> : <div className="habits-layout">
-      <nav className="habit-list" aria-label="Abitudini a ore">{visible.map(habit => <button key={habit.id} aria-current={habit.id === selected.id ? 'true' : undefined} style={{ '--event-color': eventColors[habit.color].value } as CSSProperties} onClick={() => choose(habit.id)}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{habit.archivedOn ? 'Archiviata' : habit.series?.at(-1)?.period === 'month' ? 'Serie mensile' : 'Serie settimanale'}</small></button>)}</nav>
+    {!selected ? <div className="habit-empty"><h3>{archived ? 'Nessuna serie conclusa' : 'Fai spazio a ciò che vuoi imparare'}</h3><p>{archived ? 'Qui ritroverai le serie concluse, anche quando scegli di ripeterle.' : 'Scegli le ore da raggiungere in una settimana o in un mese.'}</p>{!archived && <p className="editor-hint">Usa Crea nell’header per iniziare un nuovo percorso.</p>}</div> : <div className="habits-layout">
+      <nav className="habit-list" aria-label="Abitudini a ore">{visible.map(habit => <button key={habit.id} aria-current={habit.id === selected.id ? 'true' : undefined} style={{ '--event-color': eventColors[habit.color].value } as CSSProperties} onClick={() => choose(habit.id)}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{archived ? `${habit.series?.filter(entry => entry.decision).length ?? 0} ${habit.series?.filter(entry => entry.decision).length === 1 ? 'serie conclusa' : 'serie concluse'}` : habit.series?.at(-1)?.period === 'month' ? 'Serie mensile' : 'Serie settimanale'}</small></button>)}</nav>
       {series && <article className="habit-detail weekly-time-detail" style={{ '--event-color': eventColors[selected.color].value } as CSSProperties}>
         <header><span className="habit-detail-icon"><EventIcon icon={selected.icon} /></span><div><h3>{selected.title}</h3>{selected.motivation && <p>{selected.motivation}</p>}</div>{!ended && !series.decision && <StandardButton variant="ghost" onClick={() => onEditWeekly(selected.id)}>Modifica obiettivo</StandardButton>}</header>
-        <label className="time-series-selector">Serie<select value={series.id} onChange={event => setSeriesId(event.target.value)}>{[...selected.series!].reverse().map(entry => <option key={entry.id} value={entry.id}>{entry.period === 'month' ? 'Mese' : 'Settimana'} · {displayDate(entry.startsOn, { year: 'numeric' })} – {displayDate(entry.endsOn, { year: 'numeric' })}{entry.decision ? ' · Conclusa' : entry.endsOn < today() ? ' · Da concludere' : ' · In corso'}</option>)}</select></label>
-        <WeeklyTimeSummary progress={getWeeklyTimeProgress(selected.id, series.startsOn)} />
-        {ended && result?.reached && <p className="time-series-earned"><AppIcon name="trophies" /> Trofeo conquistato per questa serie</p>}
-        {ended && !series.decision && <StandardButton onClick={() => onReviewSeries(selected.id, series.id)}>Concludi la serie</StandardButton>}
-        {!series.decision && <div className="time-detail-actions"><StandardButton disabled={ended || series.startsOn > today()} onClick={() => onAddTime(selected.id)}>Aggiungi tempo</StandardButton>{!ended && <StandardButton variant="secondary" onClick={() => onPlanTime(selected.id)}>Pianifica una sessione</StandardButton>}</div>}
+        <label className="time-series-selector">Serie<select value={series.id} onChange={event => setSeriesId(event.target.value)}>{[...visibleSeries].reverse().map(entry => <option key={entry.id} value={entry.id}>Serie {selected.series!.findIndex(value => value.id === entry.id) + 1} · {entry.period === 'month' ? 'Mese' : 'Settimana'} · {displayDate(entry.startsOn, { year: 'numeric' })} – {displayDate(entry.closedOn ?? entry.endsOn, { year: 'numeric' })}{entry.decision ? ' · Conclusa' : entry.endsOn < today() ? ' · Da concludere' : ' · In corso'}</option>)}</select></label>
+        <WeeklyTimeSummary progress={getWeeklyTimeProgress(selected.id, series.startsOn, today(), series.id)} />
+        {result?.reached && <p className="time-series-earned"><AppIcon name="trophies" /> Trofeo conquistato per questa serie</p>}
+        {canConclude && !series.decision && <StandardButton onClick={() => onReviewSeries(selected.id, series.id)}>Concludi la serie</StandardButton>}
+        {!series.decision && !canConclude && <div className="time-detail-actions"><StandardButton disabled={ended || series.startsOn > today()} onClick={() => onAddTime(selected.id)}>Aggiungi tempo</StandardButton>{!ended && <StandardButton variant="secondary" onClick={() => onPlanTime(selected.id)}>Pianifica una sessione</StandardButton>}</div>}
         <h4>Diario della serie</h4>
         {sessions.length === 0 ? <p className="editor-hint">Nessun tempo registrato in questa serie.</p> : <ul className="time-session-list">{sessions.map(session => <li key={session.id} className={session.removed ? 'time-session-removed' : ''}>
           <div><time dateTime={session.date}>{displayDate(session.date, { weekday: 'short', day: 'numeric', month: 'short' })}</time><strong>{formatDurationMinutes(session.minutes)}{session.removed ? ' · Rimossa' : ''}</strong>{session.notes && <p>{session.notes}</p>}</div>

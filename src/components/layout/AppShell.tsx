@@ -28,6 +28,7 @@ export function AppShell() {
     document.documentElement.dataset.palette = palette;
   }, [palette]);
   const openEditor = useCallback((date: string, occurrence?: Occurrence, initialKind?: ItemKind) => setDialog({ type: "editor", date, occurrence, initialKind }), []);
+  const reviewTimeSeries = (habitId: string, seriesId: string) => setDialog({ type: "time-series", habitId, seriesId });
   const openEvent = useCallback((item: Occurrence, confirmDelete = false) => setDialog({ type: "event", item, confirmDelete }), []);
   const openHabits = useCallback((habitId?: string) => {
     if (habitId) setSelectedHabitId(habitId);
@@ -50,13 +51,14 @@ export function AppShell() {
         <AppHeader activeScreen={activeScreen} onCreate={() => setDialog({ type: "create" })} />
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
         {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
-        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={openHabits} onAddHabit={() => setDialog({ type: "create" })} onAddTime={habitId => setDialog({ type: "time-session", habitId })} />
+        <TodayScreen onReviewSeries={reviewTimeSeries} active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={openHabits} onAddHabit={() => setDialog({ type: "create" })} onAddTime={habitId => setDialog({ type: "time-session", habitId })} />
         <HabitsScreen active={activeScreen === "habits"} selectedHabitId={selectedHabitId} onSelectHabit={setSelectedHabitId} onAdd={() => setDialog({ type: "create" })} onEdit={habitId => setDialog({ type: "habit", habitId })} onRepeat={habitId => setDialog({ type: "habit", habitId, repeat: true })}
           onEditWeekly={habitId => setDialog({ type: "weekly-habit", habitId })}
-          onReviewSeries={(habitId, seriesId) => setDialog({ type: "time-series", habitId, seriesId })}
+          onReviewSeries={reviewTimeSeries}
           onAddTime={(habitId, session) => setDialog({ type: "time-session", habitId, session })}
           onPlanTime={habitId => setDialog({ type: "editor", weeklyHabitId: habitId, date: [today(), weeklyTimeHabits.find(habit => habit.id === habitId)?.startsOn ?? today()].sort().at(-1)! })} />
         <CalendarScreen
+          onReviewSeries={reviewTimeSeries}
           active={activeScreen === "calendar"}
           week={week}
           onWeekChange={setWeek}

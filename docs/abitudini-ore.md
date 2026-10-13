@@ -14,8 +14,8 @@ oppure l’ultimo giorno del mese civile. Una partenza a periodo iniziato mantie
 l’obiettivo scelto: la UI segnala il periodo parziale. Le registrazioni e le ore
 oltre il target restano nella serie di appartenenza e non passano alle successive.
 
-Alla prima apertura dopo la scadenza, anche al cambio giorno con l’app aperta,
-compare un riepilogo con obiettivo e ore raggiunte. Se il target è raggiunto o
+Appena il tempo confermato raggiunge o supera l’obiettivo, oppure alla scadenza
+del periodo, compare un riepilogo con obiettivo e ore raggiunte. Se il target è raggiunto o
 superato compare un trofeo. Si sceglie tra:
 
 - **Ripeti la serie**: conferma la precedente e crea una nuova serie da oggi, nel
@@ -23,6 +23,11 @@ superato compare un trofeo. Si sceglie tra:
   non diventano serie vuote.
 - **Va bene così**: conferma il risultato e archivia il percorso.
 
+La nuova serie può iniziare anche oggi, nella stessa settimana o nello stesso mese,
+con conteggi separati e nessun riporto delle eccedenze.
+Al raggiungimento dell’obiettivo, «Concludi la serie» sostituisce «Aggiungi tempo»
+in Oggi, nel dettaglio e nel calendario del giorno corrente. La nuova serie
+ripristina il pulsante per aggiungere tempo.
 Chiudere la modale rimanda la scelta; «Concludi la serie» nel dettaglio la riapre.
 La conferma è persistita e idempotente. Dopo la conferma, diario e obiettivo di
 quella serie restano consultabili in sola lettura. Prima della conferma è possibile
@@ -34,6 +39,9 @@ non può cambiare; la modifica del target riguarda solo la serie ancora in corso
 - **Oggi** mostra totale, obiettivo e le ultime quattro registrazioni della serie
   corrente, con data, durata e nota. «Mostra tutte» espande il resto. L’ordine segue
   il primo inserimento: correzioni e ripristini non duplicano o spostano le voci.
+- **Abitudini → A ore → Archivio** mostra tutte le serie concluse, anche delle
+  abitudini ripetute ancora attive. Il selettore numerato distingue anche serie
+  concluse nello stesso giorno. **In corso** mostra soltanto le serie aperte.
 - **Abitudini → A ore** permette di scegliere una serie e consultare il suo diario,
   compresi risultati precedenti e registrazioni rimosse. Le serie aperte consentono
   aggiunta, modifica, rimozione e ripristino delle registrazioni.
@@ -50,8 +58,10 @@ Non si registra tempo futuro. I target ammettono fino a 168 ore per settimana e
 
 `WeeklyTimeHabit` mantiene l’identità dell’abitudine e una raccolta `TimeSeries`.
 Il nome tecnico precedente è conservato per limitare modifiche ai contratti.
-Le serie hanno intervalli disgiunti; `TimeSession` e il suo audit conservano le date
-originali. `StatisticsRepository` calcola risultati e trofei sullo snapshot confermato,
+Le serie possono ripartire nello stesso giorno. Alla conferma, `closedOn` conserva
+la data di chiusura e `sessionIds` fissa l’appartenenza delle registrazioni alla
+serie precedente, comprese quelle rimosse. Non si memorizzano totali derivati.
+`TimeSession` e il suo audit conservano le date e i contenuti originali. `StatisticsRepository` calcola risultati e trofei sullo snapshot confermato,
 senza salvare totali derivati. Gli esiti binari delle abitudini a step non cambiano.
 
 Gli archivi a ore precedenti vengono convertiti alle settimane note, conservando

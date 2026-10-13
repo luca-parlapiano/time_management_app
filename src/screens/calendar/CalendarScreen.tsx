@@ -8,6 +8,7 @@ import type { Occurrence } from "../../model/calendar.js";
 import { WeeklyCalendar } from "./WeeklyCalendar";
 
 interface CalendarScreenProps {
+  onReviewSeries: (habitId: string, seriesId: string) => void;
   active: boolean;
   onAddTime: (habitId?: string, session?: TimeSession) => void;
   week: string;
@@ -17,7 +18,7 @@ interface CalendarScreenProps {
 }
 
 /** Schermata settimanale del calendario e relativi comandi di navigazione. */
-export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent, onAddTime }: CalendarScreenProps) {
+export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent, onAddTime, onReviewSeries }: CalendarScreenProps) {
   const { state, saving, recordOutcome, weeklyTimeHabits } = useDB();
   const [view, setView] = useState<"agenda" | "timeline">("agenda");
   const addItem = useCallback((date: string) => onOpenEditor(date, undefined, "fixed"), [onOpenEditor]);
@@ -51,7 +52,7 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
           onAdd={addItem}
           onEdit={openItem}
           onOutcome={recordOutcome}
-          renderTime={weeklyTimeHabits.length ? date => <CalendarTimeDay date={date} onAddTime={onAddTime} /> : undefined}
+          renderTime={weeklyTimeHabits.length ? date => <CalendarTimeDay onReviewSeries={onReviewSeries} date={date} onAddTime={onAddTime} /> : undefined}
         />
       </div>
     </section>

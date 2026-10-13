@@ -3,6 +3,7 @@ import { CalendarDialog } from '../../components/ui/CalendarDialog';
 import { DurationFields } from '../../components/ui/DurationFields';
 import { StandardButton } from '../../components/ui/StandardButton';
 import { useDB } from '../../hooks/useDB';
+import { seriesForSession } from '../../domain/timeSeries';
 import { durationMinutes } from '../../domain/calendar';
 import { displayDate, today } from '../../utils/dates';
 import { formatDurationMinutes } from '../../utils/time';
@@ -20,8 +21,8 @@ export function TimeSessionEditor({ habitId, session, occurrence, onClose }: Pro
   const [error, setError] = useState('');
   const [manualId, setManualId] = useState('');
   const habit = weeklyTimeHabits.find(entry => entry.id === draft.habitId);
-  const series = habit?.series?.find(entry => entry.startsOn <= draft.date && entry.endsOn >= draft.date) ?? habit?.series?.at(-1);
-  const manual = occurrence && !existing ? timeSessions.filter(entry => entry.habitId === draft.habitId && !entry.sourceId && !entry.removed && (!series || (entry.date >= series.startsOn && entry.date <= series.endsOn))) : [];
+  const series = habit ? seriesForSession(habit, draft) ?? habit.series?.at(-1) : undefined;
+  const manual = occurrence && !existing ? timeSessions.filter(entry => entry.habitId === draft.habitId && !entry.sourceId && !entry.removed && (!series || (habit && seriesForSession(habit, entry)?.id === series.id))) : [];
   const change = (patch: Partial<TimeSession>) => { setDraft(current => ({ ...current, ...patch })); setCommandId(crypto.randomUUID()); setError(''); };
   return <CalendarDialog title={existing ? 'Modifica tempo registrato' : 'Aggiungi tempo'} onClose={onClose}>
     <form className="habit-editor" onSubmit={async event => {

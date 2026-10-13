@@ -1,4 +1,4 @@
-import { createTimeSeries, seriesAtDate, timePeriodBounds } from './timeSeries.js';
+import { createTimeSeries, seriesAtDate, seriesForSession, timePeriodBounds } from './timeSeries.js';
 import { eventColors, eventIcons, MAX_MONTHLY_MINUTES, MAX_SESSION_MINUTES, MAX_WEEKLY_MINUTES } from '../constants.js';
 import { addDays, validDate, weekStart } from '../utils/dates.js';
 import { isFiniteNumber, isIntegerInRange } from '../utils/numbers.js';
@@ -51,19 +51,22 @@ export function validateWeeklyTime(archive: PlannerArchive): void {
     if (h.series !== undefined) {
       if (!Array.isArray(h.series) || !h.series.length) throw new Error('Serie delle ore non valide.');
       let end = '';
+      let closedOn: string | undefined;
       const seriesIds = new Set<string>();
       for (const [index, raw] of h.series.entries()) {
-        const series = object(raw, ['id', 'period', 'startsOn', 'endsOn', 'targetMinutes', 'decision', 'nextSeriesId']);
+        const series = object(raw, ['id', 'period', 'startsOn', 'endsOn', 'targetMinutes', 'decision', 'nextSeriesId', 'closedOn', 'sessionIds']);
         if (!identity(series.id) || seriesIds.has(series.id) || (series.period !== 'week' && series.period !== 'month') ||
-          !validDate(series.startsOn) || !validDate(series.endsOn) || series.startsOn < h.startsOn || series.startsOn <= end ||
+          !validDate(series.startsOn) || !validDate(series.endsOn) || series.startsOn < h.startsOn || (series.startsOn <= end && (!closedOn || series.startsOn < closedOn)) ||
           series.endsOn !== timePeriodBounds(series.startsOn, series.period).end ||
           !isIntegerInRange(series.targetMinutes, 1, series.period === 'month' ? MAX_MONTHLY_MINUTES : MAX_WEEKLY_MINUTES) ||
           (series.decision !== undefined && series.decision !== 'repeat' && series.decision !== 'stop') ||
           (index < h.series.length - 1 && !series.decision)) throw new Error('Serie delle ore non valida.');
+        if ((series.closedOn !== undefined && (!series.decision || !validDate(series.closedOn) || series.closedOn < series.startsOn || series.closedOn > series.endsOn || !Array.isArray(series.sessionIds))) ||
+          (series.sessionIds !== undefined && (!series.closedOn || !Array.isArray(series.sessionIds) || series.sessionIds.some(id => !identity(id)) || new Set(series.sessionIds).size !== series.sessionIds.length))) throw new Error('Chiusura della serie non valida.');
         const next: unknown = h.series[index + 1];
         if ((series.decision === 'repeat' && (!identity(series.nextSeriesId) || !next || typeof next !== 'object' || !('id' in next) || next.id !== series.nextSeriesId)) ||
           (series.decision !== 'repeat' && series.nextSeriesId !== undefined)) throw new Error('Ripetizione della serie non valida.');
-        seriesIds.add(series.id); end = series.endsOn;
+        seriesIds.add(series.id); end = series.endsOn; closedOn = series.closedOn as string | undefined;
       }
     }
     habits.set(h.id, h as unknown as WeeklyTimeHabit);
@@ -73,12 +76,14 @@ export function validateWeeklyTime(archive: PlannerArchive): void {
     const habit = habits.get(item.weeklyHabitId);
     if (!habit || item.date < habit.startsOn || (!habit.series && item.timeHabitUntil !== habit.archivedOn) || (habit?.series && (!item.timeHabitUntil || item.timeHabitUntil > habit.series.at(-1)!.endsOn)) || Object.values(item.exceptions).some(value => value && value.date < habit.startsOn)) throw new Error('Pianificazione delle ore non valida.');
   }
+  const validatedSessions = new Map<string, TimeSession>();
   const ids = new Set<string>(), links = new Set<string>(), totals = new Map<string, number>();
   for (const session of sessions) {
     validateSession(session, habits);
-    if (habits.get(session.habitId)?.series && !seriesAtDate(habits.get(session.habitId)!, session.date)) throw new Error('Sessione fuori dalla sua serie.');
+    if (habits.get(session.habitId)?.series && !seriesForSession(habits.get(session.habitId)!, session)) throw new Error('Sessione fuori dalla sua serie.');
     if (ids.has(session.id)) throw new Error('Sessione duplicata.');
     ids.add(session.id);
+    validatedSessions.set(session.id, session);
     if (session.sourceId) {
       const key = JSON.stringify([session.sourceId, session.occurrenceDate]);
       if (links.has(key)) throw new Error('Questa occorrenza ha già una sessione.');
@@ -92,6 +97,12 @@ export function validateWeeklyTime(archive: PlannerArchive): void {
       if (total > MAX_SESSION_MINUTES) throw new Error('Il tempo registrato per questa abitudine supera 24 ore nella giornata.');
       totals.set(key, total);
     }
+  }
+  const assignedIds = new Set<string>();
+  for (const habit of habits.values()) for (const series of habit.series ?? []) for (const id of series.sessionIds ?? []) {
+    const session = validatedSessions.get(id);
+    if (assignedIds.has(id) || !session || session.habitId !== habit.id || session.date < series.startsOn || session.date > series.endsOn) throw new Error('Appartenenza alla serie non valida.');
+    assignedIds.add(id);
   }
   const commands = new Set<string>(), latest = new Map<string, TimeSession>();
   for (const value of history) {
@@ -184,8 +195,8 @@ export function saveTimeSession(archive: PlannerArchive, command: TimeSessionCom
   const habit = requireHabit(archive, session.habitId);
   const previous = archive.timeSessions?.find(entry => entry.id === session.id);
   if (habit.series) {
-    const series = seriesAtDate(habit, session.date);
-    if (!series || series.decision || (previous && seriesAtDate(habit, previous.date)?.id !== series.id)) throw new Error('La registrazione deve restare nella sua serie aperta.');
+    const series = seriesForSession(habit, session);
+    if (!series || series.decision || session.date < series.startsOn || session.date > series.endsOn || (previous && seriesForSession(habit, previous)?.id !== series.id)) throw new Error('La registrazione deve restare nella sua serie aperta.');
   }
   if (previous && previous.habitId !== session.habitId) throw new Error('Non puoi cambiare abitudine a una sessione.');
   if (session.date > referenceDate && (!session.removed || !previous || !sameSession({ ...previous, removed: true }, session))) throw new Error('Puoi registrare soltanto tempo già svolto.');
@@ -208,15 +219,15 @@ export function saveTimeSession(archive: PlannerArchive, command: TimeSessionCom
   return result;
 }
 
-/** Calcola una settimana civile sullo snapshot: solo minuti svolti, mai esiti o totali persistiti; la barra può superare il 100% nei dati. */
-export function weeklyTimeProgress(archive: PlannerArchive, id: string, date: string, referenceDate: string): WeeklyTimeProgress {
+/** Calcola il progresso sullo snapshot; seriesId distingue serie nello stesso giorno, altrimenti usa la più recente per la data. Non salva totali e conserva percentuali oltre 100. */
+export function weeklyTimeProgress(archive: PlannerArchive, id: string, date: string, referenceDate: string, seriesId?: string): WeeklyTimeProgress {
   requireDate(date); requireDate(referenceDate);
   const habit = requireHabit(archive, id);
-  const series = habit.series ? seriesAtDate(habit, date) ?? habit.series.at(-1)! : undefined;
+  const series = habit.series ? (seriesId ? habit.series.find(entry => entry.id === seriesId) : seriesAtDate(habit, date)) ?? habit.series.at(-1)! : undefined;
   const week = series?.startsOn ?? weekStart(date), end = series?.endsOn ?? addDays(week, 6);
   requireDate(week); requireDate(end);
   const targetMinutes = series?.targetMinutes ?? habit.targets.filter(target => target.effectiveFrom <= week).at(-1)?.minutes ?? 0;
-  const sessions = (archive.timeSessions ?? []).filter(session => session.habitId === id && !session.removed && session.date >= week && session.date <= end);
+  const sessions = (archive.timeSessions ?? []).filter(session => session.habitId === id && !session.removed && session.date >= week && session.date <= end && (!series || seriesForSession(habit, session)?.id === series.id));
   const completedMinutes = sessions.filter(session => session.date <= referenceDate).reduce((total, session) => total + session.minutes, 0);
   const futureMinutes = sessions.filter(session => session.date > referenceDate).reduce((total, session) => total + session.minutes, 0);
   const links = new Set((archive.timeSessions ?? []).filter(session => !session.removed && session.sourceId).map(session => JSON.stringify([session.sourceId, session.occurrenceDate])));

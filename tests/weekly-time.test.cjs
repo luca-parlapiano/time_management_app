@@ -168,7 +168,7 @@ test('series use civil weeks and calendar months, including leap years and year 
 test('repeat preserves excess and starts an isolated series at zero, without filling skipped periods', () => {
   let archive = save(periodic(), session('a', '2026-10-06', 180));
   const first = archive.weeklyTimeHabits[0].series[0];
-  assert.throws(() => seriesDomain.resolveTimeSeries(archive, 'hours', first.id, true, 'next', '2026-10-11'), /non è ancora/);
+  assert.throws(() => seriesDomain.resolveTimeSeries(archive, 'hours', first.id, true, 'next', '2026-10-05'), /non è ancora/);
   archive = seriesDomain.resolveTimeSeries(archive, 'hours', first.id, true, 'next', '2026-11-04');
   a.validateArchive(archive);
   const results = seriesDomain.timeSeriesResults(archive, '2026-11-04');
@@ -187,6 +187,50 @@ test('repeat preserves excess and starts an isolated series at zero, without fil
   assert.throws(() => save(archive, { ...archive.timeSessions[0], date: '2026-11-04' }, 'move', '2026-11-04'), /sua serie/);
   assert.throws(() => save(archive, { ...archive.timeSessions[0], removed: true }, 'remove-closed', '2026-11-04'), /sua serie/);
   assert.deepEqual(a.parseArchive(a.exportArchive(archive)), archive);
+});
+
+test('reaching or exceeding the target can restart immediately, including multiple series on the same day', () => {
+  for (const minutes of [120, 128]) {
+    const date = '2026-10-06';
+    let archive = save(periodic(), session('a', date, minutes), 'first', date);
+    const firstId = archive.weeklyTimeHabits[0].series[0].id;
+    const history = structuredClone(archive.timeSessionHistory);
+    archive = seriesDomain.resolveTimeSeries(archive, 'hours', firstId, true, 'second', date);
+    a.validateArchive(archive);
+    assert.deepEqual(archive.timeSessionHistory, history);
+    assert.deepEqual(seriesDomain.timeSeriesResults(archive, date).map(result => result.completedMinutes), [minutes, 0]);
+    assert.equal(w.weeklyTimeProgress(archive, 'hours', date, date).completedMinutes, 0);
+    assert.equal(w.weeklyTimeProgress(archive, 'hours', date, date, firstId).completedMinutes, minutes);
+    assert.deepEqual(new StatisticsRepository(archive).getRecentTimeSessions('hours', date), []);
+    assert.equal(seriesDomain.resolveTimeSeries(archive, 'hours', firstId, true, 'retry', date), archive);
+    assert.throws(() => save(archive, { ...archive.timeSessions[0], removed: true }, 'remove-closed', date), /sua serie/);
+    archive = save(archive, session('b', date, 120), 'second-session', date);
+    archive = seriesDomain.resolveTimeSeries(archive, 'hours', 'second', true, 'third', date);
+    archive = save(archive, session('c', date, 30), 'third-session', date);
+    a.validateArchive(archive);
+    assert.deepEqual(seriesDomain.timeSeriesResults(archive, date).map(result => result.completedMinutes), [minutes, 120, 30]);
+    const statistics = new StatisticsRepository(archive);
+    assert.equal(statistics.getTimeMinutes(date), minutes + 150);
+    assert.deepEqual(statistics.getTimeSessions('hours', date, date, firstId).map(entry => entry.id), ['a']);
+    assert.deepEqual(statistics.getRecentTimeSessions('hours', date).map(entry => entry.id), ['c']);
+    assert.deepEqual(a.parseArchive(a.exportArchive(archive)), archive);
+    const duplicated = structuredClone(archive);
+    duplicated.weeklyTimeHabits[0].series[1].sessionIds.push('a');
+    assert.throws(() => a.validateArchive(duplicated), /Appartenenza/);
+  }
+});
+
+test('early stop preserves its result and does not allow an unfinished series to close', () => {
+  const date = '2026-10-06';
+  let archive = save(periodic(), session('a', date, 119), 'first', date);
+  const id = archive.weeklyTimeHabits[0].series[0].id;
+  assert.throws(() => seriesDomain.resolveTimeSeries(archive, 'hours', id, true, 'next', date), /non è ancora/);
+  archive = save(archive, session('a', date, 120), 'correct', date);
+  archive = seriesDomain.resolveTimeSeries(archive, 'hours', id, false, '', date);
+  a.validateArchive(archive);
+  assert.equal(archive.weeklyTimeHabits[0].archivedOn, date);
+  assert.equal(seriesDomain.timeSeriesResults(archive, date)[0].reached, true);
+  assert.equal(archive.weeklyTimeHabits[0].series.length, 1);
 });
 
 test('stop archives the series, below-target results do not award a trophy, and no automatic restart occurs', () => {

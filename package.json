@@ -9,7 +9,7 @@
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron:tsc\" \"npm:dev:electron:run\"",
     "dev:renderer": "vite",
     "dev:electron:tsc": "tsc -p tsconfig.electron.json --watch",
-    "dev:electron:run": "wait-on tcp:5173 file:dist-electron/electron/main.js && electron .",
+    "dev:electron:run": "wait-on tcp:5173 file:dist-electron/electron/main.js && node --watch --watch-path=dist-electron --watch-preserve-output node_modules/electron/cli.js .",
     "build": "npm run build:renderer && npm run build:electron",
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.electron.json",

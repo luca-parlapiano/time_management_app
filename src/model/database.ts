@@ -49,8 +49,8 @@ export interface DBContextValue {
   cancelWeeklyTimeTarget(id: string): Promise<void>;
   archiveWeeklyTimeHabit(id: string): Promise<void>;
   saveTimeSession(command: TimeSessionCommand): Promise<void>;
-  getWeeklyTimeProgress(id: string, date: string, referenceDate?: string): WeeklyTimeProgress;
-  getTimeSessions(id: string, from: string, through: string): TimeSession[];
+  getWeeklyTimeProgress(id: string, date: string, referenceDate?: string, seriesId?: string): WeeklyTimeProgress;
+  getTimeSessions(id: string, from: string, through: string, seriesId?: string): TimeSession[];
   getRecentTimeSessions(id: string, referenceDate?: string): TimeSession[];
   getTimeMinutes(date: string, habitId?: string): number;
   getTimeSeriesResults(referenceDate?: string): TimeSeriesResult[];

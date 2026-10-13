@@ -26,12 +26,15 @@ Usare una versione di Node compatibile con il lockfile e con `node:sqlite`, usat
 anche dai test. Le note sull’ambiente verificato sono in [Qualità del codice](docs/code-quality.md).
 
 `npm run dev` avvia Vite, la compilazione Electron in watch e la finestra desktop.
+Le modifiche ai moduli compilati di Electron riavviano anche il processo desktop
+e il worker SQLite, mantenendo allineate interfaccia e validazione dei dati.
 Vite compila React; TypeScript compila main, worker e `electron/preload.cts`
 (il preload generato è `preload.cjs`).
 
 La persistenza richiede Electron: il solo server Vite non espone il bridge SQLite.
 Le [procedure di verifica](docs/code-quality.md#procedure-di-verifica) includono
-le prove browser con dati temporanei. Dopo modifiche a main/preload riavviare Electron.
+le prove browser con dati temporanei. Il riavvio automatico di Electron chiude
+eventuali moduli non salvati; i dati già confermati restano nel database.
 
 ## Funzionalità attuali
 

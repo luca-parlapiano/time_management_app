@@ -10,6 +10,8 @@ export interface TimeSeries {
   targetMinutes: number;
   decision?: 'repeat' | 'stop';
   nextSeriesId?: string;
+  closedOn?: string;
+  sessionIds?: string[];
 }
 
 export interface TimeSeriesResult {

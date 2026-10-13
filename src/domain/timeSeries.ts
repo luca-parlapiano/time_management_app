@@ -1,6 +1,6 @@
 import type { PlannerArchive } from '../model/outcomeArchive.js';
 import type { CalendarItem } from '../model/calendar.js';
-import type { TimePeriod, TimeSeries, TimeSeriesResult, WeeklyTimeHabit } from '../model/weeklyTime.js';
+import type { TimePeriod, TimeSeries, TimeSeriesResult, TimeSession, WeeklyTimeHabit } from '../model/weeklyTime.js';
 import { addDays, validDate, weekStart } from '../utils/dates.js';
 import { isIntegerInRange } from '../utils/numbers.js';
 import { MAX_MONTHLY_MINUTES, MAX_WEEKLY_MINUTES } from '../constants.js';
@@ -28,15 +28,21 @@ export function createTimeSeries(id: string, period: TimePeriod, date: string, t
 export function timeSeriesResults(archive: PlannerArchive, referenceDate: string): TimeSeriesResult[] {
   if (!validDate(referenceDate)) throw new Error('Data non valida.');
   return (archive.weeklyTimeHabits ?? []).flatMap(habit => (habit.series ?? []).map(series => {
-    const completedMinutes = (archive.timeSessions ?? []).filter(session => session.habitId === habit.id && !session.removed && session.date >= series.startsOn && session.date <= series.endsOn && session.date <= referenceDate)
+    const completedMinutes = (archive.timeSessions ?? []).filter(session => session.habitId === habit.id && !session.removed && seriesForSession(habit, session)?.id === series.id && session.date <= referenceDate)
       .reduce((total, session) => total + session.minutes, 0);
     return { habit, series, completedMinutes, reached: completedMinutes >= series.targetMinutes };
   }));
 }
 
-/** Trova l’unica serie che contiene la data: gli intervalli delle serie non possono sovrapporsi. */
+/** Trova l’ultima serie per una data civile; una ripetizione immediata può iniziare nello stesso giorno. */
 export function seriesAtDate(habit: WeeklyTimeHabit, date: string) {
-  return habit.series?.find(series => series.startsOn <= date && series.endsOn >= date);
+  return habit.series?.slice().reverse().find(series => series.startsOn <= date && series.endsOn >= date);
+}
+
+/** Risolve l’appartenenza di una registrazione: le chiusure conservano gli ID, i dati precedenti usano le date. */
+export function seriesForSession(habit: WeeklyTimeHabit, session: TimeSession) {
+  return habit.series?.find(series => series.sessionIds?.includes(session.id))
+    ?? habit.series?.slice().reverse().find(series => !series.sessionIds && series.startsOn <= session.date && series.endsOn >= session.date);
 }
 
 /** Verifica che una nuova pianificazione o uno spostamento resti nella serie aperta cui è collegato. */
@@ -49,22 +55,25 @@ export function validateTimePlan(archive: PlannerArchive, item: CalendarItem): v
   if (!series || series.decision || item.timeHabitUntil !== series.endsOn || item.endDate > series.endsOn) throw new Error('La pianificazione deve restare nel periodo della serie aperta.');
 }
 
-/** Conclude una serie scaduta e, su scelta esplicita, ne crea una nel periodo corrente. Retry della stessa scelta sono innocui. */
+/** Conclude una serie raggiunta o scaduta; conserva l’appartenenza delle sessioni e riparte da oggi solo su scelta esplicita. I retry non duplicano serie. */
 export function resolveTimeSeries(archive: PlannerArchive, habitId: string, seriesId: string, repeat: boolean, nextId: string, referenceDate: string): PlannerArchive {
   const habit = archive.weeklyTimeHabits?.find(entry => entry.id === habitId);
   const series = habit?.series?.find(entry => entry.id === seriesId);
-  if (!habit || !series || !validDate(referenceDate) || series.endsOn >= referenceDate) throw new Error('La serie non è ancora terminata.');
+  if (!habit || !series || !validDate(referenceDate)) throw new Error('La serie non è ancora terminata.');
   const decision: 'repeat' | 'stop' = repeat ? 'repeat' : 'stop';
   if (series.decision) {
     if (series.decision === decision) return archive;
     throw new Error('La serie è già conclusa.');
   }
+  if (series.endsOn >= referenceDate && !timeSeriesResults(archive, referenceDate).find(result => result.habit.id === habitId && result.series.id === seriesId)?.reached) throw new Error('La serie non è ancora terminata.');
   if (habit.series?.at(-1)?.id !== series.id) throw new Error('Puoi proseguire soltanto dall’ultima serie.');
   if (repeat && (!nextId.trim() || habit.series.some(entry => entry.id === nextId))) throw new Error('Identità della nuova serie non valida.');
   const next = repeat ? createTimeSeries(nextId, series.period, referenceDate, series.targetMinutes) : undefined;
+  const closedOn = series.endsOn < referenceDate ? series.endsOn : referenceDate;
+  const sessionIds = (archive.timeSessions ?? []).filter(session => session.habitId === habitId && seriesForSession(habit, session)?.id === seriesId).map(session => session.id);
   return { ...archive, weeklyTimeHabits: archive.weeklyTimeHabits?.map(entry => entry.id !== habitId ? entry : {
-    ...entry, ...(!repeat ? { archivedOn: series.endsOn } : {}),
-    series: [...entry.series!.map(value => value.id === seriesId ? { ...value, decision, ...(next ? { nextSeriesId: next.id } : {}) } : value), ...(next ? [next] : [])],
+    ...entry, ...(!repeat ? { archivedOn: closedOn } : {}),
+    series: [...entry.series!.map(value => value.id === seriesId ? { ...value, decision, closedOn, sessionIds, ...(next ? { nextSeriesId: next.id } : {}) } : value), ...(next ? [next] : [])],
   }) };
 }
 
