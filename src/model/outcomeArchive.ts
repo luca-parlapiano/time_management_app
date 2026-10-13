@@ -1,3 +1,4 @@
+import type { WeeklyTimeHabit, TimeSession, TimeSessionRecord } from "./weeklyTime.js";
 import type { CalendarState, EventColor, EventIcon, ItemOutcome } from "./calendar.js";
 import type { Habit } from "./habit.js";
 
@@ -16,9 +17,12 @@ export interface OutcomeRecord {
 
 export interface PlannerArchive {
   format: "time-planner-backup";
-  version: 2;
+  version: 3;
   calendar: CalendarState;
   /** Assente nei backup creati prima dell'introduzione delle abitudini. */
   habits?: Habit[];
   history: OutcomeRecord[];
+  weeklyTimeHabits?: WeeklyTimeHabit[];
+  timeSessions?: TimeSession[];
+  timeSessionHistory?: TimeSessionRecord[];
 }

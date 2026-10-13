@@ -1,3 +1,4 @@
+import type { WeeklyTimeHabit } from "../../model/weeklyTime";
 import { isPositiveNumber } from "../../utils/numbers.js";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ interface CalendarItemEditorProps {
   item?: CalendarItem;
   occurrence?: Occurrence;
   routine?: boolean;
+  weeklyHabit?: WeeklyTimeHabit;
   initialKind?: ItemKind;
   items: CalendarItem[];
   onClose: () => void;
@@ -20,16 +22,16 @@ interface CalendarItemEditorProps {
   onDelete: (target: EditTarget, unlocked: boolean) => Promise<void>;
 }
 
-export function CalendarItemEditor({ date, item, occurrence, routine = false, initialKind = "flexible", items, onClose, onSave, onDelete }: CalendarItemEditorProps) {
+export function CalendarItemEditor({ date, item, occurrence, routine = false, weeklyHabit, initialKind = "flexible", items, onClose, onSave, onDelete }: CalendarItemEditorProps) {
   const dayLabels = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
   const [weekdays, setWeekdays] = useState<number[]>([Array.from({ length: 7 }, (_, i) => addDays(weekStart(date), i)).indexOf(date)]);
   const [linkedSourceIds, setLinkedSourceIds] = useState<string[]>([]);
   const linked = items.filter(other => item?.activityId && other.activityId === item.activityId);
-  const candidates = items.filter(other => item && other.id !== item.id && other.recurrence && Boolean(other.routine) === Boolean(item.routine) && (!item.activityId || other.activityId !== item.activityId));
+  const candidates = items.filter(other => item && other.id !== item.id && other.recurrence && other.weeklyHabitId === item?.weeklyHabitId && Boolean(other.routine) === Boolean(item.routine) && (!item.activityId || other.activityId !== item.activityId));
   const [scope, setScope] = useState<"occurrence" | "series">("occurrence");
   const initial: CalendarItem = item && occurrence
     ? { ...item, ...occurrence, id: item.id }
-    : { id: crypto.randomUUID(), title: "", date, endDate: date, start: "09:00", end: "10:00", kind: routine ? "flexible" : initialKind, notes: "", exceptions: {}, recurrence: routine ? {} : undefined, ...(routine ? { routine: true as const } : {}) };
+    : { id: crypto.randomUUID(), ...(weeklyHabit ? { weeklyHabitId: weeklyHabit.id, timeHabitUntil: weeklyHabit.series?.at(-1)?.endsOn ?? weeklyHabit.archivedOn, icon: weeklyHabit.icon, color: weeklyHabit.color, coverImage: false } : {}), title: weeklyHabit?.title ?? "", date, endDate: date, start: "09:00", end: "10:00", kind: routine ? "flexible" : initialKind, notes: "", exceptions: {}, recurrence: routine ? {} : undefined, ...(routine ? { routine: true as const } : {}) };
   const [draft, setDraft] = useState(initial);
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
@@ -38,7 +40,7 @@ export function CalendarItemEditor({ date, item, occurrence, routine = false, in
     if (error) { errorRef.current?.focus(); errorRef.current?.scrollIntoView({ block: "nearest" }); }
   }, [error]);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [scheduleOpen, setScheduleOpen] = useState(routine);
+  const [scheduleOpen, setScheduleOpen] = useState(routine || Boolean(weeklyHabit));
   const [appearanceChanged, setAppearanceChanged] = useState(false);
   const locked = Boolean(item && item.kind !== "flexible" && !unlocked);
   const target = item && occurrence ? { sourceId: item.id, occurrenceDate: occurrence.occurrenceDate, scope, applyAppearanceToSeries: appearanceChanged, linkedSourceIds } : undefined;
@@ -50,7 +52,7 @@ export function CalendarItemEditor({ date, item, occurrence, routine = false, in
   const repeatDays = !item?.recurrence ? weekdays.map(day => dayLabels[day]).join(", ") : (linked.length ? linked : [item]).map(entry => displayDate(entry.date, { weekday: "short", day: undefined, month: undefined })).join(", ");
   function change(patch: Partial<CalendarItem>) { setDraft(current => ({ ...current, ...patch })); setError(""); setConfirmDelete(false); }
   function changeAppearance(patch: Partial<Pick<CalendarItem, "icon" | "color" | "coverImage">>) { setAppearanceChanged(true); change(patch); }
-  return <CalendarDialog title={item?.routine ? "Modifica routine" : item ? "Modifica elemento" : routine ? "Nuova routine" : initialKind === "fixed" ? "Nuovo appuntamento fisso" : "Aggiungi attività"} onClose={onClose}>
+  return <CalendarDialog title={weeklyHabit ? "Pianifica una sessione" : item?.routine ? "Modifica routine" : item ? "Modifica elemento" : routine ? "Nuova routine" : initialKind === "fixed" ? "Nuovo appuntamento fisso" : "Aggiungi attività"} onClose={onClose}>
     <form noValidate onSubmit={async event => {
       event.preventDefault();
       try {
@@ -61,6 +63,7 @@ export function CalendarItemEditor({ date, item, occurrence, routine = false, in
         setScheduleOpen(true);
       }
     }}>
+      {weeklyHabit && <p className="editor-hint">Questo tempo è solo pianificato. Quando avrai finito, registra la durata effettiva dal dettaglio dell’appuntamento.</p>}
       {routine && !item && <p className="editor-hint">Una routine è un’attività ricorrente da ricordare. Non ha step né un percorso di apprendimento.</p>}
       {!routine && !item && initialKind === "fixed" && <p className="editor-hint">Questo appuntamento occupa e protegge il suo spazio nel Calendario. Non comparirà nella Home.</p>}
       {item?.recurrence && <div className="form-grid">
@@ -113,7 +116,7 @@ export function CalendarItemEditor({ date, item, occurrence, routine = false, in
             </button>)}</div>
           </fieldset>
         </div>
-        <fieldset className="appearance-options" disabled={Boolean(item?.recurrence)}>
+        <fieldset className="appearance-options" disabled={Boolean(item?.recurrence || draft.weeklyHabitId)}>
           <legend>Tipo</legend>
           <div className="item-kind-options">
             {(Object.keys(kindLabels) as ItemKind[]).map(kind => <label className="item-kind-option" key={kind} title={kindLabels[kind]}>
@@ -154,7 +157,7 @@ export function CalendarItemEditor({ date, item, occurrence, routine = false, in
         {draft.recurrence && (!item?.recurrence || seriesEdit) && <label>Ultima data della serie
           <input type="date" min={draft.date} value={draft.recurrence.until ?? ""} onChange={e => change({ recurrence: e.target.value ? { until: e.target.value } : {} })} />
         </label>}
-        {draft.kind === "flexible" && draft.recurrence && !draft.habitId && (!item?.recurrence || seriesEdit) && <label className="activity-check"><input type="checkbox" checked={draft.routine === true} onChange={e => change({ routine: e.target.checked ? true : undefined })} />Monitora questa serie come routine nella Home e nelle Statistiche</label>}
+        {draft.kind === "flexible" && !draft.weeklyHabitId && draft.recurrence && !draft.habitId && (!item?.recurrence || seriesEdit) && <label className="activity-check"><input type="checkbox" checked={draft.routine === true} onChange={e => change({ routine: e.target.checked ? true : undefined })} />Monitora questa serie come routine nella Home e nelle Statistiche</label>}
             <StandardButton variant="secondary" type="button" onClick={() => {
               try {
                 validateData({ ...draft, title: draft.title.trim() || "Attività" });

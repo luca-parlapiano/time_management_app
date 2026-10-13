@@ -40,7 +40,7 @@ test('outcome index preserves identity, same-day completions and corrections bef
 test('shared read model refreshes on correction while the previous snapshot stays closed', () => {
   const created = createHabit(emptyCalendar(), [], { title:'Lettura',motivation:'',icon:'study',color:'teal',stepTarget:1,startsOn:'2026-10-05',weekdays:[0],start:'10:00',durationMinutes:20 }, { habitId:'reading' });
   const entry = occurrences(created.calendar.items, '2026-10-05', '2026-10-05')[0];
-  const raw = { format:'time-planner-backup',version:2,...created,history:[outcomeRecord(created.calendar,entry,'completed')] };
+  const raw = { format:'time-planner-backup',version:3,...created,history:[outcomeRecord(created.calendar,entry,'completed')] };
   raw.calendar = setOccurrenceOutcome(raw.calendar, entry.sourceId, entry.occurrenceDate, 'completed');
   const closedArchive = reconcileHabitCompletion(raw);
   const closed = new StatisticsRepository(closedArchive);
@@ -68,7 +68,7 @@ test('mixed and all-skipped series close after every unique step is assessed and
   const {repeatHabitDraft}=require(join(build,'domain/habitCompletion.js'));
   for (const outcomes of [['completed','skipped','completed'],['skipped','skipped','skipped']]) {
     const created=createHabit(emptyCalendar(),[],{title:'Palestra',motivation:'',icon:'sport',color:'purple',stepTarget:3,startsOn:'2026-10-12',weekdays:[0,2,4],start:'18:00',durationMinutes:60},{habitId:'gym'});
-    let archive={format:'time-planner-backup',version:2,...created,history:[]};
+    let archive={format:'time-planner-backup',version:3,...created,history:[]};
     const events=occurrences(archive.calendar.items,'2026-10-12','2026-10-16');
     const save=(index,outcome)=>{
       const event=events[index];
@@ -99,7 +99,7 @@ test('not-done steps advance an active dashboard and a larger target reopens the
   const {updateHabit}=require(join(build,'domain/habits.js'));
   const draft={title:'Test',motivation:'',icon:'sport',color:'purple',stepTarget:3,startsOn:'2026-10-12',weekdays:[0,2,4],start:'18:00',durationMinutes:60};
   const created=createHabit(emptyCalendar(),[],draft,{habitId:'gym'});
-  let archive={format:'time-planner-backup',version:2,...created,history:[]};
+  let archive={format:'time-planner-backup',version:3,...created,history:[]};
   const events=occurrences(archive.calendar.items,'2026-10-12','2026-10-16');
   for (const [index,event] of events.entries()) {
     archive={...archive,calendar:setOccurrenceOutcome(archive.calendar,event.sourceId,event.occurrenceDate,'skipped'),history:[...archive.history,outcomeRecord(archive.calendar,event,'skipped')]};

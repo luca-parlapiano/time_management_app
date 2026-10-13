@@ -1,3 +1,6 @@
+import { saveWeeklyTimeHabit, cancelWeeklyTimeTarget, archiveWeeklyTimeHabit, saveTimeSession } from "../domain/weeklyTime";
+import { resolveTimeSeries, validateTimePlan } from "../domain/timeSeries";
+import { today } from "../utils/dates";
 import { reconcileHabitCompletion } from "../domain/habitCompletion";
 import { StatisticsRepository } from "../repository/StatisticsRepository";
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,7 +19,7 @@ import { repositoryDB } from "../repository/RepositoryDB";
 interface DBProviderProps { children: ReactNode; repository?: DBRepository }
 
 export const DBContext = createContext<DBContextValue | null>(null);
-const emptyArchive: PlannerArchive = { format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [] };
+const emptyArchive: PlannerArchive = { format: 'time-planner-backup', version: 3, calendar: emptyCalendar(), habits: [], history: [] };
 export function DBProvider({ children, repository = repositoryDB }: DBProviderProps) {
   const { run } = useLoading();
   const [palette, setPalette] = useState<Palette>("natural");
@@ -101,6 +104,18 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     return { saved, skipped, lastDate };
   }, [recordOutcome]);
   const value = useMemo<DBContextValue>(() => ({
+    weeklyTimeHabits: snapshot?.archive.weeklyTimeHabits ?? [],
+    timeSessions: snapshot?.archive.timeSessions ?? [],
+    saveWeeklyTimeHabit: (id, draft) => mutate(archive => saveWeeklyTimeHabit(archive, id, draft, today()), false, { scope: `weekly:${id}` }),
+    cancelWeeklyTimeTarget: id => mutate(archive => cancelWeeklyTimeTarget(archive, id, today())),
+    archiveWeeklyTimeHabit: id => mutate(archive => archiveWeeklyTimeHabit(archive, id, today())),
+    saveTimeSession: command => mutate(archive => saveTimeSession(archive, command, today(), new Date().toISOString()), false, { scope: `time:${command.session.id}` }),
+    getWeeklyTimeProgress: (id, date, referenceDate) => statistics.getWeeklyTimeProgress(id, date, referenceDate),
+    getTimeSessions: (id, from, through) => statistics.getTimeSessions(id, from, through),
+    getRecentTimeSessions: (id, referenceDate) => statistics.getRecentTimeSessions(id, referenceDate),
+    getTimeMinutes: (date, habitId) => statistics.getTimeMinutes(date, habitId),
+    getTimeSeriesResults: referenceDate => statistics.getTimeSeriesResults(referenceDate),
+    resolveTimeSeries: (habitId, seriesId, repeat, nextId) => mutate(archive => resolveTimeSeries(archive, habitId, seriesId, repeat, nextId, today())),
     getHabitCompletionDate: id => statistics.getHabitCompletionDate(id),
     getHabitProgress: id => statistics.getHabitProgress(id),
     getHabitTimeline: (id, from, through) => statistics.getHabitTimeline(id, from, through),
@@ -131,9 +146,12 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       const result = deleteHabit(archive.calendar, archive.habits ?? [], id);
       return { ...archive, calendar: result.calendar, habits: result.habits };
     }, false, loading ?? { scope: `habit:${id}` }),
-    saveItem: (item, unlocked, target, weekdays, loading) => mutate(archive => ({...archive,
-      calendar: weekdays ? putWeeklyActivity(archive.calendar,item,weekdays,{actor:'user',unlocked},target) : putItem(archive.calendar,item,{actor:'user',unlocked},target),
-    }), false, loading),
+    saveItem: (item, unlocked, target, weekdays, loading) => mutate(archive => {
+      validateTimePlan(archive, item);
+      const calendar = weekdays ? putWeeklyActivity(archive.calendar,item,weekdays,{actor:'user',unlocked},target) : putItem(archive.calendar,item,{actor:'user',unlocked},target);
+      for (const created of calendar.items) if (!archive.calendar.items.some(previous => previous.id === created.id)) validateTimePlan(archive, created);
+      return { ...archive, calendar };
+    }, false, loading),
     deleteItem: (target, unlocked, loading) => mutate(archive => ({...archive,calendar:deleteItem(archive.calendar,target,{actor:'user',unlocked})}), false, loading),
     savePreferences: (profile, goals, loading) => mutate(archive => {
       const remainingIds = new Set(goals.map(goal => goal.id));

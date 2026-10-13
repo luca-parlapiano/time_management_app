@@ -28,7 +28,7 @@ export function createDevRepository(): RepositoryDB {
     reset: async expectedRevision => {
       if (!snapshot || expectedRevision !== snapshot.revision) throw new Error("Revisione del laboratorio non aggiornata. Riprova.");
       snapshot = {
-        archive: { format: "time-planner-backup", version: 2, calendar: emptyCalendar(), habits: [], history: [] },
+        archive: { format: "time-planner-backup", version: 3, calendar: emptyCalendar(), habits: [], history: [] },
         revision: snapshot.revision + 1, previous: null,
       };
       palette = "natural";

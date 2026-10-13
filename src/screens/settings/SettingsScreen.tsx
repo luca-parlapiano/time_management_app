@@ -13,7 +13,7 @@ interface SettingsScreenProps {
 /** Schermata del profilo, delle preferenze visive e dei backup. */
 export function SettingsScreen({ active, onOpenProfile, onClearCalendar, onResetAll }: SettingsScreenProps) {
   const { state, habits, archive, previous, saving, palette, paletteError, changePalette } = useDB();
-  const hasData = state.items.length > 0 || habits.length > 0 || state.goals.length > 0 || state.profile !== null || archive.history.length > 0 || previous !== null || palette !== "natural";
+  const hasData = state.items.length > 0 || habits.length > 0 || (archive.weeklyTimeHabits?.length ?? 0) > 0 || state.goals.length > 0 || state.profile !== null || archive.history.length > 0 || previous !== null || palette !== "natural";
   return (
     <section id="panel-settings" className="app-screen" role="tabpanel" aria-labelledby="tab-settings" tabIndex={0} hidden={!active}>
       <header className="calendar-header">
@@ -31,7 +31,7 @@ export function SettingsScreen({ active, onOpenProfile, onClearCalendar, onReset
         <ArchiveSettings />
         <section className="summary-card" aria-labelledby="settings-clear-title">
           <h3 id="settings-clear-title">Svuota calendario</h3>
-          <p>Rimuove appuntamenti, routine e abitudini pianificate. Conserva profilo, obiettivi, storico degli esiti e palette.</p>
+          <p>Rimuove appuntamenti, routine e abitudini pianificate. Conserva le abitudini a ore e il loro diario, oltre a profilo, obiettivi, storico degli esiti e palette.</p>
           <StandardButton variant="secondary" type="button" disabled={saving || (state.items.length === 0 && habits.length === 0)} onClick={onClearCalendar}>Svuota calendario</StandardButton>
         </section>
         <section className="summary-card settings-reset-card" aria-labelledby="settings-reset-title">

@@ -431,7 +431,7 @@ test('habit creation links weekly occasions atomically and preserves their ident
   assert.deepEqual(visible.map(entry=>[entry.date,entry.start,entry.end]),[
     ['2026-09-28','21:00','21:20'],['2026-09-30','21:00','21:20'],['2026-10-02','21:00','21:20'],
   ]);
-  archives.validateArchive({format:'time-planner-backup',version:2,calendar:created.calendar,habits:created.habits,history:[]});
+  archives.validateArchive({format:'time-planner-backup',version:3,calendar:created.calendar,habits:created.habits,history:[]});
   const occupied=put(c.emptyCalendar(),item('occupied',{date:'2026-09-28',endDate:'2026-09-28',start:'21:10',end:'22:00'}));
   assert.throws(()=>habits.createHabit(occupied,[],draft,{habitId:'habit-conflict'}),/Conflitto/);
   for (const stepTarget of [0,13,2.5]) assert.throws(()=>habits.createHabit(c.emptyCalendar(),[],habitDraft({stepTarget}),{habitId:`bad-${stepTarget}`}),/1 a 12/);
@@ -501,7 +501,7 @@ test('a moved habit occurrence saves with its original identity and a real colli
   const visible = c.occurrences(moved.items, '2026-09-29', '2026-09-29')[0];
   assert.equal(visible.occurrenceDate, '2026-09-28');
   assert.equal(visible.habitId, 'habit-reading');
-  archives.validateArchive({format:'time-planner-backup',version:2,calendar:moved,habits:created.habits,history:[]});
+  archives.validateArchive({format:'time-planner-backup',version:3,calendar:moved,habits:created.habits,history:[]});
   const occupied = put(created.calendar, fixed('Lavoro', {date:'2026-09-29',endDate:'2026-09-29',start:'21:10',end:'22:00'}));
   assert.throws(() => put(occupied, proposed, user, target(source.id, occurrence.occurrenceDate)), c.CalendarConflictError);
   assert.deepEqual(occupied.items[0], source);
@@ -513,7 +513,7 @@ test('a removed habit occurrence keeps its latest recorded result; deleting its 
   const recorded = c.setOccurrenceOutcome(created.calendar, occurrence.sourceId, occurrence.occurrenceDate, 'completed');
   assert.throws(() => c.deleteItem(recorded, target(occurrence.sourceId, occurrence.occurrenceDate, 'series'), user), /sezione Abitudini/);
   const removed = c.deleteItem(recorded, target(occurrence.sourceId, occurrence.occurrenceDate), user);
-  archives.validateArchive({format:'time-planner-backup',version:2,calendar:removed,habits:created.habits,history});
+  archives.validateArchive({format:'time-planner-backup',version:3,calendar:removed,habits:created.habits,history});
   const entries = habitTimeline(removed, history, created.habits[0], '2026-09-28', '2026-09-28');
   assert.equal(entries.length, 1);
   assert.equal(entries[0].outcome, 'completed');
@@ -529,21 +529,21 @@ test('corrections preserve an audit trail but count each appointment once, indep
   state = c.clearCalendar(state);
   assert.equal(history.length, 2);
   assert.deepEqual(archives.latestOutcomes(history), [second]);
-  const archive = { format: 'time-planner-backup', version: 2, calendar: state, habits: [], history };
+  const archive = { format: 'time-planner-backup', version: 3, calendar: state, habits: [], history };
   assert.deepEqual(archives.parseArchive(archives.exportArchive(archive)).history, history);
 });
 test('import accepts only the current backup and rejects foreign formats and unknown fields', () => {
   const state = put(c.emptyCalendar(), item('history'));
   const occurrence = c.occurrences(state.items, '2026-09-14', '2026-09-14')[0];
   const record = archives.outcomeRecord(state, occurrence, 'completed');
-  const backup = { format: 'time-planner-backup', version: 2, calendar: state, habits: [], history: [record] };
+  const backup = { format: 'time-planner-backup', version: 3, calendar: state, habits: [], history: [record] };
   assert.deepEqual(archives.parseArchive(archives.exportArchive(backup)), JSON.parse(JSON.stringify(backup)));
   const legacy = {...backup}; delete legacy.habits;
   assert.deepEqual(archives.parseArchive(JSON.stringify(legacy)).habits, []);
   const oldHabitItem = {...item('old-habit',{recurrence:{},habitId:'old',habitPlanId:'old-plan'}),activityId:'old'};
   const oldBackup = {format:'time-planner-backup',version:1,calendar:{...state,items:[...state.items,oldHabitItem]},habits:[{id:'old',title:'Vecchia',notes:'',icon:'study',color:'teal',status:'active',plans:[]}],history:[record]};
   const migrated = archives.parseArchive(JSON.stringify(oldBackup));
-  assert.equal(migrated.version,2);
+  assert.equal(migrated.version,3);
   assert.deepEqual(migrated.habits,[]);
   assert.ok(!migrated.calendar.items.some(entry=>entry.habitId));
   for (const value of [state, { answers: {}, plannerResult: {} }, { ...backup, version: 9 }, null, []]) {
@@ -570,7 +570,7 @@ const habitCompletionDate = (history, habit) => indexedCompletion(indexHabitOutc
 const { StatisticsRepository: CompletionStatistics } = require(join(process.env.CALENDAR_TEST_BUILD, 'repository/StatisticsRepository.js'));
 function completedHabitFixture(stepTarget = 12, recorded = stepTarget) {
   const created = habits.createHabit(c.emptyCalendar(), [], habitDraft({ stepTarget, weekdays: [0,1,2,3,4] }), { habitId: 'finite-habit' });
-  const archive = { format: 'time-planner-backup', version: 2, ...created, history: [] };
+  const archive = { format: 'time-planner-backup', version: 3, ...created, history: [] };
   // I casi legacy possono contenere esiti oltre il traguardo attuale.
   const entries = c.occurrences(archive.calendar.items.map(item => ({...item,habitPlannedUntil:undefined})), '2026-09-28', '2026-11-30').slice(0, recorded);
   for (const entry of entries) {
@@ -650,7 +650,7 @@ test('closure uses moved event dates and suppresses unrecorded exceptions after 
 test('three-step repeat plans exactly three appointments across all views and legacy reloads', () => {
   const draft = habitDraft({stepTarget:3,startsOn:'2026-10-05',start:'18:00'});
   const original = habits.createHabit(c.emptyCalendar(),[],draft,{habitId:'gym'});
-  const archive = {format:'time-planner-backup',version:2,...original,history:[]};
+  const archive = {format:'time-planner-backup',version:3,...original,history:[]};
   for (const event of c.occurrences(archive.calendar.items,'2026-01-01','2027-12-31')) {
     archive.history.push(archives.outcomeRecord(archive.calendar,event,'completed'));
     archive.calendar = c.setOccurrenceOutcome(archive.calendar,event.sourceId,event.occurrenceDate,'completed');

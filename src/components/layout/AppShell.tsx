@@ -13,10 +13,11 @@ import { AppHeader } from "./AppHeader";
 import { AppDialogs, type AppDialogState } from "./AppDialogs";
 import { AppSidebar } from "./AppSidebar";
 import { ScreenTabs, type ScreenId } from "./ScreenTabs";
+import { TimeSeriesNotifications } from "../../screens/habits/TimeSeriesConclusion";
 
 /** Layout principale e solo stato condiviso tra più schermate. */
 export function AppShell() {
-  const { palette, saving } = useDB();
+  const { palette, saving, weeklyTimeHabits } = useDB();
   const { isLoading } = useLoading();
   const [sidebarExpanded, setSidebarExpanded] = useState(() => window.matchMedia("(min-width: 721px)").matches);
   const [activeScreen, setActiveScreen] = useState<ScreenId>("today");
@@ -43,27 +44,33 @@ export function AppShell() {
         expanded={sidebarExpanded}
         onToggle={() => setSidebarExpanded((value) => !value)}
         onAddHabit={() => setDialog({ type: "create" })}
-        onOpenHabits={() => setActiveScreen("habits")}
+        onOpenHabits={openHabits}
       />
       <main className="calendar-panel">
-        <AppHeader activeScreen={activeScreen} />
+        <AppHeader activeScreen={activeScreen} onCreate={() => setDialog({ type: "create" })} />
         <ScreenTabs activeScreen={activeScreen} onChange={setActiveScreen} />
         {saving && isLoading() && <p role="status" className="database-save-status">Salvataggio…</p>}
-        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={openHabits} onAddHabit={() => setDialog({ type: "create" })} />
-        <HabitsScreen active={activeScreen === "habits"} selectedHabitId={selectedHabitId} onSelectHabit={setSelectedHabitId} onAdd={() => setDialog({ type: "create" })} onEdit={habitId => setDialog({ type: "habit", habitId })} onRepeat={habitId => setDialog({ type: "habit", habitId, repeat: true })} />
+        <TodayScreen active={activeScreen === "today"} onOpenEvent={openEvent} onOpenHabits={openHabits} onAddHabit={() => setDialog({ type: "create" })} onAddTime={habitId => setDialog({ type: "time-session", habitId })} />
+        <HabitsScreen active={activeScreen === "habits"} selectedHabitId={selectedHabitId} onSelectHabit={setSelectedHabitId} onAdd={() => setDialog({ type: "create" })} onEdit={habitId => setDialog({ type: "habit", habitId })} onRepeat={habitId => setDialog({ type: "habit", habitId, repeat: true })}
+          onEditWeekly={habitId => setDialog({ type: "weekly-habit", habitId })}
+          onReviewSeries={(habitId, seriesId) => setDialog({ type: "time-series", habitId, seriesId })}
+          onAddTime={(habitId, session) => setDialog({ type: "time-session", habitId, session })}
+          onPlanTime={habitId => setDialog({ type: "editor", weeklyHabitId: habitId, date: [today(), weeklyTimeHabits.find(habit => habit.id === habitId)?.startsOn ?? today()].sort().at(-1)! })} />
         <CalendarScreen
           active={activeScreen === "calendar"}
           week={week}
           onWeekChange={setWeek}
           onOpenEditor={openEditor}
           onOpenEvent={openEvent}
+          onAddTime={(habitId, session) => setDialog({ type: "time-session", habitId, session })}
         />
         <StatisticsScreen active={activeScreen === "statistics"} />
         <TrophiesScreen active={activeScreen === "trophies"} />
         <SettingsScreen active={activeScreen === "settings"} onOpenProfile={() => setDialog({ type: "preferences" })}
           onClearCalendar={() => setDialog({ type: "clear" })} onResetAll={() => setDialog({ type: "reset-all" })} />
       </main>
-      <AppDialogs dialog={dialog} onChange={setDialog} onHabitSaved={showSavedHabit} />
+      <AppDialogs dialog={dialog} onChange={setDialog} onHabitSaved={showSavedHabit} onWeeklyHabitSaved={id => { setDialog(null); openHabits(id); }} />
+      <TimeSeriesNotifications enabled={!dialog} />
     </div>
   );
 }

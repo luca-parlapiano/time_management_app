@@ -1,3 +1,4 @@
+import { today } from "../../utils/dates";
 import { useState } from "react";
 import { displayDate, isProgressActivity, outcomeLabels } from "../../domain/calendar";
 import type { ItemOutcome, Occurrence } from "../../model/calendar.js";
@@ -11,9 +12,10 @@ interface CalendarEventMenuProps {
   onEdit: () => void;
   onOutcome: (outcome: ItemOutcome) => Promise<void>;
   onDelete: () => Promise<void>;
+  onRecordTime?: () => void;
 }
 
-export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, initialConfirmDelete = false }: CalendarEventMenuProps) {
+export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, onRecordTime, initialConfirmDelete = false }: CalendarEventMenuProps) {
   const [confirmDelete, setConfirmDelete] = useState(initialConfirmDelete);
   const [error, setError] = useState("");
   async function run(action: () => Promise<void>) {
@@ -25,6 +27,7 @@ export function CalendarEventMenu({ item, onClose, onEdit, onOutcome, onDelete, 
       <legend>Com’è andata?</legend>
       <div>{(Object.keys(outcomeLabels) as ItemOutcome[]).map(outcome => <StandardButton variant="secondary" type="button" key={outcome} aria-pressed={item.outcome === outcome} onClick={() => run(() => onOutcome(outcome))}>{outcomeLabels[outcome]}</StandardButton>)}</div>
     </fieldset>}
+    {onRecordTime && !confirmDelete && <StandardButton disabled={item.date > today()} onClick={onRecordTime}>Registra tempo svolto</StandardButton>}
     <div className="event-menu-actions">
       {!confirmDelete && <StandardButton variant="secondary" type="button" onClick={onEdit}>Modifica</StandardButton>}
       {!confirmDelete ? <StandardButton variant="ghost" type="button" onClick={() => setConfirmDelete(true)}>Elimina</StandardButton> : <div className="event-delete-confirmation">

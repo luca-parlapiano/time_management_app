@@ -1,7 +1,7 @@
 import { isPalette } from "../src/theme.js";
 import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
 import { DatabaseService } from "./databaseService.js";
-import type { DatabaseWrite } from "../src/model/database.js";
+import { validateArchive } from "../src/domain/outcomeArchive.js";
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,7 +76,14 @@ app.whenReady().then(() => {
     if (!sender || event.senderFrame !== event.sender.mainFrame) throw new Error("Richiesta database non autorizzata.");
   };
   ipcMain.handle("planner-db:read", event => { trusted(event); return database!.read(); });
-  ipcMain.handle("planner-db:write", (event, input: DatabaseWrite) => { trusted(event); return database!.write(input); });
+  ipcMain.handle("planner-db:write", (event, input: unknown) => {
+    trusted(event);
+    if (!input || typeof input !== "object" || Array.isArray(input) || !("archive" in input) || !("expectedRevision" in input) ||
+      (input.expectedRevision !== null && !isNonNegativeSafeInteger(input.expectedRevision)) ||
+      ("replace" in input && input.replace !== undefined && typeof input.replace !== "boolean")) throw new Error("Scrittura database non valida.");
+    validateArchive(input.archive);
+    return database!.write({ archive: input.archive, expectedRevision: input.expectedRevision, replace: "replace" in input && input.replace === true });
+  });
   ipcMain.handle("planner-db:reset", (event, expectedRevision: unknown) => {
     trusted(event);
     if (!isNonNegativeSafeInteger(expectedRevision)) throw new Error("Revisione non valida.");

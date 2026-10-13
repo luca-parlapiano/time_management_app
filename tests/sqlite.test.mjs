@@ -11,7 +11,7 @@ import { emptyCalendar, occurrences, setOccurrenceOutcome } from '../dist-electr
 import { createHabit } from '../dist-electron/src/domain/habits.js';
 import { outcomeRecord, latestOutcomes, parseArchive, exportArchive } from '../dist-electron/src/domain/outcomeArchive.js';
 const item = { id:'first',title:'Palestra',date:'2026-09-22',endDate:'2026-09-22',start:'09:00',end:'10:00',kind:'flexible',notes:'',exceptions:{} };
-const initial = () => ({format:'time-planner-backup',version:2,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]});
+const initial = () => ({format:'time-planner-backup',version:3,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]});
 
 test('SQLite: persistence, audit corrections, backup, import recovery and stale revisions', () => {
  const dir=mkdtempSync(join(tmpdir(),'agenda-sqlite-')); const filename=join(dir,'agenda.sqlite'); let store;
@@ -79,7 +79,7 @@ test('SQLite reset clears all app data, prior import and palette atomically', ()
   const repair=new DatabaseSync(filename);repair.exec('DROP TRIGGER fail_reset');repair.close();
   const reset=store.reset(saved.revision);
   assert.equal(reset.revision,saved.revision+1);
-  assert.deepEqual(reset.archive,{format:'time-planner-backup',version:2,calendar:emptyCalendar(),habits:[],history:[]});
+  assert.deepEqual(reset.archive,{format:'time-planner-backup',version:3,calendar:emptyCalendar(),habits:[],history:[]});
   assert.equal(reset.previous,null);
   assert.equal(store.readPalette(),'natural');
   store.close();store=new SQLiteStore(filename);
@@ -135,7 +135,7 @@ test('SQLite upgrades a version 1 database with an empty habits table', () => {
   assert.equal(store.read(),null);
   store.close();store=undefined;
   const migrated=new DatabaseSync(filename);
-  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,4);
+  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,5);
   assert.ok(migrated.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='habits'").get());
   migrated.close();
  } finally {store?.close();rmSync(dir,{recursive:true,force:true});}
@@ -155,7 +155,7 @@ test('SQLite version 3 migration removes legacy habits and their linked appointm
   legacy.close();
   store=new SQLiteStore(filename);store.close();store=undefined;
   const migrated=new DatabaseSync(filename);
-  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,4);
+  assert.equal(migrated.prepare('PRAGMA user_version').get().user_version,5);
   assert.equal(migrated.prepare('SELECT count(*) AS total FROM activities').get().total,0);
   assert.equal(migrated.prepare('SELECT count(*) AS total FROM habits').get().total,0);
   migrated.close();
@@ -230,7 +230,7 @@ test('SQLite: completed habits close on read and remain closed after reopening w
   store = new SQLiteStore(filename);
   const created = createHabit(emptyCalendar(), [], { title: 'Percorso finito', motivation: '', icon: 'gaming', color: 'green', stepTarget: 1, startsOn: '2026-10-05', weekdays: [0,1], start: '12:00', durationMinutes: 20 }, { habitId: 'closed' });
   const entry = occurrences(created.calendar.items, '2026-10-05', '2026-10-05')[0];
-  const archive = { format: 'time-planner-backup', version: 2, ...created, history: [outcomeRecord(created.calendar, entry, 'completed')] };
+  const archive = { format: 'time-planner-backup', version: 3, ...created, history: [outcomeRecord(created.calendar, entry, 'completed')] };
   archive.calendar = setOccurrenceOutcome(archive.calendar, entry.sourceId, entry.occurrenceDate, 'completed');
   const saved = store.write({ archive, expectedRevision: null });
   assert.equal(saved.archive.history.length, 1);
@@ -260,6 +260,7 @@ test('SQLite v4 converts legacy outcomes atomically and preserves audit, previou
   const db=new DatabaseSync(filename);
   db.exec(`DROP TABLE outcome_records;
     CREATE TABLE outcome_records (id TEXT PRIMARY KEY, sequence INTEGER UNIQUE NOT NULL, source_id TEXT NOT NULL, activity_id TEXT NOT NULL, occurrence_date TEXT NOT NULL, event_date TEXT NOT NULL, title TEXT NOT NULL, icon TEXT NOT NULL, color TEXT NOT NULL, outcome TEXT NOT NULL, recorded_at TEXT);
+    DROP TABLE weekly_time_habits; DROP TABLE time_sessions; DROP TABLE time_session_history;
     PRAGMA user_version = 3;`);
   db.prepare('UPDATE activities SET data=? WHERE id=?').run(JSON.stringify(legacy.calendar.items[0]),item.id);
   for(const [i,r] of legacy.history.entries())db.prepare('INSERT INTO outcome_records VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(r.id,i,r.sourceId,r.activityId,r.occurrenceDate,r.eventDate,r.title,r.icon,r.color,r.outcome,r.recordedAt);
@@ -278,10 +279,83 @@ test('SQLite v4 converts legacy outcomes atomically and preserves audit, previou
   store.close();store=new SQLiteStore(filename);
   assert.deepEqual(store.read(),migrated);
   const persisted=new DatabaseSync(filename);
-  assert.equal(persisted.prepare('PRAGMA user_version').get().user_version,4);
+  assert.equal(persisted.prepare('PRAGMA user_version').get().user_version,5);
   assert.deepEqual(persisted.prepare('SELECT outcome FROM outcome_records ORDER BY sequence').all().map(r=>r.outcome),['completed','skipped']);
   assert.equal(JSON.parse(persisted.prepare('SELECT data FROM activities').get().data).outcomes[item.date],'skipped');
   assert.throws(()=>persisted.prepare('UPDATE outcome_records SET outcome=?').run('partial'),/CHECK/);
   persisted.close();
  } finally {store?.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('SQLite weekly time: sessions, corrections, prior import and reset survive restart atomically', async () => {
+ const { saveWeeklyTimeHabit, saveTimeSession, weeklyTimeProgress } = await import('../dist-electron/src/domain/weeklyTime.js');
+ const dir=mkdtempSync(join(tmpdir(),'agenda-weekly-time-')); const filename=join(dir,'agenda.sqlite'); let store=new SQLiteStore(filename);
+ try {
+  let archive=saveWeeklyTimeHabit(initial(),'hours',{title:'Studio',motivation:'',icon:'study',color:'teal',startsOn:'2026-10-05',targetMinutes:360},'2026-10-11');
+  const command={commandId:'record-1',session:{id:'session-1',habitId:'hours',date:'2026-10-11',minutes:120,notes:'Esercizi',removed:false}};
+  archive=saveTimeSession(archive,command,'2026-10-11','2026-10-11T10:00:00Z');
+  let saved=store.write({archive,expectedRevision:null});
+  store.close();store=new SQLiteStore(filename);
+  assert.deepEqual(store.read(),saved);
+  assert.equal(weeklyTimeProgress(store.read().archive,'hours','2026-10-11','2026-10-11').completedMinutes,120);
+  const db=new DatabaseSync(filename);
+  db.exec("CREATE TRIGGER fail_time BEFORE INSERT ON time_session_history BEGIN SELECT RAISE(ABORT,'time failure'); END");db.close();
+  const corrected=saveTimeSession(saved.archive,{commandId:'correct',session:{...command.session,minutes:90}},'2026-10-11','2026-10-11T11:00:00Z');
+  assert.throws(()=>store.write({archive:corrected,expectedRevision:saved.revision}),/time failure/);
+  assert.deepEqual(store.read(),saved);
+  const fix=new DatabaseSync(filename);fix.exec('DROP TRIGGER fail_time');fix.close();
+  saved=store.write({archive:corrected,expectedRevision:saved.revision});
+  const backup=parseArchive(exportArchive(saved.archive));
+  const replacement=store.write({archive:initial(),expectedRevision:saved.revision,replace:true});
+  assert.deepEqual(replacement.previous,backup);
+  store.close();store=new SQLiteStore(filename);
+  assert.deepEqual(store.read().previous,backup);
+  saved=store.write({archive:backup,expectedRevision:replacement.revision,replace:true});
+  assert.equal(saved.archive.timeSessionHistory.length,2);
+  const reset=store.reset(saved.revision);
+  store.close();store=new SQLiteStore(filename);
+  assert.deepEqual(store.read(),reset);
+  assert.equal(reset.archive.weeklyTimeHabits,undefined);
+  const check=new DatabaseSync(filename);
+  for(const table of ['weekly_time_habits','time_sessions','time_session_history']) assert.equal(check.prepare(`SELECT count(*) AS total FROM ${table}`).get().total,0);
+  check.close();
+ } finally {store.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('SQLite v4 to v5 preserves legacy revision, habits, audit, palette and import recovery', () => {
+ const dir=mkdtempSync(join(tmpdir(),'agenda-v5-'));const filename=join(dir,'agenda.sqlite');let store=new SQLiteStore(filename);
+ try {
+  const saved=store.write({archive:initial(),expectedRevision:null});
+  const expected=store.write({archive:initial(),expectedRevision:saved.revision,replace:true});
+  store.writePalette('night');store.close();
+  const legacy=new DatabaseSync(filename);
+  legacy.exec('DROP TABLE weekly_time_habits; DROP TABLE time_sessions; DROP TABLE time_session_history; PRAGMA user_version = 4');legacy.close();
+  store=new SQLiteStore(filename);
+  assert.deepEqual(store.read(),expected);
+  assert.equal(store.readPalette(),'night');
+  const check=new DatabaseSync(filename);assert.equal(check.prepare('PRAGMA user_version').get().user_version,5);check.close();
+ } finally {store.close();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('SQLite time series: monthly result, repeat decision and isolated totals survive reopen and backup', async () => {
+ const { saveWeeklyTimeHabit, saveTimeSession } = await import('../dist-electron/src/domain/weeklyTime.js');
+ const { resolveTimeSeries, timeSeriesResults } = await import('../dist-electron/src/domain/timeSeries.js');
+ const dir=mkdtempSync(join(tmpdir(),'agenda-series-')); const filename=join(dir,'agenda.sqlite'); let store=new SQLiteStore(filename);
+ try {
+  let archive=saveWeeklyTimeHabit(initial(),'monthly',{title:'Chitarra',motivation:'',icon:'study',color:'teal',startsOn:'2026-09-01',period:'month',targetMinutes:1200},'2026-09-01');
+  archive=saveTimeSession(archive,{commandId:'one',session:{id:'one',habitId:'monthly',date:'2026-09-10',minutes:1320,notes:'Pratica',removed:false}},'2026-09-30','2026-09-30T10:00:00Z');
+  let saved=store.write({archive,expectedRevision:null});
+  const seriesId=saved.archive.weeklyTimeHabits[0].series[0].id;
+  archive=resolveTimeSeries(saved.archive,'monthly',seriesId,true,'october','2026-10-13');
+  saved=store.write({archive,expectedRevision:saved.revision});
+  store.close();store=new SQLiteStore(filename);
+  assert.deepEqual(store.read(),saved);
+  const results=timeSeriesResults(store.read().archive,'2026-10-13');
+  assert.deepEqual(results.map(result=>result.completedMinutes),[1320,0]);
+  assert.equal(results[0].reached,true);
+  assert.equal(results[0].series.decision,'repeat');
+  assert.equal(results[1].series.startsOn,'2026-10-13');
+  assert.equal(results[1].series.endsOn,'2026-10-31');
+  assert.deepEqual(parseArchive(exportArchive(saved.archive)),saved.archive);
+ } finally {store.close();rmSync(dir,{recursive:true,force:true});}
 });

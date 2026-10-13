@@ -18,7 +18,7 @@ import "../src/themes.css";
 
 const date = today();
 const mode = new URLSearchParams(location.search).get("scenario");
-let archive: PlannerArchive = { format: "time-planner-backup", version: 2, calendar: emptyCalendar(), habits: [], history: [] };
+let archive: PlannerArchive = { format: "time-planner-backup", version: 3, calendar: emptyCalendar(), habits: [], history: [] };
 const samples: Pick<HabitDraft, "title" | "icon" | "color" | "stepTarget" | "start">[] = [
   { title: "Leggere venti minuti", icon: "study", color: "teal", stepTarget: 6, start: "21:00" },
   { title: "Fare movimento", icon: "sport", color: "orange", stepTarget: 8, start: "18:00" },

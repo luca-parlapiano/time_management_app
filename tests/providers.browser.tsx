@@ -30,7 +30,7 @@ let rejectGate: ((error: Error)=>void) | null=null;
 let failInitialization=true;
 const date=today();
 const item: CalendarItem={id:'test-activity',title:'Attività di prova',date,endDate:date,start:'09:00',end:'11:00',kind:'flexible',notes:'Solo dati di test',exceptions:{},recurrence:{until:date},routine:true,icon:'sport',color:'green'};
-let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:2,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]},revision:0,previous:null};
+let saved: DatabaseSnapshot={archive:{format:'time-planner-backup',version:3,calendar:{...emptyCalendar(),items:[item]},habits:[],history:[]},revision:0,previous:null};
 const memoryBridge: DatabaseBridge={
  read:async()=>{initializeCount++;if(failInitialization)throw new Error('Simulated open failure');return structuredClone(saved);},
  readPalette:async()=> 'natural', writePalette:async(value: Palette)=>value,
@@ -43,7 +43,7 @@ const memoryBridge: DatabaseBridge={
  },
  reset:async expectedRevision=>{
   if(saved.revision!==expectedRevision)throw new Error('Stale revision');
-  saved={archive:{format:'time-planner-backup',version:2,calendar:emptyCalendar(),habits:[],history:[]},revision:saved.revision+1,previous:null};
+  saved={archive:{format:'time-planner-backup',version:3,calendar:emptyCalendar(),habits:[],history:[]},revision:saved.revision+1,previous:null};
   return structuredClone(saved);
  },
 };

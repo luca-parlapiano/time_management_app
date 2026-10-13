@@ -10,6 +10,7 @@ Partire dall’[indice della documentazione](docs/README.md): distingue comporta
 attuale, direzione di prodotto e materiale del prototipo storico.
 
 - [Calendario, ricorrenze ed esiti](docs/calendario-continuo.md).
+- [Abitudini con obiettivo di ore settimanali](docs/abitudini-ore.md).
 - [Architettura, Provider, persistenza e statistiche](docs/provider-database-model.md).
 - [Qualità del codice e verifiche](docs/code-quality.md).
 - [Stato del progetto e lavoro ancora aperto](docs/stato-progetto.md).

@@ -13,7 +13,7 @@ const dashboard = (archive, date, time) => habitDashboard(reconcileHabitCompleti
 const draft = { title: 'Lettura', motivation: '', icon: 'study', color: 'teal', stepTarget: 3, startsOn: '2026-10-01', weekdays: [0,1,2,3,4,5,6], start: '10:00', durationMinutes: 20 };
 function fixture(patch = {}) {
   const { calendar, habits } = createHabit(c.emptyCalendar(), [], { ...draft, ...patch }, { habitId: 'reading' });
-  return { format: 'time-planner-backup', version: 2, calendar, habits, history: [] };
+  return { format: 'time-planner-backup', version: 3, calendar, habits, history: [] };
 }
 function record(archive, date, outcome) {
   const occurrence = c.occurrences(archive.calendar.items, date, date).find(item => item.date === date);

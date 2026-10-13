@@ -131,7 +131,8 @@ Ogni operazione ha un identificatore: la prima operazione che termina non nascon
 ## SQLite e inizializzazione
 
 Il file `agenda.sqlite` si trova nella directory `app.getPath("userData")` di Electron.
-Le tabelle sono `activities`, `habits`, `goals`, `outcome_records` e `metadata`. Gli esiti hanno
+Lo schema 5 comprende `activities`, `habits`, `goals`, `outcome_records`, `metadata`,
+`weekly_time_habits`, `time_sessions` e `time_session_history`. Gli esiti hanno
 colonne per data dell’appuntamento, identità dell’occorrenza e momento della registrazione,
 con indici per data e occorrenza.
 
@@ -139,13 +140,14 @@ RepositoryDB legge sempre SQLite. Se non esiste ancora uno snapshot, salva un ca
 vuoto con storico vuoto e revisione attesa nulla. Le aperture successive restituiscono
 lo snapshot esistente senza riscriverlo. Un errore di lettura o scrittura viene presentato
 all’utente: non provoca un ripristino silenzioso. L’importazione usa backup JSON
-`time-planner-backup` v2 con calendario v2, abitudini facoltative e storico. I backup v1
+`time-planner-backup` v3 con calendario v2, abitudini facoltative, diario delle ore e storico.
+I backup v2 vengono aggiornati senza inventare registrazioni di tempo. I backup v1
 vengono convertiti eliminando il precedente modello di abitudini e i relativi
 appuntamenti; calendario indipendente, profilo, obiettivi e storico restano disponibili.
 Campi estranei e formati diversi vengono rifiutati. Gli esiti correnti sono
 rappresentati soltanto da `outcomes`.
 
-Ogni abitudine da acquisire conserva soltanto identità, nome, motivazione, aspetto e un
+Ogni abitudine a step conserva soltanto identità, nome, motivazione, aspetto e un
 traguardo da 1 a 12 step. Giorni, orario e durata appartengono alle serie del calendario;
 `habitId` le collega all'abitudine e `activityId` ne mantiene stabile il percorso nello
 storico. Creazione e modifica aggiornano abitudine e appuntamenti nella stessa revisione e
@@ -155,6 +157,11 @@ derivati dagli ultimi esiti confermati e non vengono salvati come totali.
 Una routine è invece una normale serie ricorrente del calendario. Non viene salvata
 nella tabella `habits`, non ha `habitId`, step o percorso: serve soltanto a ricordare
 un'attività periodica e usa le operazioni calendario già esistenti.
+
+Le [abitudini a ore](abitudini-ore.md) hanno identità e storico dei target separati.
+Il diario conserva sessioni correnti e audit, mentre `StatisticsRepository` calcola
+totali e registrazioni recenti sullo snapshot confermato. Le loro durate non entrano
+nelle statistiche degli esiti binari.
 
 Il backup JSON resta importabile/esportabile. Ogni importazione sostituisce i dati e conserva una copia del precedente archivio. Gli esiti rimangono nello storico dopo l’eliminazione delle attività; le statistiche contano l’ultimo esito per appuntamento.
 

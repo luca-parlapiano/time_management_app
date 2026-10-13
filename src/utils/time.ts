@@ -1,4 +1,4 @@
-import { isIntegerInRange } from "./numbers.js";
+import { isIntegerInRange, isNonNegativeSafeInteger } from "./numbers.js";
 import { positiveModulo } from "./math.js";
 
 /**
@@ -54,4 +54,11 @@ export function toTime(totalMinutes: number): string {
   const hours = Math.floor(normalized / 60).toString().padStart(2, "0");
   const minutes = (normalized % 60).toString().padStart(2, "0");
   return `${hours}:${minutes}`;
+}
+
+/** Formatta minuti interi non negativi come durata, senza azzerare le ore oltre 24; zero produce «0 min». */
+export function formatDurationMinutes(minutes: number): string {
+  if (!isNonNegativeSafeInteger(minutes)) throw new Error("Durata non valida.");
+  const hours = Math.floor(minutes / 60), rest = minutes % 60;
+  return hours ? `${hours} h${rest ? ` ${rest} min` : ""}` : `${rest} min`;
 }

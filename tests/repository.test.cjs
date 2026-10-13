@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { join } = require('node:path');
 const { RepositoryDB } = require(join(process.env.CALENDAR_TEST_BUILD, 'repository/RepositoryDB.js'));
 const { emptyCalendar } = require(join(process.env.CALENDAR_TEST_BUILD, 'domain/calendar.js'));
-const emptyArchive = () => ({ format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [] });
+const emptyArchive = () => ({ format: 'time-planner-backup', version: 3, calendar: emptyCalendar(), habits: [], history: [] });
 const { createDevRepository } = require(join(process.env.CALENDAR_TEST_BUILD, 'repository/DevRepository.js'));
 
 test('Dev repositories isolate sessions and snapshots, reject stale writes and reset only their own data', async () => {

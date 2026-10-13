@@ -1,7 +1,7 @@
 import { percentage } from "../../utils/math.js";
 import { toMinutes as minutes, toTime } from "../../utils/time.js";
 import { buildCalendarTimeline, calendarTimelineOffset } from "../../utils/calendarTimeline.js";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { memo, useEffect, useState } from "react";
 import { addDays, displayDate, occurrences, today } from "../../domain/calendar";
 import type { CalendarState, ItemOutcome, Occurrence } from "../../model/calendar.js";
@@ -14,6 +14,7 @@ interface WeeklyCalendarProps {
   state: CalendarState;
   week: string;
   disabled?: boolean;
+  renderTime?: (date: string) => ReactNode;
   onAdd: (date: string) => void;
   onEdit: (item: Occurrence) => void;
   onOutcome: (item: Occurrence, outcome: ItemOutcome) => Promise<void>;
@@ -42,7 +43,7 @@ function useCurrentTimeIndicator(days: string[], initialFirstHour: number, initi
   return { date, firstHour, lastHour, label };
 }
 
-function WeeklyCalendarContent({ state, week, view, disabled, onAdd, onEdit, onOutcome }: WeeklyCalendarProps) {
+function WeeklyCalendarContent({ state, week, view, disabled, onAdd, onEdit, onOutcome, renderTime }: WeeklyCalendarProps) {
   const visible = occurrences(state.items, week, addDays(week, 6));
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
   const dayEntries = days.map(date => visible.filter(item => item.date <= date && (item.endDate > date || (item.endDate === date && item.end > "00:00"))));
@@ -62,9 +63,9 @@ function WeeklyCalendarContent({ state, week, view, disabled, onAdd, onEdit, onO
   const timelinePercent = (minute: number) => percentage(calendarTimelineOffset(minute, timeline), timeline.height);
   const hours = Array.from({ length: lastHour - firstHour + 1 }, (_, index) => firstHour + index);
   const agenda = view === "agenda";
-  return <section className={`calendar-grid ${agenda ? "weekly-agenda" : "continuous-calendar hourly-calendar"}`} aria-label={agenda ? "Agenda settimanale" : "Calendario settimanale"} style={{ "--timeline-min-height": `${timeline.height}px` } as CSSProperties}>
+  return <section className={`calendar-grid ${renderTime ? "calendar-with-time " : ""}${agenda ? "weekly-agenda" : "continuous-calendar hourly-calendar"}`} aria-label={agenda ? "Agenda settimanale" : "Calendario settimanale"} style={{ "--timeline-min-height": `${timeline.height}px` } as CSSProperties}>
     {!agenda && <aside className="calendar-time-column" aria-label="Orari">
-      <header className="day-header">Orari</header>
+      <header className="day-header">Orari{renderTime && <div className="calendar-time-spacer" />}</header>
       <div className="time-timeline">
         {hours.map(hour => <span key={hour} className="calendar-hour" style={{ top: `${timelinePercent(hour * 60)}%` }}>{String(hour).padStart(2, "0")}:00</span>)}
       </div>
@@ -74,6 +75,7 @@ function WeeklyCalendarContent({ state, week, view, disabled, onAdd, onEdit, onO
       return <article key={date} className={`day-column ${date === currentTime.date ? "day-today" : ""}`}>
         <header className="day-header"><time dateTime={date}>{displayDate(date, { weekday: "short", day: "numeric", month: undefined })}</time><small>{date === currentTime.date ? "Oggi" : "\u00a0"}</small>
           <StandardButton variant="ghost" disabled={disabled} type="button" className="day-add" aria-label={`Nuovo appuntamento fisso il ${date}`} onClick={() => onAdd(date)} title="Nuovo appuntamento fisso">+</StandardButton>
+          {renderTime?.(date)}
         </header>
         <div className={`day-blocks${agenda ? "" : " day-timeline"}`}>
           {!agenda && hours.map(hour => <span key={hour} className="calendar-hour-line" aria-hidden="true" style={{ top: `${timelinePercent(hour * 60)}%` }} />)}

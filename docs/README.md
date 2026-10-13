@@ -9,6 +9,7 @@ Ultimo riallineamento al codice: 27 settembre 2026.
 3. [Calendario continuo](calendario-continuo.md): comportamento dell’app e regole utente.
 4. [Architettura, Provider, repository e modelli](provider-database-model.md): stack, confini tra processi, contratti, persistenza, loading e formule statistiche.
 5. [Qualità del codice](code-quality.md) e [utility condivise](code-quality.md#utility-condivise-e-costanti): convenzioni e verifiche.
+6. [Abitudini a ore](abitudini-ore.md): obiettivi settimanali, registrazioni, storico e persistenza, aggiunti il 12 ottobre 2026.
 
 ## Direzione di prodotto e proposte
 
@@ -16,6 +17,7 @@ Questi documenti descrivono obiettivi e ipotesi, non funzionalità tutte disponi
 
 - [Strategia prodotto e benchmark](strategia-prodotto-e-benchmark.md): pubblico, valore e ipotesi da validare. I dati sui concorrenti non sono stati rivalidati nel riallineamento.
 - [Piano di implementazione Oggi e Abitudini](piano-implementazione-oggi-abitudini.md): sequenza di lavoro proposta, contratti, criteri di accettazione e preparazione al mobile.
+- [Piano di implementazione Abitudini a ore settimanali](piano-implementazione-abitudini-ore-settimanali.md): obiettivi di tempo, diario delle sessioni, calendario, migrazioni e verifiche.
 - [Piano di implementazione Routine](piano-implementazione-routine.md): sequenze nel calendario, esperienza mobile, persistenza, Android/iOS negli store e continuità fra dispositivi.
 - [AI e personalizzazione locale](ai-modello-personalizzazione-locale.md): possibile evoluzione, subordinata a validazione e conferma dell’utente.
 

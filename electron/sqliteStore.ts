@@ -1,3 +1,4 @@
+import { upgradeTimeSeries } from '../src/domain/timeSeries.js';
 import { reconcileHabitCompletion } from "../src/domain/habitCompletion.js";
 import { isPalette } from "../src/theme.js";
 import type { Palette } from "../src/model/theme.js";
@@ -13,11 +14,13 @@ import type { Habit } from '../src/model/habit.js';
 
 export class SQLiteStore {
   private readonly db: DatabaseSync;
+  private timeTablesReady = false;
   constructor(filename: string) {
     this.db = new DatabaseSync(filename);
     this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
     const version = (this.db.prepare('PRAGMA user_version').get() as {user_version:number}).user_version;
-    if (version > 4) { this.db.close(); throw new Error('Database creato da una versione più recente dell’app.'); }
+    if (version > 5) { this.db.close(); throw new Error('Database creato da una versione più recente dell’app.'); }
+    this.timeTablesReady = version >= 5;
     this.db.exec(`BEGIN;
       CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS activities (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
@@ -44,6 +47,26 @@ export class SQLiteStore {
       try { this.migrateBinaryOutcomes(); }
       catch (error) { this.db.close(); throw error; }
     }
+    if (version < 5) {
+      try { this.migrateWeeklyTime(); }
+      catch (error) { this.db.close(); throw error; }
+    }
+  }
+  /** Aggiunge il diario delle ore in una transazione, conservando anche la copia precedente e la revisione. */
+  private migrateWeeklyTime(): void {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const snapshot = this.readSnapshot();
+      this.db.exec(`
+        CREATE TABLE weekly_time_habits (id TEXT PRIMARY KEY, position INTEGER NOT NULL, data TEXT NOT NULL);
+        CREATE TABLE time_sessions (id TEXT PRIMARY KEY, position INTEGER NOT NULL, source_id TEXT, occurrence_date TEXT, data TEXT NOT NULL,
+          CHECK ((source_id IS NULL) = (occurrence_date IS NULL)), UNIQUE(source_id, occurrence_date));
+        CREATE TABLE time_session_history (id TEXT PRIMARY KEY, sequence INTEGER UNIQUE NOT NULL, data TEXT NOT NULL);
+      `);
+      if (snapshot?.previous) this.putMetadata('previousImport', archiveForStorage(snapshot.previous));
+      this.db.exec('PRAGMA user_version = 5; COMMIT');
+      this.timeTablesReady = true;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
   /** Converte gli archivi precedenti e restringe gli esiti SQL in una transazione, conservando audit e revisione. */
   private migrateBinaryOutcomes(): void {
@@ -88,7 +111,10 @@ export class SQLiteStore {
     const profile = JSON.parse(this.metadata('profile') ?? 'null') as CalendarProfile | null;
     const history = this.db.prepare(`SELECT id,source_id AS sourceId,activity_id AS activityId,occurrence_date AS occurrenceDate,
       event_date AS eventDate,title,icon,color,outcome,recorded_at AS recordedAt FROM outcome_records ORDER BY sequence`).all().map(row => ({...row})) as unknown as OutcomeRecord[];
-    const archive = readStoredArchive({format:'time-planner-backup',version:2,calendar:{version:2,items,goals,profile},habits,history});
+    const weeklyTimeHabits = this.timeTablesReady ? this.db.prepare('SELECT data FROM weekly_time_habits ORDER BY position').all().map(row => JSON.parse(row.data as string) as unknown) : [];
+    const timeSessions = this.timeTablesReady ? this.db.prepare('SELECT data FROM time_sessions ORDER BY position').all().map(row => JSON.parse(row.data as string) as unknown) : [];
+    const timeSessionHistory = this.timeTablesReady ? this.db.prepare('SELECT data FROM time_session_history ORDER BY sequence').all().map(row => JSON.parse(row.data as string) as unknown) : [];
+    const archive = readStoredArchive({format:'time-planner-backup',version:3,calendar:{version:2,items,goals,profile},habits,history,...(weeklyTimeHabits.length ? {weeklyTimeHabits,timeSessions,timeSessionHistory} : {})});
     const storedPrevious: unknown = JSON.parse(this.metadata('previousImport') ?? 'null');
     const previous = storedPrevious === null ? null : readStoredArchive(storedPrevious);
     const parsedRevision = JSON.parse(revision);
@@ -102,9 +128,10 @@ export class SQLiteStore {
     try {
       const existing = this.readSnapshot();
       if ((existing?.revision ?? null) !== input.expectedRevision) throw new Error('Dati aggiornati in un’altra finestra. Riapri l’app prima di continuare.');
-      const archive = reconcileHabitCompletion(input.archive, input.replace ? undefined : existing?.archive);
+      const archive = reconcileHabitCompletion(upgradeTimeSeries(input.archive), input.replace ? undefined : existing?.archive);
+      validateArchive(archive);
       const previous = input.replace && existing ? existing.archive : existing?.previous ?? null;
-      this.db.exec('DELETE FROM activities; DELETE FROM goals; DELETE FROM habits; DELETE FROM outcome_records;');
+      this.db.exec('DELETE FROM activities; DELETE FROM goals; DELETE FROM habits; DELETE FROM outcome_records; DELETE FROM weekly_time_habits; DELETE FROM time_sessions; DELETE FROM time_session_history;');
       const activityInsert = this.db.prepare('INSERT INTO activities(id,position,data) VALUES (?,?,?)');
       archiveForStorage(archive).calendar.items.forEach((item,index) => activityInsert.run(item.id,index,JSON.stringify(item)));
       const goalInsert = this.db.prepare('INSERT INTO goals(id,position,data) VALUES (?,?,?)');
@@ -113,6 +140,12 @@ export class SQLiteStore {
       (archive.habits ?? []).forEach((habit,index) => habitInsert.run(habit.id,index,JSON.stringify(habit)));
       const outcomeInsert = this.db.prepare('INSERT INTO outcome_records VALUES (?,?,?,?,?,?,?,?,?,?,?)');
       archive.history.forEach((record,index) => outcomeInsert.run(record.id,index,record.sourceId,record.activityId,record.occurrenceDate,record.eventDate,record.title,record.icon,record.color,record.outcome,record.recordedAt));
+      const weeklyInsert = this.db.prepare('INSERT INTO weekly_time_habits VALUES (?,?,?)');
+      (archive.weeklyTimeHabits ?? []).forEach((habit,index) => weeklyInsert.run(habit.id,index,JSON.stringify(habit)));
+      const sessionInsert = this.db.prepare('INSERT INTO time_sessions VALUES (?,?,?,?,?)');
+      (archive.timeSessions ?? []).forEach((session,index) => sessionInsert.run(session.id,index,session.sourceId ?? null,session.occurrenceDate ?? null,JSON.stringify(session)));
+      const auditInsert = this.db.prepare('INSERT INTO time_session_history VALUES (?,?,?)');
+      (archive.timeSessionHistory ?? []).forEach((record,index) => auditInsert.run(record.id,index,JSON.stringify(record)));
       const revision = (existing?.revision ?? -1) + 1;
       this.putMetadata('profile',archive.calendar.profile);
       this.putMetadata('revision',revision);
@@ -128,11 +161,11 @@ export class SQLiteStore {
     try {
       const existing = this.readSnapshot();
       if (existing?.revision !== expectedRevision) throw new Error('Dati aggiornati in un’altra finestra. Riapri l’app prima di continuare.');
-      this.db.exec('DELETE FROM activities; DELETE FROM goals; DELETE FROM habits; DELETE FROM outcome_records; DELETE FROM metadata;');
+      this.db.exec('DELETE FROM activities; DELETE FROM goals; DELETE FROM habits; DELETE FROM outcome_records; DELETE FROM weekly_time_habits; DELETE FROM time_sessions; DELETE FROM time_session_history; DELETE FROM metadata;');
       const revision = expectedRevision + 1;
       this.putMetadata('revision', revision);
       this.db.exec('COMMIT');
-      return { archive: { format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [] }, revision, previous: null };
+      return { archive: { format: 'time-planner-backup', version: 3, calendar: emptyCalendar(), habits: [], history: [] }, revision, previous: null };
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
   /** Legge il tema del dispositivo; un database senza preferenza usa la palette iniziale. */

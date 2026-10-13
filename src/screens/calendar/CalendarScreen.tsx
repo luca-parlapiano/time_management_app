@@ -1,3 +1,5 @@
+import type { TimeSession } from "../../model/weeklyTime";
+import { CalendarTimeDay } from "./CalendarTimeDay";
 import { useCallback, useState } from "react";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { addDays, displayDate, today, weekStart } from "../../domain/calendar";
@@ -7,6 +9,7 @@ import { WeeklyCalendar } from "./WeeklyCalendar";
 
 interface CalendarScreenProps {
   active: boolean;
+  onAddTime: (habitId?: string, session?: TimeSession) => void;
   week: string;
   onWeekChange: (week: string) => void;
   onOpenEditor: (date: string, occurrence?: Occurrence, initialKind?: "fixed") => void;
@@ -14,8 +17,8 @@ interface CalendarScreenProps {
 }
 
 /** Schermata settimanale del calendario e relativi comandi di navigazione. */
-export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent }: CalendarScreenProps) {
-  const { state, saving, recordOutcome } = useDB();
+export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpenEvent, onAddTime }: CalendarScreenProps) {
+  const { state, saving, recordOutcome, weeklyTimeHabits } = useDB();
   const [view, setView] = useState<"agenda" | "timeline">("agenda");
   const addItem = useCallback((date: string) => onOpenEditor(date, undefined, "fixed"), [onOpenEditor]);
   const openItem = useCallback((item: Occurrence) => onOpenEvent(item, false), [onOpenEvent]);
@@ -48,6 +51,7 @@ export function CalendarScreen({ active, week, onWeekChange, onOpenEditor, onOpe
           onAdd={addItem}
           onEdit={openItem}
           onOutcome={recordOutcome}
+          renderTime={weeklyTimeHabits.length ? date => <CalendarTimeDay date={date} onAddTime={onAddTime} /> : undefined}
         />
       </div>
     </section>

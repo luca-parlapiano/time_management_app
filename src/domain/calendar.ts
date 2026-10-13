@@ -106,6 +106,9 @@ export function isOccurrenceDate(item: CalendarItem, date: string): boolean {
  */
 export function validateItem(item: CalendarItem): void {
   validateData(item);
+  if (item.weeklyHabitId !== undefined && (typeof item.weeklyHabitId !== "string" || !item.weeklyHabitId || item.habitId || item.routine || item.outcomes || item.kind !== "flexible")) throw new Error("Collegamento alle ore non valido.");
+  if (item.timeOriginalDate !== undefined && (!item.weeklyHabitId || !validDate(item.timeOriginalDate))) throw new Error("Data originale delle ore non valida.");
+  if (item.timeHabitUntil !== undefined && (!item.weeklyHabitId || !validDate(item.timeHabitUntil))) throw new Error("Fine dell’abitudine a ore non valida.");
   if (item.activityId !== undefined && (typeof item.activityId !== "string" || !item.activityId || !item.recurrence)) throw new Error("Attività ricorrente non valida.");
   if (item.routine !== undefined && (item.routine !== true || item.kind !== "flexible" || !item.recurrence || item.habitId)) throw new Error("Routine non valida.");
   if (item.habitId !== undefined && (typeof item.habitId !== "string" || !item.habitId || !item.recurrence)) {
@@ -180,17 +183,18 @@ function atDate(item: CalendarItem, date: string): ItemData {
 export function occurrences(items: CalendarItem[], from: string, through: string): Occurrence[] {
   const result: Occurrence[] = [];
   function include(item: CalendarItem, original: string, data: ItemData, exception: boolean) {
+    if (item.timeHabitUntil && data.date > item.timeHabitUntil) return;
     if (item.habitPlannedUntil && original > item.habitPlannedUntil) return;
     if (item.habitClosedOn && data.date > item.habitClosedOn) return;
     if (data.date <= through && (data.endDate > from || (data.endDate === from && data.end > "00:00"))) {
       const outcome = item.outcomes?.[original];
       result.push({ ...data, id: item.recurrence ? `${item.id}@${original}` : item.id,
         sourceId: item.id, occurrenceDate: original, completed: outcome === "completed", outcome, recurring: Boolean(item.recurrence), exception,
-        ...(item.habitId ? { habitId: item.habitId } : {}), ...(item.routine ? { routine: true as const } : {}) });
+        ...(item.habitId ? { habitId: item.habitId } : {}), ...(item.weeklyHabitId ? { weeklyHabitId: item.weeklyHabitId } : {}), ...(item.routine ? { routine: true as const } : {}) });
     }
   }
   for (const item of items) {
-    if (!item.recurrence) { include(item, item.date, item, false); continue; }
+    if (!item.recurrence) { include(item, item.timeOriginalDate ?? item.date, item, false); continue; }
     // Con durata massima di 24 ore, basta il giorno precedente per includere gli eventi notturni.
     const first = addDays(from, -1);
     const offset = Math.max(0, Math.ceil((dateNumber(first) - dateNumber(item.date)) / (7 * DAY)));
@@ -262,6 +266,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
   if (access.actor !== "user" && proposed.kind !== "flexible") throw new Error("Il motore e l’AI possono inserire solo attività flessibili.");
   validateData(proposed);
   let replacement: CalendarItem = { ...dataOf(proposed), id: proposed.id, recurrence: proposed.recurrence, exceptions: proposed.exceptions, title: proposed.title.trim(),
+    ...(proposed.weeklyHabitId ? { weeklyHabitId: proposed.weeklyHabitId, timeHabitUntil: proposed.timeHabitUntil, ...(!proposed.recurrence ? { timeOriginalDate: proposed.timeOriginalDate ?? proposed.date } : {}) } : {}),
     ...(proposed.habitId ? { habitId: proposed.habitId, habitPlannedUntil: proposed.habitPlannedUntil } : {}), ...(proposed.routine ? { routine: true } : {}) };
   if (existing) {
     if (existing.recurrence && target?.scope === "occurrence") {
@@ -270,7 +275,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
       replacement = { ...existing, exceptions: { ...existing.exceptions, [target.occurrenceDate]: dataOf(replacement) } };
     } else {
       if (existing.recurrence && (replacement.date !== existing.date || !replacement.recurrence)) throw new Error("La data di inizio e la frequenza della serie sono stabili. Modifica una singola occorrenza per spostarla.");
-      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, habitId: existing.habitId, habitPlannedUntil: existing.habitPlannedUntil, habitClosedOn: existing.habitClosedOn, outcomes: existing.outcomes, exceptions: existing.exceptions };
+      replacement = { ...replacement, id: existing.id, activityId: existing.activityId, habitId: existing.habitId, weeklyHabitId: existing.weeklyHabitId, timeHabitUntil: existing.timeHabitUntil, timeOriginalDate: existing.timeOriginalDate, habitPlannedUntil: existing.habitPlannedUntil, habitClosedOn: existing.habitClosedOn, outcomes: existing.outcomes, exceptions: existing.exceptions };
       // Negli eventi singoli la data stessa è la chiave dell’esito e segue lo spostamento.
       if (!existing.recurrence && existing.outcomes && replacement.date !== existing.date) {
         replacement.outcomes = existing.outcomes[existing.date] === undefined ? {} : { [replacement.date]: existing.outcomes[existing.date] };
@@ -291,6 +296,7 @@ export function putItem(state: CalendarState, proposed: CalendarItem, access: Ed
       const member = state.items.find(item => item.id === id);
       if (!member?.recurrence) throw new Error("Puoi collegare solo appuntamenti ricorrenti.");
       guard(member, access);
+      if (member.weeklyHabitId !== existing.weeklyHabitId) throw new Error("Non puoi collegare serie di abitudini diverse.");
     }
     // Collegare una serie include anche il suo gruppo: gli orari restano indipendenti.
     const groups = new Set(state.items.filter(item => selected.has(item.id) && item.activityId).map(item => item.activityId));
@@ -347,6 +353,7 @@ export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, 
   const existing = target ? state.items.find(item => item.id === target.sourceId) : undefined;
   if (target && (!existing || existing.recurrence)) throw new Error("Scegli un’attività senza ripetizione da convertire.");
   guard(existing, access);
+  if (existing?.weeklyHabitId) throw new Error("Per ripetere una sessione a ore, crea una nuova pianificazione: quella originale conserva il suo diario.");
   const span = (dateNumber(proposed.endDate) - dateNumber(proposed.date)) / DAY;
   const dates = weekdays.map(day => {
     let date = addDays(weekStart(proposed.date), day);
@@ -357,7 +364,7 @@ export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, 
   const matches = dates.map(({ date }) => existing ? state.items.filter(item =>
     item.id !== existing.id && item.title.trim().toLocaleLowerCase("it-IT") === proposed.title.trim().toLocaleLowerCase("it-IT") &&
     item.kind === proposed.kind && item.start === proposed.start && item.end === proposed.end && durationMinutes(item) === durationMinutes(proposed) &&
-    Boolean(item.routine) === Boolean(proposed.routine) &&
+    Boolean(item.routine) === Boolean(proposed.routine) && item.weeklyHabitId === proposed.weeklyHabitId &&
     item.date >= date && (!proposed.recurrence?.until || item.date <= proposed.recurrence.until) &&
     (dateNumber(item.date) - dateNumber(date)) % (7 * DAY) === 0 &&
     // Una serie è riutilizzabile solo se ha la stessa scadenza, anche quando è illimitata.
@@ -383,7 +390,7 @@ export function putWeeklyActivity(state: CalendarState, proposed: CalendarItem, 
       if (existing.outcomes?.[existing.date]) outcomes[date] = existing.outcomes[existing.date];
     }
     next = putItem(next, { ...proposed, id, date, endDate: addDays(date, span), exceptions }, access);
-    next = { ...next, items: next.items.map(item => item.id === id ? { ...item, outcomes } : item) };
+    next = { ...next, items: next.items.map(item => item.id === id ? { ...item, ...(proposed.weeklyHabitId ? {} : { outcomes }) } : item) };
     ids.add(id);
   }
   const reusedGroups = new Set(reused.map(item => item.activityId).filter(Boolean));

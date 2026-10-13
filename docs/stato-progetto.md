@@ -2,6 +2,10 @@
 
 Rilevazione sul codice del 27 settembre 2026. [Indice documentazione](README.md).
 
+Aggiornamento del 12 ottobre 2026: disponibili le [abitudini a ore](abitudini-ore.md),
+con serie settimanali o mensili, riepilogo conclusivo e trofei, inserimento manuale da Oggi, stack delle ultime quattro
+registrazioni espandibile, diario settimanale, piano facoltativo, backup v3 e SQLite 5.
+
 ## Implementato nel flusso principale
 
 | Area | Disponibile |
@@ -30,9 +34,9 @@ più ampia del calendario attuale. Restano da definire o implementare:
 
 - inbox e sequenze composte da più attività ordinate;
 - modifica con data di decorrenza invece della sostituzione del calendario corrente;
-- occasioni autonome «da collocare»: oggi le abitudini creano direttamente eventi settimanali con orario;
+- occasioni autonome «da collocare» per gli step; le abitudini a ore possono già esistere senza piano;
 - notifiche facoltative per proporre uno spazio libero compatibile, senza prenotarlo o sostituire impegni automaticamente;
-- timer, reminder azionabili e misurazione della durata reale;
+- timer e reminder azionabili; la durata reale può già essere registrata manualmente per le abitudini a ore;
 - ripianificazione assistita compatibile con date, vincoli ed esiti;
 - apprendimento delle preferenze e ranking personale degli slot;
 - eventuale AI con proposta, validazione, anteprima e conferma.

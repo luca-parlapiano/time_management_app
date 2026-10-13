@@ -1,3 +1,4 @@
+import type { TimeSeriesResult, WeeklyTimeHabit, WeeklyTimeHabitDraft, TimeSession, TimeSessionCommand, WeeklyTimeProgress } from "./weeklyTime.js";
 import type { ActivityYearStatistics, DailyStatistics, StatisticsActivity } from "./statistics.js";
 import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTarget, ItemOutcome, Occurrence } from "./calendar.js";
 import type { LoadingOptions } from "./loading.js";
@@ -42,6 +43,19 @@ export interface DBRepository {
 }
 
 export interface DBContextValue {
+  weeklyTimeHabits: WeeklyTimeHabit[];
+  timeSessions: TimeSession[];
+  saveWeeklyTimeHabit(id: string, draft: WeeklyTimeHabitDraft): Promise<void>;
+  cancelWeeklyTimeTarget(id: string): Promise<void>;
+  archiveWeeklyTimeHabit(id: string): Promise<void>;
+  saveTimeSession(command: TimeSessionCommand): Promise<void>;
+  getWeeklyTimeProgress(id: string, date: string, referenceDate?: string): WeeklyTimeProgress;
+  getTimeSessions(id: string, from: string, through: string): TimeSession[];
+  getRecentTimeSessions(id: string, referenceDate?: string): TimeSession[];
+  getTimeMinutes(date: string, habitId?: string): number;
+  getTimeSeriesResults(referenceDate?: string): TimeSeriesResult[];
+  resolveTimeSeries(habitId: string, seriesId: string, repeat: boolean, nextId: string): Promise<void>;
+
   getHabitCompletionDate(id: string): string | undefined;
   getHabitProgress(id: string): HabitJourneyProgress;
   getHabitTimeline(id: string, from: string, through: string): HabitTimelineEntry[];

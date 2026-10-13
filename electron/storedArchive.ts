@@ -1,3 +1,4 @@
+import { upgradeTimeSeries } from '../src/domain/timeSeries.js';
 import { reconcileHabitCompletion } from '../src/domain/habitCompletion.js';
 import { isOccurrenceDate, occurrences, validDate } from '../src/domain/calendar.js';
 import { outcomeRecord, upgradeArchive, validateArchive } from '../src/domain/outcomeArchive.js';
@@ -74,5 +75,7 @@ export function readStoredArchive(value: unknown): PlannerArchive {
     }
   }
   validateArchive(archive);
-  return reconcileHabitCompletion(archive);
+  const upgraded = upgradeTimeSeries(archive);
+  validateArchive(upgraded);
+  return reconcileHabitCompletion(upgraded);
 }

@@ -1,3 +1,5 @@
+import { validateWeeklyTime } from "./weeklyTime.js";
+import { upgradeTimeSeries } from "./timeSeries.js";
 /**
  * Regole dello storico degli esiti e del formato di backup.
  * Il calendario descrive gli appuntamenti attuali; lo storico ne conserva gli esiti
@@ -61,7 +63,7 @@ export function upgradeArchive(value: unknown): unknown {
   const cloned: unknown = structuredClone(value);
   if (!cloned || typeof cloned !== "object" || Array.isArray(cloned)) return cloned;
   const archive = cloned as Record<string, unknown>;
-  if (archive.format !== "time-planner-backup" || (archive.version !== 1 && archive.version !== 2)) return cloned;
+  if (archive.format !== "time-planner-backup" || (archive.version !== 1 && archive.version !== 2 && archive.version !== 3)) return cloned;
   if (archive.calendar && typeof archive.calendar === "object" && !Array.isArray(archive.calendar)) {
     const calendar = archive.calendar as Record<string, unknown>;
     if (Array.isArray(calendar.items)) {
@@ -80,7 +82,7 @@ export function upgradeArchive(value: unknown): unknown {
     if (record && typeof record === "object" && "outcome" in record && record.outcome === "partial") record.outcome = "skipped";
   }
   if (archive.version === 1) archive.habits = [];
-  archive.version = 2;
+  archive.version = 3;
   return archive;
 }
 
@@ -91,7 +93,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   if (!Array.isArray(calendar.items) || !Array.isArray(calendar.goals)) throw new Error('Archivio calendario non riconosciuto.');
   const dataFields = ['coverImage', 'icon', 'color', 'title', 'date', 'endDate', 'start', 'end', 'kind', 'notes', 'goalId'];
   for (const item of calendar.items) {
-    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'habitClosedOn', 'habitPlannedUntil', 'routine', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
+    requireFields(item, [...dataFields, 'id', 'activityId', 'habitId', 'weeklyHabitId', 'timeHabitUntil', 'timeOriginalDate', 'habitClosedOn', 'habitPlannedUntil', 'routine', 'outcomes', 'recurrence', 'exceptions'], 'Attività');
     if (item.recurrence !== undefined) requireFields(item.recurrence, ['until'], 'Ricorrenza');
     if (!item.exceptions || typeof item.exceptions !== 'object' || Array.isArray(item.exceptions)) throw new Error('Eccezioni non valide.');
     for (const exception of Object.values(item.exceptions)) {
@@ -118,13 +120,14 @@ function validateArchiveFields(value: Record<string, unknown>): void {
  * Ammette esiti di attività eliminate: non richiede che la fonte esista nel calendario attuale.
  */
 export function validateArchive(value: unknown): asserts value is PlannerArchive {
-  requireFields(value, ['format', 'version', 'calendar', 'habits', 'history', 'exportedAt'], 'Backup');
-  if (value.format !== 'time-planner-backup' || value.version !== 2) throw new Error("Formato di backup non riconosciuto.");
+  requireFields(value, ['format', 'version', 'calendar', 'habits', 'history', 'weeklyTimeHabits', 'timeSessions', 'timeSessionHistory', 'exportedAt'], 'Backup');
+  if (value.format !== 'time-planner-backup' || value.version !== 3) throw new Error("Formato di backup non riconosciuto.");
   if (value.exportedAt !== undefined && (typeof value.exportedAt !== 'string' || !isFiniteNumber(Date.parse(value.exportedAt)))) throw new Error('Data di esportazione non valida.');
   validateArchiveFields(value);
   const archive = value as unknown as PlannerArchive;
   validateCalendar(archive.calendar);
   validateHabits(archive.habits ?? [], archive.calendar);
+  validateWeeklyTime(archive);
   const ids = new Set<string>();
   for (const record of archive.history) {
     if (!record || ![record.id, record.sourceId, record.activityId, record.title].every(value => typeof value === "string" && value.trim()) || ids.has(record.id) ||
@@ -142,7 +145,10 @@ export function validateArchive(value: unknown): asserts value is PlannerArchive
 export function parseArchive(text: string): PlannerArchive {
   const parsed = upgradeArchive(JSON.parse(text));
   validateArchive(parsed);
-  return { format: "time-planner-backup", version: 2, calendar: parsed.calendar, habits: parsed.habits ?? [], history: parsed.history };
+  const { exportedAt: _exportedAt, ...archive } = parsed as PlannerArchive & { exportedAt?: string };
+  const upgraded = upgradeTimeSeries({ ...archive, habits: parsed.habits ?? [] });
+  validateArchive(upgraded);
+  return upgraded;
 }
 /**
  * Prepara i dati per IPC, SQLite e backup eliminando chiusura e limite pianificato derivati.

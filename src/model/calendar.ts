@@ -23,7 +23,11 @@ export interface ItemData {
 export interface CalendarItem extends ItemData {
   id: string;
   activityId?: string;
+  /** Ultima data visualizzata ammessa dopo l’archiviazione dell’abitudine a ore. */
+  timeHabitUntil?: string;
+  timeOriginalDate?: string;
   habitId?: string;
+  weeklyHabitId?: string;
   /** Fine effettiva del percorso, ricalcolata dagli esiti confermati. */
   habitClosedOn?: string;
   /** Ultima data originale pianificata per gli step della serie; derivata dal traguardo. */
@@ -46,6 +50,7 @@ export interface Occurrence extends ItemData {
   recurring: boolean;
   exception: boolean;
   habitId?: string;
+  weeklyHabitId?: string;
   routine?: true;
 }
 

@@ -1,5 +1,6 @@
 import { archiveForStorage, exportArchive, parseArchive, upgradeArchive, validateArchive } from "../domain/outcomeArchive";
 import { reconcileHabitCompletion } from "../domain/habitCompletion";
+import { upgradeTimeSeries } from "../domain/timeSeries";
 import { emptyCalendar } from "../domain/calendar";
 import type { DatabaseBridge, DatabaseSnapshot, DatabaseWrite, DBRepository } from "../model/database.js";
 import type { PlannerArchive } from "../model/outcomeArchive.js";
@@ -24,10 +25,14 @@ export class RepositoryDB implements DBRepository {
     const previous = snapshot.previous === null ? null : upgradeArchive(snapshot.previous);
     validateArchive(archive);
     if (previous !== null) validateArchive(previous);
+    const upgraded = upgradeTimeSeries(archive);
+    const upgradedPrevious = previous === null ? null : upgradeTimeSeries(previous);
+    validateArchive(upgraded);
+    if (upgradedPrevious !== null) validateArchive(upgradedPrevious);
     return {
       ...snapshot,
-      archive: reconcileHabitCompletion(archive),
-      previous: previous === null ? null : reconcileHabitCompletion(previous),
+      archive: reconcileHabitCompletion(upgraded),
+      previous: upgradedPrevious === null ? null : reconcileHabitCompletion(upgradedPrevious),
     };
   }
   /** Legge la preferenza del dispositivo da SQLite tramite il worker. */
@@ -44,7 +49,7 @@ export class RepositoryDB implements DBRepository {
     const existing = await connection.read();
     if (existing) return this.prepareSnapshot(existing);
     const archive: PlannerArchive = {
-      format: 'time-planner-backup', version: 2, calendar: emptyCalendar(), habits: [], history: [],
+      format: 'time-planner-backup', version: 3, calendar: emptyCalendar(), habits: [], history: [],
     };
     return this.prepareSnapshot(await connection.write({ archive, expectedRevision: null }));
   }

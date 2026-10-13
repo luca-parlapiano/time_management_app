@@ -1,3 +1,5 @@
+import { weeklyTimeProgress } from "../domain/weeklyTime.js";
+import { timeSeriesResults, seriesAtDate } from "../domain/timeSeries.js";
 import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry } from "../model/statistics.js";
 import { isIntegerInRange } from "../utils/numbers.js";
 import { today } from "../utils/dates.js";
@@ -27,6 +29,43 @@ export class StatisticsRepository {
     this.items = this.archive.calendar.items.filter(isProgressActivity);
     // La chiusura ferma la pianificazione, senza cancellare risultati già confermati.
     this.latest = progressOutcomeHistory(archive.calendar, this.habitOutcomes.latest);
+  }
+
+  /** Restituisce il progresso a minuti senza mescolarlo agli esiti binari delle altre attività. */
+  getWeeklyTimeProgress(id: string, date: string, referenceDate = today()) {
+    return weeklyTimeProgress(this.archive, id, date, referenceDate);
+  }
+
+  /** Legge il diario inclusivo in ordine di data; conserva le sessioni rimosse per consentirne il ripristino. */
+  getTimeSessions(id: string, from: string, through: string) {
+    if (!validDate(from) || !validDate(through) || from > through) throw new Error("Periodo non valido.");
+    return (this.archive.timeSessions ?? []).filter(session => session.habitId === id && session.date >= from && session.date <= through)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  }
+
+  /** Elenca le sessioni attive dalla più recente inserita; correzioni e ripristini mantengono la posizione originale. Esclude date successive al riferimento. */
+  getRecentTimeSessions(id: string, referenceDate = today()) {
+    if (!validDate(referenceDate)) throw new Error("Data non valida.");
+    const habit = this.archive.weeklyTimeHabits?.find(entry => entry.id === id);
+    const series = habit?.series?.at(-1);
+    const current = new Map((this.archive.timeSessions ?? [])
+      .filter(session => session.habitId === id && !session.removed && session.date <= referenceDate && (!series || seriesAtDate(habit!, session.date)?.id === series.id))
+      .map(session => [session.id, session]));
+    const insertionOrder = new Set((this.archive.timeSessionHistory ?? []).map(record => record.session.id));
+    return [...insertionOrder].reverse().flatMap(sessionId => {
+      const session = current.get(sessionId);
+      return session ? [session] : [];
+    });
+  }
+
+  /** Restituisce i risultati delle serie, inclusi quelli scaduti in attesa di una scelta e quelli archiviati. */
+  getTimeSeriesResults(referenceDate = today()) { return timeSeriesResults(this.archive, referenceDate); }
+
+  /** Somma il tempo attivo di una data civile, eventualmente per abitudine; le sessioni rimosse non contribuiscono. */
+  getTimeMinutes(date: string, habitId?: string) {
+    if (!validDate(date)) throw new Error("Data non valida.");
+    return (this.archive.timeSessions ?? []).filter(session => !session.removed && session.date === date && (!habitId || session.habitId === habitId))
+      .reduce((total, session) => total + session.minutes, 0);
   }
 
   /** Cerca l’abitudine nello snapshot corrente; rifiuta identità inesistenti o eliminate. */

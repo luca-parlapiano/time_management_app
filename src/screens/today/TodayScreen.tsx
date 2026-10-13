@@ -1,3 +1,4 @@
+import { WeeklyTimeToday } from "./WeeklyTimeToday";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { eventAppearance, eventColors, today, todayOccurrences } from "../../domain/calendar";
@@ -10,10 +11,10 @@ import { HabitJourney } from "../habits/HabitJourney";
 import { HabitProgressCard } from "./HabitProgressCard";
 import { toMinutes, toTime } from "../../utils/time";
 
-interface TodayScreenProps { active: boolean; onOpenEvent: (item: Occurrence) => void; onOpenHabits: (habitId?: string) => void; onAddHabit: () => void }
+interface TodayScreenProps { active: boolean; onOpenEvent: (item: Occurrence) => void; onOpenHabits: (habitId?: string) => void; onAddHabit: () => void; onAddTime: (habitId: string) => void }
 
 /** Dashboard operativa della giornata corrente. */
-export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit }: TodayScreenProps) {
+export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit, onAddTime }: TodayScreenProps) {
   const { state, habits, saving, recordOutcome, getHabitDashboard, getHabitProgress } = useDB();
   const [outcomeError, setOutcomeError] = useState<{ id: string; message: string } | null>(null);
   const now = useLocalMinute();
@@ -34,6 +35,7 @@ export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit }: T
   return (
     <section id="panel-today" className="app-screen" role="tabpanel" aria-labelledby="tab-today" tabIndex={0} hidden={!active}>
       <div className="screen-content today-screen-content">
+        <WeeklyTimeToday onAddTime={onAddTime} onOpenHabits={onOpenHabits} />
         {next && <section className="today-next" aria-labelledby="today-next-title"><p className="eyebrow">Prossimo passo</p><h3 id="today-next-title">{next.title}</h3><p>{next.start}–{next.end}{next.habitId ? " · Abitudine" : next.routine ? " · Routine" : ""}</p></section>}
         <div className="today-columns">
         <section className="today-card today-agenda" aria-labelledby="today-agenda-title">

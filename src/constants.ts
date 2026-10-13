@@ -85,3 +85,9 @@ export const DEFAULT_MODEL_REPOSITORY = "Qwen/Qwen3-4B-GGUF:Q4_K_M";
 export const STARTUP_TIMEOUT_MS = 5 * 60 * 1_000;
 
 export const REQUEST_TIMEOUT_MS = 60_000;
+
+// Limiti delle registrazioni manuali e degli obiettivi settimanali, in minuti.
+export const MAX_SESSION_MINUTES = 1440;
+export const MAX_WEEKLY_MINUTES = 10080;
+export const MAX_MONTHLY_MINUTES = 44640;
+export const TIME_SESSION_PREVIEW_COUNT = 4;
