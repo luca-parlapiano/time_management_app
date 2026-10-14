@@ -2,57 +2,63 @@ import type { CSSProperties } from "react";
 import { HABIT_DASHBOARD_DAYS, HABIT_DASHBOARD_OCCASIONS, eventColors, habitDashboardStates } from "../../constants";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { EventIcon } from "../../icons/EventIcon";
+import { useDB } from "../../hooks/useDB";
 import type { HabitDashboard, HabitDashboardRow } from "../../model/habit";
-import { displayDate } from "../../utils/dates";
+import { displayDate, today } from "../../utils/dates";
 import { HabitJourney } from "../habits/HabitJourney";
+import { WeeklyTimeToday } from "./WeeklyTimeToday";
 
 interface HabitProgressCardProps {
   progress: HabitDashboard;
   onOpenHabits: (habitId?: string) => void;
   onAddHabit: () => void;
+  onAddTime: (habitId: string) => void;
+  onReviewSeries: (habitId: string, seriesId: string) => void;
 }
 
-/** Mostra traguardi e occasioni disponibili; apre il percorso senza modificare esiti. */
-export function HabitProgressCard({ progress, onOpenHabits, onAddHabit }: HabitProgressCardProps) {
-  const { featured } = progress;
-  return <section className="today-card today-progress" aria-labelledby="today-progress-title">
+/** Riunisce i percorsi in righe compatte; conserva diario e occasioni recenti nei dettagli espandibili. */
+export function HabitProgressCard({ progress, onOpenHabits, onAddHabit, onAddTime, onReviewSeries }: HabitProgressCardProps) {
+  const { weeklyTimeHabits } = useDB();
+  const hasTimeHabits = weeklyTimeHabits.some(habit => !habit.archivedOn && habit.startsOn <= today() && !habit.series?.at(-1)?.decision);
+  const empty = progress.totalHabits === 0 && !hasTimeHabits;
+  return <section className="today-paths" aria-labelledby="today-progress-title">
     <header className="today-card-heading">
-      <div><p className="eyebrow">Un passo alla volta</p><h3 id="today-progress-title">Il tuo percorso</h3></div>
-      {progress.milestonesReached > 0 && <span className="today-milestone-count">{progress.milestonesReached} {progress.milestonesReached === 1 ? "serie conclusa" : "serie concluse"}</span>}
+      <div><p className="eyebrow">Un passo alla volta</p><h3 id="today-progress-title">I tuoi percorsi</h3></div>
+      <StandardButton variant="ghost" onClick={() => onOpenHabits()}>Vedi tutti i percorsi →</StandardButton>
     </header>
-    {progress.totalHabits === 0 ? <div className="today-progress-empty">
-      <h4>{progress.milestonesReached ? "Tutte le serie sono concluse" : "Da un piccolo gesto nasce un percorso"}</h4>
-      <p>{progress.milestonesReached ? "Tutti gli eventi delle serie hanno un esito. Vuoi ripetere una serie?" : "Scegli un’abitudine e un traguardo alla tua portata. Qui vedrai i passi che costruisci nel tempo."}</p>
-      {progress.milestonesReached > 0 && <StandardButton variant="secondary" onClick={() => onOpenHabits()}>Vedi le serie concluse</StandardButton>}
+    {empty ? <div className="today-empty">
+      <h4>{progress.milestonesReached ? "Tutte le serie a step sono concluse" : "Il tuo prossimo percorso parte da qui"}</h4>
+      <p>Scegli un’abitudine e un traguardo alla tua portata.</p>
       <StandardButton onClick={onAddHabit}>Crea un’abitudine</StandardButton>
-    </div> : <>
-      {featured ? <div className="today-milestone" style={{ "--event-color": eventColors[featured.habit.color].value } as CSSProperties}>
-        <p className="eyebrow">Il prossimo traguardo</p>
-        <button className="today-habit-link" onClick={() => onOpenHabits(featured.habit.id)}>
-          <EventIcon icon={featured.habit.icon} /><strong>{featured.habit.title}</strong><span aria-hidden="true">↗</span>
-        </button>
-        <p>{featured.remaining === 1 ? "Manca un evento da valutare per concludere la serie." : `Mancano ${featured.remaining} eventi da valutare per concludere la serie.`}</p>
-        <HabitJourney progress={featured.journey} compact />
-      </div> : <div className="today-milestone today-milestone-intro"><h4>Il percorso inizia dal primo esito</h4><p>Segna Fatto o Non fatto per ogni evento: entrambi fanno avanzare la serie. Gli eventi fatti sono conteggiati separatamente.</p></div>}
-      <div className="today-recent-heading"><h4>Il tuo ritmo recente</h4><p>Fino a {HABIT_DASHBOARD_OCCASIONS} occasioni per abitudine · ultimi {HABIT_DASHBOARD_DAYS} giorni</p></div>
-      <ul className="today-progress-list">{progress.rows.map(row => <HabitProgressRow key={row.habit.id} row={row} onOpen={() => onOpenHabits(row.habit.id)} />)}</ul>
-      <ul className="today-progress-legend" aria-label="Legenda degli esiti">{Object.entries(habitDashboardStates).map(([state, { label, symbol }]) => <li key={state}><span className={`today-outcome-mark ${state}`} aria-hidden="true">{symbol}</span>{label}</li>)}</ul>
-      <details className="today-progress-note"><summary>Come leggere il percorso</summary><p>Da sinistra a destra, dalle occasioni meno recenti alle più recenti. I conteggi si riferiscono agli indicatori visibili. Dopo una modifica del piano, alcune occasioni passate senza esito potrebbero non essere disponibili. I traguardi seguono il numero di step scelto per ogni abitudine.</p></details>
-      <StandardButton className="today-progress-all" variant="ghost" onClick={() => onOpenHabits()}>{progress.totalHabits > progress.rows.length ? `Vedi tutte le ${progress.totalHabits} abitudini` : "Vedi i percorsi"}<span aria-hidden="true"> →</span></StandardButton>
-    </>}
+    </div> : <div className="today-path-list">
+      {progress.rows.map(row => <article className="today-path-row" key={row.habit.id} style={{ "--event-color": eventColors[row.habit.color].value } as CSSProperties}>
+        <div className="today-path-main">
+          <div className="today-path-identity"><span className="today-path-icon"><EventIcon icon={row.habit.icon} /></span><div><p className="eyebrow">Serie a step</p><button className="today-habit-link" onClick={() => onOpenHabits(row.habit.id)}><strong>{row.habit.title}</strong></button></div></div>
+          <HabitJourney progress={row.journey} compact />
+          <StandardButton variant="secondary" onClick={() => onOpenHabits(row.habit.id)}>Apri percorso</StandardButton>
+        </div>
+        <details className="today-path-details"><summary>Ritmo recente</summary>
+          <p className="editor-hint">Fino a {HABIT_DASHBOARD_OCCASIONS} occasioni · ultimi {HABIT_DASHBOARD_DAYS} giorni</p>
+          <HabitRecentOutcomes row={row} />
+          <ul className="today-progress-legend" aria-label="Legenda degli esiti">{Object.entries(habitDashboardStates).map(([state, { label, symbol }]) => <li key={state}><span className={`today-outcome-mark ${state}`} aria-hidden="true">{symbol}</span>{label}</li>)}</ul>
+        </details>
+      </article>)}
+      <WeeklyTimeToday onAddTime={onAddTime} onOpenHabits={onOpenHabits} onReviewSeries={onReviewSeries} />
+      {progress.totalHabits > progress.rows.length && <StandardButton variant="ghost" onClick={() => onOpenHabits()}>Vedi tutte le {progress.totalHabits} abitudini a step</StandardButton>}
+    </div>}
+    {!empty && <details className="today-progress-note"><summary>Come leggere i percorsi</summary><p>Fatto e Non fatto fanno avanzare le serie a step; gli eventi fatti restano un conteggio distinto. Le occasioni recenti sono ordinate dalla meno recente alla più recente, senza includere attività future senza esito. Dopo una modifica del piano, alcune occasioni passate senza esito potrebbero non essere disponibili. Le serie a ore mostrano il tempo registrato nel proprio periodo.</p></details>}
   </section>;
 }
 
 /** Rende accessibili data ed esito di ogni occasione, anche al focus da tastiera. */
-function HabitProgressRow({ row, onOpen }: { row: HabitDashboardRow; onOpen: () => void }) {
+function HabitRecentOutcomes({ row }: { row: HabitDashboardRow }) {
   const { habit, entries, counts } = row;
   const summary = [
     counts.completed && `${counts.completed} ${counts.completed === 1 ? "completata" : "completate"}`,
     counts.skipped && `${counts.skipped} ${counts.skipped === 1 ? "non fatta" : "non fatte"}`,
     counts.pending && `${counts.pending} senza esito`,
   ].filter(Boolean).join(" · ");
-  return <li className="today-progress-row" style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}>
-    <button className="today-habit-link" onClick={onOpen}><EventIcon icon={habit.icon} /><strong>{habit.title}</strong><span aria-hidden="true">↗</span></button>
+  return <div>
     {entries.length ? <>
       <ol className="today-outcome-strip" aria-label={`Occasioni recenti di ${habit.title}`}>{entries.map(entry => {
         const state = entry.outcome ?? "pending";
@@ -62,5 +68,5 @@ function HabitProgressRow({ row, onOpen }: { row: HabitDashboardRow; onOpen: () 
       })}</ol>
       <p className="today-progress-counts">{summary}</p>
     </> : <p className="today-progress-counts">Nessuna occasione trascorsa disponibile negli ultimi {HABIT_DASHBOARD_DAYS} giorni.</p>}
-  </li>;
+  </div>;
 }

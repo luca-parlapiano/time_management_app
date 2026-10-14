@@ -3,7 +3,7 @@ import type { TimeActivityStatistics, TimeDayStatistics, TimeYearStatistics } fr
 import { timeSeriesResults, seriesForSession } from "../domain/timeSeries.js";
 import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry } from "../model/statistics.js";
 import { isIntegerInRange } from "../utils/numbers.js";
-import { today } from "../utils/dates.js";
+import { today, weekStart } from "../utils/dates.js";
 import { percentage } from "../utils/math.js";
 import { addDays, eventAppearance, isProgressActivity, occurrences, validDate } from '../domain/calendar.js';
 import { indexHabitOutcomes } from '../domain/habitOutcomeIndex.js';
@@ -67,6 +67,18 @@ export class StatisticsRepository {
   getTimeMinutes(date: string, habitId?: string) {
     if (!validDate(date)) throw new Error("Data non valida.");
     return (this.archive.timeSessions ?? []).filter(session => !session.removed && session.date === date && (!habitId || session.habitId === habitId))
+      .reduce((total, session) => total + session.minutes, 0);
+  }
+
+  /** Somma le sessioni correnti da lunedì alla data civile ricevuta, inclusi i percorsi archiviati.
+   * Esclude rimozioni, pianificazioni e date future; le correzioni contribuiscono una sola volta.
+   * Rifiuta una data non valida e non modifica lo snapshot.
+   */
+  getTimeWeekMinutes(date: string): number {
+    if (!validDate(date)) throw new Error('Data non valida.');
+    const from = weekStart(date);
+    return (this.archive.timeSessions ?? [])
+      .filter(session => !session.removed && session.date >= from && session.date <= date)
       .reduce((total, session) => total + session.minutes, 0);
   }
 

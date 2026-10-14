@@ -6,6 +6,7 @@ import { RepositoryDB } from "../src/repository/RepositoryDB";
 import { DBProvider } from "../src/providers/DBProvider";
 import { LoadingProvider } from "../src/providers/LoadingProvider";
 import { addDays, emptyCalendar, occurrences, setOccurrenceOutcome, today } from "../src/domain/calendar";
+import { saveWeeklyTimeHabit, saveTimeSession } from "../src/domain/weeklyTime";
 import { createHabit } from "../src/domain/habits";
 import { reconcileHabitCompletion, repeatHabitDraft } from "../src/domain/habitCompletion";
 import { outcomeRecord, validateArchive } from "../src/domain/outcomeArchive";
@@ -24,7 +25,7 @@ const samples: Pick<HabitDraft, "title" | "icon" | "color" | "stepTarget" | "sta
   { title: "Fare movimento", icon: "sport", color: "orange", stepTarget: 8, start: "18:00" },
   { title: "Scrivere un pensiero", icon: "heart", color: "purple", stepTarget: 5, start: "22:00" },
 ];
-if (mode === "many") samples.push(
+if (mode === "many" || mode?.startsWith("dashboard")) samples.push(
   { title: "Una pausa per respirare e ritrovare la concentrazione durante una giornata impegnativa", icon: "rest", color: "blue", stepTarget: 12, start: "12:00" },
   { title: "Studiare una lingua", icon: "study", color: "pink", stepTarget: 4, start: "17:00" },
   { title: "Preparare la giornata", icon: "work", color: "green", stepTarget: 3, start: "08:00" },
@@ -45,9 +46,9 @@ if (mode === "repeat" || mode === "mixed") {
   }
 }
 if (mode !== "empty" && mode !== "repeat" && mode !== "mixed") samples.forEach((sample, index) => {
-  const created = createHabit(archive.calendar, archive.habits ?? [], { ...sample, motivation: "Un piccolo spazio per me, ogni giorno.", startsOn: mode === "new" ? date : addDays(date, -28), weekdays: [0,1,2,3,4,5,6], durationMinutes: 20 }, { habitId: `demo-${index}` });
+  const created = createHabit(archive.calendar, archive.habits ?? [], { ...sample, motivation: "Un piccolo spazio per me, ogni giorno.", startsOn: (mode === "new" || mode?.startsWith("dashboard")) ? date : addDays(date, -28), weekdays: [0,1,2,3,4,5,6], durationMinutes: 20 }, { habitId: `demo-${index}` });
   archive = { ...archive, ...created };
-  if (mode === "new") return;
+  if (mode === "new" || mode?.startsWith("dashboard")) return;
   const results: (ItemOutcome | undefined)[] = index === 0
     ? ["completed", "completed", "skipped", "completed", "completed", "completed", "completed"]
     : index === 1 ? ["completed", "skipped", "skipped", "skipped", "completed", "skipped", undefined]
@@ -63,13 +64,20 @@ if (mode !== "empty" && mode !== "repeat" && mode !== "mixed") samples.forEach((
   });
 });
 if (mode === "rest") archive.calendar = { ...archive.calendar, items: archive.calendar.items.map(item => ({ ...item, exceptions: { ...item.exceptions, [date]: null } })) };
+if (mode === "dashboard" || mode === "dashboard-night" || mode === "dashboard-failure") {
+  for (const [index, period] of (["week", "month"] as const).entries()) {
+    const id = `time-${index}`;
+    archive = saveWeeklyTimeHabit(archive, id, { title: index ? "Studiare una lingua e conoscere nuove culture" : "Studiare Sub", motivation: "", startsOn: date, period, targetMinutes: index ? 600 : 360, color: index ? "orange" : "blue", icon: "study" }, date);
+    archive = saveTimeSession(archive, { commandId: `session-${id}`, session: { id: `session-${id}`, habitId: id, date, minutes: index ? 600 : 45, notes: "Sessione di prova", removed: false } }, date, new Date().toISOString());
+  }
+}
 let saved: DatabaseSnapshot = { archive, revision: 0, previous: null };
 const memoryBridge: DatabaseBridge = {
   read: async () => structuredClone(saved),
-  readPalette: async () => mode === "night" ? "night" : "natural",
+  readPalette: async () => (mode === "night" || mode === "dashboard-night") ? "night" : "natural",
   writePalette: async value => value,
   write: async input => {
-    if (mode === "failure") throw new Error("Salvataggio non riuscito: errore simulato nei dati di prova.");
+    if ((mode === "failure" || mode === "dashboard-failure")) throw new Error("Salvataggio non riuscito: errore simulato nei dati di prova.");
     if (input.expectedRevision !== saved.revision) throw new Error("Revisione di prova non aggiornata.");
     validateArchive(input.archive);
     saved = { archive: structuredClone(input.archive), revision: saved.revision + 1, previous: input.replace ? saved.archive : saved.previous };

@@ -52,6 +52,7 @@ export interface DBContextValue {
   getWeeklyTimeProgress(id: string, date: string, referenceDate?: string, seriesId?: string): WeeklyTimeProgress;
   getTimeSessions(id: string, from: string, through: string, seriesId?: string): TimeSession[];
   getRecentTimeSessions(id: string, referenceDate?: string): TimeSession[];
+  getTimeWeekMinutes(date: string): number;
   getTimeMinutes(date: string, habitId?: string): number;
   getTimeYearStatistics(year: number, referenceDate?: string): TimeYearStatistics;
   getTimeSeriesResults(referenceDate?: string): TimeSeriesResult[];

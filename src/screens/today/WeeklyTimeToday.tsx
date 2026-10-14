@@ -13,17 +13,21 @@ interface Props { onReviewSeries: (habitId: string, seriesId: string) => void; o
 export function WeeklyTimeToday({ onAddTime, onOpenHabits, onReviewSeries }: Props) {
   const { weeklyTimeHabits, getWeeklyTimeProgress, getRecentTimeSessions } = useDB();
   const date = today();
-  const habits = weeklyTimeHabits.filter(habit => !habit.archivedOn && habit.startsOn <= date);
+  const habits = weeklyTimeHabits.filter(habit => !habit.archivedOn && habit.startsOn <= date && !habit.series?.at(-1)?.decision);
   if (!habits.length) return null;
-  return <section className="today-card weekly-time-today" aria-labelledby="weekly-time-today-title"><header className="today-card-heading"><div><p className="eyebrow">Tempo per imparare</p><h3 id="weekly-time-today-title">Le tue serie a ore</h3></div></header><div className="weekly-time-cards">{habits.map(habit => {
+  return <>{habits.map(habit => {
     const series = habit.series?.at(-1);
-    const progress = getWeeklyTimeProgress(habit.id, date);
+    const progress = getWeeklyTimeProgress(habit.id, date, date, series?.id);
     const canConclude = series && !series.decision && (progress.state === 'reached' || series.endsOn < date);
-    return <article className="weekly-time-card" key={habit.id} style={{ '--event-color': eventColors[habit.color].value } as CSSProperties}>
-      <button type="button" className="today-habit-link" onClick={() => onOpenHabits(habit.id)}><EventIcon icon={habit.icon} /><strong>{habit.title}</strong></button>
-      <p className="editor-hint">{series?.period === 'month' ? 'Obiettivo mensile' : 'Obiettivo settimanale'}</p>
+    return <article className="today-path-row" key={habit.id} style={{ '--event-color': eventColors[habit.color].value } as CSSProperties}>
+      <div className="today-path-main">
+      <div className="today-path-identity"><span className="today-path-icon"><EventIcon icon={habit.icon} /></span><div>
+      <p className="eyebrow">{series?.period === 'month' ? 'Serie mensile' : 'Serie settimanale'}</p>
+      <button type="button" className="today-habit-link" onClick={() => onOpenHabits(habit.id)}><strong>{habit.title}</strong></button>
+      </div></div>
       <WeeklyTimeSummary progress={progress} />
-      <TimeSessionStack sessions={getRecentTimeSessions(habit.id, date)} />
-      {canConclude ? <StandardButton onClick={() => onReviewSeries(habit.id, series.id)}>Concludi la serie</StandardButton> : <StandardButton onClick={() => onAddTime(habit.id)}>Aggiungi tempo</StandardButton>}
-  </article>; })}</div></section>;
+      {canConclude ? <StandardButton onClick={() => onReviewSeries(habit.id, series.id)}>Concludi la serie</StandardButton> : <StandardButton variant="secondary" disabled={progress.state === 'future' || progress.state === 'inactive'} onClick={() => onAddTime(habit.id)}>Aggiungi tempo</StandardButton>}
+      </div>
+      <details className="today-path-details"><summary>Ultime registrazioni</summary><TimeSessionStack sessions={getRecentTimeSessions(habit.id, date)} /><StandardButton variant="ghost" onClick={() => onOpenHabits(habit.id)}>Apri percorso</StandardButton></details>
+  </article>; })}</>;
 }

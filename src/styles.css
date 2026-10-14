@@ -462,11 +462,6 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .habit-mode-switch { width: fit-content; max-width: 100%; margin: 0 auto 18px; flex-shrink: 0; gap: 5px; padding: 5px; border-radius: 16px; }
 .habit-mode-switch button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 22px; border-radius: 11px; font-size: 18px; font-weight: 700; white-space: nowrap; }
 .habit-mode-switch button svg { flex-shrink: 0; }
-.weekly-time-today { min-width: 0; }
-.weekly-time-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); gap: 16px; }
-.weekly-time-card { padding: 20px; border: 1px solid color-mix(in srgb, var(--event-color) 40%, transparent); border-radius: 18px; background: linear-gradient(145deg, color-mix(in srgb, var(--event-color) 9%, transparent), transparent 80%), rgb(var(--surface-rgb)); }
-.weekly-time-card .today-habit-link { margin-bottom: 18px; }
-.weekly-time-card > button:last-child { width: 100%; margin-top: 14px; }
 .weekly-time-summary { margin: 18px 0; }
 .weekly-time-total { margin: 0 0 12px; line-height: 1.3; }
 .weekly-time-total strong { font-size: 32px; letter-spacing: -1px; }
@@ -538,27 +533,16 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .app-date { margin: 3px 0 0; color: var(--text-muted); font-size: 13px; line-height: 1.4; }
 
 /* Dashboard giornaliera */
-.today-screen-content { display: grid; align-content: start; gap: 18px; padding: 4px; container-type: inline-size; }
-.today-columns { display: grid; align-items: start; gap: 20px; }
+.today-screen-content { display: grid; align-content: start; gap: 32px; width: 100%; max-width: 1280px; margin-inline: auto; padding: 12px 4px 32px; container-type: inline-size; }
 .today-card { min-width: 0; padding: 22px; border: 1px solid rgba(var(--ink-rgb), .14); border-radius: 22px; background: rgb(var(--surface-rgb)); }
 .today-card-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
 .today-card-heading .eyebrow { margin-bottom: 6px; font-size: 10px; }
 .today-card-heading h3 { margin: 0; font-size: 23px; }
-.today-milestone-count { padding: 6px 10px; border-radius: 20px; background: rgba(var(--accent-rgb), .1); color: var(--label); font-size: 12px; font-weight: 700; }
-.today-milestone { padding: 18px; border: 1px solid color-mix(in srgb, var(--event-color, rgb(var(--accent-rgb))) 25%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--event-color, rgb(var(--accent-rgb))) 7%, rgb(var(--surface-rgb))); }
-.today-milestone > p:last-of-type, .today-milestone-intro p { margin: 10px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
-.today-milestone .eyebrow { font-size: 10px; }
-.today-milestone .habit-journey { margin-top: 10px; padding: 0; background: transparent; }
-.today-milestone h4, .today-recent-heading h4, .today-progress-empty h4 { margin: 0; font-size: 16px; }
 .today-habit-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
 .today-habit-link svg { flex: 0 0 22px; color: var(--event-color); }
 .today-habit-link strong { overflow-wrap: anywhere; font-size: 14px; }
 .today-habit-link > span:last-child { margin-left: auto; color: var(--text-secondary); }
 .today-habit-link:hover strong { text-decoration: underline; text-underline-offset: 4px; }
-.today-recent-heading { margin-top: 26px; }
-.today-recent-heading p { margin: 6px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
-.today-progress-list { margin: 4px 0 0; padding: 0; list-style: none; }
-.today-progress-row { padding: 18px 0; border-bottom: 1px solid rgba(var(--ink-rgb), .1); }
 .today-outcome-strip { display: flex; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
 .today-outcome-strip > li { flex: 1; min-width: 0; max-width: 38px; }
 .today-outcome-mark { position: relative; display: grid; place-items: center; width: 100%; height: 32px; border: 1px solid rgba(var(--ink-rgb), .22); border-radius: 8px; background: rgba(var(--ink-rgb), .04); color: var(--text-secondary); font-size: 18px; font-weight: 700; }
@@ -575,36 +559,79 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .today-progress-note { color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
 .today-progress-note summary { cursor: pointer; }
 .today-progress-note p { margin: 8px 0 0; }
-.today-progress-all { width: 100%; margin-top: 18px; }
-.today-progress-empty { padding: 18px 0 4px; }
-.today-progress-empty p { margin: 12px 0 20px; color: var(--text-secondary); line-height: 1.7; font-size: 14px; }
-@container (min-width: 900px) {
-  .today-columns { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
-}
-@container (max-width: 440px) {
-  .today-card { padding: 16px; }
-  .today-event { grid-template-columns: 42px 18px minmax(0, 1fr); }
-  .today-event::after { left: 48px; }
-  .today-node { width: 12px; height: 12px; }
-}
-.today-next { padding: 18px 20px; border: 1px solid color-mix(in srgb, rgb(var(--accent-rgb)) 40%, transparent); border-radius: 18px; background: color-mix(in srgb, rgb(var(--accent-rgb)) 10%, rgb(var(--surface-rgb))); }
-.today-next h3, .today-next p { margin: 4px 0 0; }
 .today-empty, .habit-empty { padding: 32px; border: 1px dashed rgba(var(--ink-rgb), .25); border-radius: 18px; text-align: center; background: rgb(var(--surface-rgb)); }
-.today-timeline { max-width: 800px; margin: 0; padding: 0; list-style: none; }
-.today-event { position: relative; display: grid; grid-template-columns: 58px 22px minmax(0, 1fr); min-height: 104px; }
+.today-agenda .today-empty { padding: 18px; border: 0; background: transparent; text-align: left; }
+.today-agenda .today-empty h3 { margin-top: 0; font-size: 16px; }
+.today-agenda .today-empty p { margin-bottom: 0; font-size: 14px; color: var(--text-secondary); }
+.today-timeline { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.today-event { position: relative; display: grid; grid-template-columns: 58px 22px minmax(0, 1fr); min-height: 80px; }
 .today-event > time { padding-top: 13px; color: var(--text-secondary); font-size: 13px; font-variant-numeric: tabular-nums; }
 .today-event::after { content: ""; position: absolute; top: 23px; bottom: -23px; left: 68px; width: 2px; background: rgba(var(--ink-rgb), .18); }
 .today-event:last-child::after { display: none; }
 .today-node { z-index: 1; width: 14px; height: 14px; margin-top: 16px; border: 3px solid var(--event-color); border-radius: 50%; background: rgb(var(--surface-rgb)); }
 .today-event.has-outcome .today-node { background: var(--event-color); }
-.today-event article { align-self: start; padding: 10px 12px; border-left: 4px solid var(--event-color); border-radius: 12px; background: color-mix(in srgb, var(--event-color) 9%, rgb(var(--surface-rgb))); }
+.today-event article { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; min-width: 0; align-self: start; padding: 10px 12px; border-left: 4px solid var(--event-color); border-radius: 12px; background: color-mix(in srgb, var(--event-color) 9%, rgb(var(--surface-rgb))); }
 .today-event-open { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.today-event-open > span:last-child { display: grid; gap: 3px; }
+.today-event-open > span:last-child { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
 .today-event-open small { color: var(--text-secondary); }
 .today-event-icon, .habit-detail-icon { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 10px; background: var(--event-color); color: white; }
-.today-outcomes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.today-outcomes { display: flex; flex-wrap: wrap; gap: 6px; }
 .today-outcomes button { min-height: 34px; padding: 6px 10px; border: 1px solid rgba(var(--ink-rgb), .18); border-radius: 9px; background: rgb(var(--surface-rgb)); color: inherit; cursor: pointer; }
 .today-outcomes button[aria-pressed="true"] { border-color: var(--event-color); background: var(--event-color); color: white; }
+
+/* Riepilogo e percorsi della dashboard */
+.today-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.today-summary-card { min-width: 0; padding: 22px; border: 1px solid rgba(var(--ink-rgb), .12); border-radius: 20px; background: rgb(var(--surface-rgb)); }
+.today-summary-next { background: linear-gradient(120deg, rgba(var(--accent-rgb), .17), transparent), rgb(var(--surface-rgb)); }
+.today-summary-card .eyebrow { margin: 0 0 18px; font-size: 11px; }
+.today-summary-value { display: block; font-size: 28px; line-height: 1.25; overflow-wrap: anywhere; }
+.today-summary-value small { font-size: 15px; font-weight: 500; color: var(--text-secondary); }
+.today-summary-card > p:last-child { margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.today-next-link { display: grid; gap: 12px; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; color: var(--text); cursor: pointer; }
+.today-next-link strong { font-size: 24px; line-height: 1.3; overflow-wrap: anywhere; }
+.today-next-link > span { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-secondary); }
+.today-completion { display: flex; height: 6px; margin-top: 14px; overflow: hidden; border-radius: 9px; background: rgba(var(--ink-rgb), .15); }
+.today-summary-dots { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.today-summary-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--event-color); }
+.today-paths { min-width: 0; }
+.today-paths .today-card-heading { margin-bottom: 16px; }
+.today-path-list { display: grid; gap: 12px; }
+.today-path-row { min-width: 0; padding: 20px 24px; border: 1px solid color-mix(in srgb, var(--event-color) 24%, transparent); border-radius: 18px; background: linear-gradient(105deg, color-mix(in srgb, var(--event-color) 15%, transparent), transparent 78%), rgb(var(--surface-rgb)); }
+.today-path-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) 170px; align-items: center; gap: 28px; }
+.today-path-main > * { min-width: 0; }
+.today-path-identity { display: flex; align-items: center; gap: 14px; }
+.today-path-identity > div { min-width: 0; }
+.today-path-identity .eyebrow { margin: 0 0 6px; font-size: 10px; }
+.today-path-identity .today-habit-link strong { font-size: 17px; }
+.today-path-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 13px; color: var(--event-color); background: color-mix(in srgb, var(--event-color) 13%, rgb(var(--surface-rgb))); }
+.today-path-icon svg { width: 24px; height: 24px; }
+.today-path-main .habit-journey { margin: 0; padding: 0; background: transparent; }
+.today-path-main .weekly-time-summary { margin: 0; }
+.today-path-main .weekly-time-total { margin: 0 0 8px; }
+.today-path-main .weekly-time-total strong { font-size: 23px; }
+.today-path-main .weekly-time-status { margin-bottom: 0; }
+.today-path-details { margin-top: 14px; color: var(--text-secondary); font-size: 12px; }
+.today-path-details summary, .today-progress-note summary { width: fit-content; cursor: pointer; padding-block: 4px; }
+.today-path-details[open] { padding-top: 12px; border-top: 1px solid rgba(var(--ink-rgb), .1); }
+.today-paths > .today-progress-note { margin-top: 18px; }
+.today-event article > [role="alert"] { grid-column: 1 / -1; }
+.today-screen-content :is(button, summary, [tabindex="0"]):focus-visible { outline: 2px solid rgb(var(--accent-rgb)); outline-offset: 4px; }
+@container (max-width: 760px) {
+  .today-summary { grid-template-columns: 1fr; gap: 12px; }
+  .today-summary-card { padding: 18px; }
+  .today-summary-card .eyebrow { margin-bottom: 10px; }
+  .today-path-main { grid-template-columns: minmax(0, 1fr) auto; gap: 18px; }
+  .today-path-identity { grid-column: 1 / -1; }
+  .today-event article { grid-template-columns: minmax(0, 1fr); }
+}
+@container (max-width: 440px) {
+  .today-card, .today-path-row { padding: 16px; }
+  .today-path-main { grid-template-columns: minmax(0, 1fr); }
+  .today-path-main > button { justify-self: start; }
+  .today-event { grid-template-columns: 42px 18px minmax(0, 1fr); }
+  .today-event::after { left: 48px; }
+  .today-node { width: 12px; height: 12px; }
+}
 
 /* Percorso delle abitudini */
 .habit-folder { --folder-background: rgb(var(--surface-rgb)); }

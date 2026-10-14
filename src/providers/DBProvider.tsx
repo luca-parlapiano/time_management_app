@@ -113,6 +113,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     getWeeklyTimeProgress: (id, date, referenceDate, seriesId) => statistics.getWeeklyTimeProgress(id, date, referenceDate, seriesId),
     getTimeSessions: (id, from, through, seriesId) => statistics.getTimeSessions(id, from, through, seriesId),
     getRecentTimeSessions: (id, referenceDate) => statistics.getRecentTimeSessions(id, referenceDate),
+    getTimeWeekMinutes: date => statistics.getTimeWeekMinutes(date),
     getTimeMinutes: (date, habitId) => statistics.getTimeMinutes(date, habitId),
     getTimeYearStatistics: (year, referenceDate) => statistics.getTimeYearStatistics(year, referenceDate),
     getTimeSeriesResults: referenceDate => statistics.getTimeSeriesResults(referenceDate),

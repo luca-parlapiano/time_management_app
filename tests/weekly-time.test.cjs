@@ -304,3 +304,20 @@ test('annual time statistics include archived and repeated series without counti
   assert.deepEqual(repository.getDailyStatistics(date), dailyBefore);
   assert.throws(() => repository.getTimeYearStatistics(0, date), /Periodo/);
 });
+
+
+test('dashboard weekly time counts current sessions through today across year boundaries', () => {
+  const archive = empty();
+  archive.timeSessions = [
+    session('previous', '2026-12-27', 90),
+    session('monday', '2026-12-28', 30),
+    session('corrected', '2027-01-01', 45),
+    session('removed', '2027-01-01', 120, { removed: true }),
+    session('future', '2027-01-02', 180),
+  ];
+  archive.timeSessionHistory = [{ id: 'old-value', session: session('corrected', '2027-01-01', 120), recordedAt: '2027-01-01T12:00:00Z' }];
+  const statistics = new StatisticsRepository(archive);
+  assert.equal(statistics.getTimeWeekMinutes('2027-01-01'), 75);
+  assert.equal(statistics.getTimeWeekMinutes('2027-01-04'), 0);
+  assert.throws(() => statistics.getTimeWeekMinutes('2027-02-30'), /Data non valida/);
+});
