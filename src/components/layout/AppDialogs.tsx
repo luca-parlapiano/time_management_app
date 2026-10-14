@@ -11,12 +11,11 @@ import { CalendarPreferences } from "../../screens/settings/CalendarPreferences"
 import { HabitEditor } from "../../screens/habits/HabitEditor";
 import { CalendarDialog } from "../ui/CalendarDialog";
 import { StandardButton } from "../ui/StandardButton";
-import { today } from "../../domain/calendar";
 import { AppIcon } from "../../icons/AppIcon";
 
 export type AppDialogState =
   | { type: "event"; item: Occurrence; confirmDelete: boolean }
-  | { type: "editor"; date: string; occurrence?: Occurrence; routine?: boolean; initialKind?: ItemKind; weeklyHabitId?: string }
+  | { type: "editor"; date: string; occurrence?: Occurrence; initialKind?: ItemKind; weeklyHabitId?: string }
   | { type: "weekly-habit"; habitId?: string }
   | { type: "time-series"; habitId: string; seriesId: string }
   | { type: "time-session"; habitId?: string; session?: TimeSession; occurrence?: Occurrence }
@@ -70,7 +69,6 @@ export function AppDialogs({ dialog, onChange, onHabitSaved, onWeeklyHabitSaved 
         items={state.items}
         date={dialog.date}
         occurrence={dialog.occurrence}
-        routine={dialog.routine}
         weeklyHabit={weeklyTimeHabits.find(habit => habit.id === dialog.weeklyHabitId)}
         initialKind={dialog.initialKind}
         item={state.items.find((item) => item.id === dialog.occurrence?.sourceId)}
@@ -90,7 +88,6 @@ export function AppDialogs({ dialog, onChange, onHabitSaved, onWeeklyHabitSaved 
     onClose={() => onChange(null)}
     onHabit={() => onChange({ type: "habit" })}
     onWeekly={() => onChange({ type: "weekly-habit" })}
-    onRoutine={() => onChange({ type: "editor", date: today(), routine: true })}
   />;
   if (dialog.type === "preferences") {
     return <CalendarPreferences state={state} onSave={savePreferences} onClose={() => onChange(null)} />;
@@ -101,9 +98,9 @@ export function AppDialogs({ dialog, onChange, onHabitSaved, onWeeklyHabitSaved 
 }
 
 /** Presenta i metodi disponibili e apre l’editor scelto, senza creare dati alla selezione. */
-function CreationChoiceDialog({ onClose, onHabit, onRoutine, onWeekly }: { onClose: () => void; onHabit: () => void; onRoutine: () => void; onWeekly: () => void }) {
-  return <CalendarDialog title="Come vuoi imparare?" className="creation-dialog creation-dialog-three" onClose={onClose}>
-    <p className="creation-intro">Ogni abitudine inizia da un piccolo gesto. Scegli il modo che fa per te.</p>
+function CreationChoiceDialog({ onClose, onHabit, onWeekly }: { onClose: () => void; onHabit: () => void; onWeekly: () => void }) {
+  return <CalendarDialog title="Che tipo di abitudine vuoi creare?" className="creation-dialog" onClose={onClose}>
+    <p className="creation-intro">Scegli se seguire un traguardo di eventi o di tempo.</p>
     <div className="creation-choice">
       <button className="creation-method creation-method-steps" type="button" onClick={onHabit} aria-labelledby="creation-steps-title" aria-describedby="creation-steps-description">
         <span className="creation-method-art" aria-hidden="true"><span className="creation-method-icon"><AppIcon name="steps" size={36} /></span><span className="creation-step-trail"><i /><i /><i /></span></span>
@@ -118,13 +115,6 @@ function CreationChoiceDialog({ onClose, onHabit, onRoutine, onWeekly }: { onClo
         <strong id="creation-hours-title">Con un obiettivo di ore</strong>
         <span className="creation-method-description" id="creation-hours-description">Scegli le ore da raggiungere in una settimana o in un mese e registra i tuoi progressi.</span>
         <span className="creation-method-action" aria-hidden="true">Scegli le ore <AppIcon name="arrow-right" size={18} /></span>
-      </button>
-      <button className="creation-method creation-method-routine" type="button" onClick={onRoutine} aria-labelledby="creation-routine-title" aria-describedby="creation-routine-description">
-        <span className="creation-method-art" aria-hidden="true"><span className="creation-method-icon"><AppIcon name="repeat" size={36} /></span><span className="creation-routine-orbit" /></span>
-        <span className="creation-method-label">Routine</span>
-        <strong id="creation-routine-title">Con un ritmo costante</strong>
-        <span className="creation-method-description" id="creation-routine-description">Fai spazio a un’attività che si ripete nei tuoi giorni, senza un traguardo di step.</span>
-        <span className="creation-method-action" aria-hidden="true">Crea una routine <AppIcon name="arrow-right" size={18} /></span>
       </button>
     </div>
     <div className="modal-actions"><StandardButton type="button" variant="secondary" onClick={onClose}>Annulla</StandardButton></div>

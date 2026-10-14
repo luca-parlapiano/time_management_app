@@ -14,10 +14,10 @@ export function ActivityStatisticsList({ year, timeActivities }: { year: number;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const referenceDate = today();
   const activities = useMemo(() => getStatisticsActivities().map(activity => getActivityYearStatistics(activity.id, year, referenceDate)), [getStatisticsActivities, getActivityYearStatistics, year, referenceDate]);
-  if (!activities.length && !timeActivities.length) return <p>Nessun esito o tempo registrato da mostrare. Crea un’abitudine o una routine per iniziare.</p>;
+  if (!activities.length && !timeActivities.length) return <p>Nessun esito o tempo registrato da mostrare. Crea un’abitudine per iniziare.</p>;
   return <div className="activity-statistics-list">
     <TimeActivityStatisticsList activities={timeActivities} />
-    {activities.length > 0 && <p className="annual-hint">Ogni serie conta una volta quando tutti gli step scelti hanno un esito, Fatto o Non fatto, nell’anno dell’ultimo step. Sono inclusi gli esiti già registrati su date future. Per le routine senza traguardo contiamo i singoli eventi fino a oggi. Apri il calendario per esplorare i singoli giorni.</p>}
+    {activities.length > 0 && <p className="annual-hint">Ogni serie a step conta una volta quando tutti gli step scelti hanno un esito, Fatto o Non fatto, nell’anno dell’ultimo step. Sono inclusi gli esiti già registrati su date future. Per le attività ricorrenti già monitorate senza traguardo contiamo i singoli eventi fino a oggi. Apri il calendario per esplorare i singoli giorni.</p>}
     {activities.map(statistics => {
       const { activity, completedSeries, completed, futureCompleted, skipped, recentDays } = statistics;
       const expanded = expandedId === activity.id;

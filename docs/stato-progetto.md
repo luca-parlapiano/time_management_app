@@ -1,18 +1,25 @@
 # Stato del progetto
 
-Rilevazione sul codice del 27 settembre 2026. [Indice documentazione](README.md).
+Rilevazione iniziale sul codice del 27 settembre 2026, aggiornata al 14 ottobre 2026.
+[Indice documentazione](README.md).
 
 Aggiornamento del 12 ottobre 2026: disponibili le [abitudini a ore](abitudini-ore.md),
 con serie settimanali o mensili, riepilogo conclusivo e trofei, inserimento manuale da Oggi, stack delle ultime quattro
 registrazioni espandibile, diario settimanale, piano facoltativo, backup v3 e SQLite 5.
 
+Aggiornamento del 14 ottobre 2026: la creazione di nuove routine come tipo di
+abitudine è stata rimossa. Le attività ricorrenti monitorate già salvate restano
+modificabili e continuano a comparire in Oggi e nelle Statistiche con i loro esiti.
+Una nuova routine composta da azioni è solo un’ipotesi da validare; vedi la
+[valutazione di prodotto](piano-routine-gruppi-di-azioni.md).
+
 ## Implementato nel flusso principale
 
 | Area | Disponibile |
 | --- | --- |
-| Oggi | Abitudini e routine ricorrenti della giornata, con registrazione rapida degli esiti; esclude appuntamenti fissi e attività singole |
+| Oggi | Abitudini e attività ricorrenti già monitorate della giornata, con registrazione rapida degli esiti; esclude appuntamenti fissi e attività singole |
 | Abitudini | Creazione e modifica con 1–12 step, giorni, orario e durata; percorso permanente nella Home e dettaglio degli esiti |
-| Routine | Promemoria ricorrenti senza step, salvati come attività flessibili del calendario |
+| Attività monitorate legacy | Vecchie routine senza step, conservate per modifica, esiti e statistiche; non più offerte come nuova scelta in Crea |
 | Calendario | Visione completa della settimana e creazione di appuntamenti fissi che proteggono gli orari, oltre a navigazione, modifica e conflitti |
 | Ricorrenze | Settimanali anche per attività flessibili, più giorni collegati, scadenza facoltativa, eccezioni e identità originale degli appuntamenti |
 | Esiti | Fatto, non fatto, correzioni e storico mantenuto dopo eliminazione/svuotamento |
@@ -32,7 +39,7 @@ un adapter addestrato e validato.
 La [strategia di prodotto](strategia-prodotto-e-benchmark.md) propone una direzione
 più ampia del calendario attuale. Restano da definire o implementare:
 
-- inbox e sequenze composte da più attività ordinate;
+- inbox e sequenze composte da più attività ordinate, queste ultime da validare come bisogno prima dello sviluppo;
 - modifica con data di decorrenza invece della sostituzione del calendario corrente;
 - occasioni autonome «da collocare» per gli step; le abitudini a ore possono già esistere senza piano;
 - notifiche facoltative per proporre uno spazio libero compatibile, senza prenotarlo o sostituire impegni automaticamente;
@@ -58,6 +65,12 @@ Account, sincronizzazione, mobile e cloud restano esclusi dall’attuale perimet
 Questi punti sono un inventario del lavoro aperto, non nuove funzionalità approvate.
 
 ## Evidenze di verifica
+
+Per la rimozione della nuova scelta Routine del 14 ottobre 2026 sono passati
+`npm run lint`, `npm run typecheck`, `npm test` e `npm run build`. Con archivi di
+prova sono stati verificati il flusso Crea, l’editor di nuovi appuntamenti, la
+modifica delle attività monitorate legacy e la conservazione dei loro esiti;
+la suite browser dei Provider è passata. Non è stato usato il database personale.
 
 Nella verifica del 27 settembre 2026, dopo la pulizia dei formati di importazione e il salvataggio della palette in SQLite, sono passati:
 
@@ -85,8 +98,8 @@ costituisce approvazione delle funzionalità future.
 2. Confermare il segmento primario e intervistare cinque persone; verificare il valore
    del client desktop prima di considerare altri client o il cloud.
 3. Verificare con gli utenti il flusso Oggi → esito → percorso dell'abitudine; poi
-   scegliere tra occasioni senza orario o inbox. Le routine restano promemoria
-   ricorrenti e non hanno step.
+   scegliere tra occasioni senza orario o inbox. Le attività monitorate legacy
+   conservano i propri esiti; un’eventuale nuova sequenza va validata nella dashboard.
    Confrontare checklist e timer, abitudini calendarizzate e flessibili, reminder utili
    e invasivi.
 4. Definire le misure MVP: primo piano, primo traguardo di abitudine, ritorno a sette giorni

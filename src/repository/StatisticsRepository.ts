@@ -210,7 +210,7 @@ export class StatisticsRepository {
     return result;
   }
 
-  /** Elenca una sola voce per abitudine o routine attualmente monitorata. */
+  /** Elenca una sola voce per abitudine o attività monitorata legacy ancora presente. */
   getStatisticsActivities(): StatisticsActivity[] {
     const seen = new Set<string>();
     const result: StatisticsActivity[] = [];

@@ -54,7 +54,7 @@ non può cambiare; la modifica del target riguarda solo la serie ancora in corso
   il diario con date, durate e note. La **Panoramica** segnala i giorni con ore
   registrate e permette di consultarne il dettaglio. Le correzioni contano una
   sola volta; rimozioni, pianificazioni e date future sono escluse dai totali.
-  Le percentuali degli esiti delle abitudini a step e delle routine restano distinte.
+  Le percentuali degli esiti delle abitudini a step e delle attività monitorate legacy restano distinte.
 
 Le sessioni richiedono minuti interi positivi, fino a 24 ore per abitudine e giornata.
 Non si registra tempo futuro. I target ammettono fino a 168 ore per settimana e

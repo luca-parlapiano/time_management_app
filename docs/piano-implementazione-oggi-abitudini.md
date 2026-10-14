@@ -1,5 +1,9 @@
 # Piano di implementazione: Oggi, Abitudini e Routine
 
+> Documento storico: dal 14 ottobre 2026 la creazione di nuove routine come tipo
+> di abitudine è stata rimossa. Le descrizioni delle routine qui sotto riguardano
+> il modello legacy; vedi lo [stato attuale](stato-progetto.md).
+
 > Proposta operativa del 29 settembre 2026. Descrive lavoro da realizzare, non
 > funzionalità già disponibili. Lo [stato del progetto](stato-progetto.md) resta il
 > riferimento per ciò che è implementato; la

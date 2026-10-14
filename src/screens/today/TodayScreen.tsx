@@ -37,12 +37,12 @@ export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit, onA
         <TodaySummary date={date} next={next} onOpenEvent={onOpenEvent} />
         <section className="today-card today-agenda" aria-labelledby="today-agenda-title">
         <header className="today-card-heading"><div><p className="eyebrow">Il piano di oggi</p><h3 id="today-agenda-title">La tua giornata</h3></div><StandardButton variant="ghost" onClick={() => onOpenHabits()}>Abitudini</StandardButton></header>
-        {events.length === 0 ? <div className="today-empty"><h3>Nessuna attività da seguire</h3><p>Qui compaiono abitudini e routine. Gli appuntamenti fissi restano nel Calendario.</p></div> : <ol className="today-timeline">
+        {events.length === 0 ? <div className="today-empty"><h3>Nessuna attività da seguire</h3><p>Qui compaiono le abitudini pianificate e le attività ricorrenti già monitorate. Gli appuntamenti fissi restano nel Calendario.</p></div> : <ol className="today-timeline">
           {events.map(item => {
             const appearance = eventAppearance(item);
             return <li key={item.id} className={`today-event${item.outcome ? " has-outcome" : ""}`} style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
               <time>{item.start}</time><span className="today-node" aria-hidden="true" />
-              <article><button type="button" className="today-event-open" onClick={() => onOpenEvent(item)}><span className="today-event-icon"><EventIcon icon={appearance.icon} /></span><span><strong>{item.title}</strong><small>{item.start}–{item.end}{item.habitId ? " · Abitudine" : item.routine ? " · Routine" : ""}</small></span></button>
+              <article><button type="button" className="today-event-open" onClick={() => onOpenEvent(item)}><span className="today-event-icon"><EventIcon icon={appearance.icon} /></span><span><strong>{item.title}</strong><small>{item.start}–{item.end}{item.habitId ? " · Abitudine" : item.routine ? " · Attività monitorata" : ""}</small></span></button>
                 <div className="today-outcomes" role="group" aria-label={`Esito ${item.title}`}>
                   <button disabled={saving} aria-pressed={item.outcome === "completed"} onClick={() => void setOutcome(item, "completed")}>Fatto</button>
                   <button disabled={saving} aria-pressed={item.outcome === "skipped"} onClick={() => void setOutcome(item, "skipped")}>Non fatto</button>

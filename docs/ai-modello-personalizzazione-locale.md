@@ -6,6 +6,10 @@
 > [architettura AI](architettura-distribuzione-ai.md).
 > [Stato del progetto](stato-progetto.md) · [Indice](README.md).
 
+Dal 14 ottobre 2026 la vecchia Routine non è più disponibile per nuove creazioni.
+Le sequenze di azioni menzionate in questa proposta AI sono un’ipotesi futura da
+validare nella dashboard, non un tipo di abitudine già disponibile.
+
 ## Decisione Di Prodotto
 
 L'app puo' includere un modello AI addestrato da noi, ma non deve addestrare un modello
@@ -58,9 +62,9 @@ una modifica concreta che l'utente vede, modifica o rifiuta, senza rigenerare la
 
 Usi ammissibili, solo su richiesta esplicita:
 
-- trasformare un brain dump in bozze di task, routine e sotto-step;
+- trasformare un brain dump in bozze di attività e sotto-step;
 - proporre una durata o una priorita' dichiarandola come stima;
-- riscrivere una routine in passi piu' piccoli e avviabili;
+- suddividere un’attività in passi piu' piccoli e avviabili;
 - spiegare in linguaggio semplice perche' il motore ha lasciato spazio o buffer;
 - proporre alternative dopo un piano saltato, senza applicarle.
 
@@ -83,7 +87,7 @@ Preferenze osservate e priorità dichiarate devono rimanere distinguibili e corr
 
 ## Cosa L'AI Non Fa
 
-- non modifica automaticamente impegni, routine o obiettivi;
+- non modifica automaticamente impegni, abitudini o obiettivi;
 - non decide quali priorita' sono importanti per una persona;
 - non accede implicitamente a dati personali o storico;
 - non invia dati personali a un servizio remoto senza consenso chiaro e revocabile;

@@ -5,6 +5,12 @@
 > I dati e le caratteristiche dei concorrenti non sono stati rivalidati nel
 > riallineamento del 26 settembre 2026; non considerarli un benchmark aggiornato.
 
+> **Decisione del 14 ottobre 2026.** La vecchia Routine è stata rimossa dalle
+> nuove creazioni; gli elementi già salvati restano modificabili. Le sequenze di
+> azioni in questo documento sono ipotesi da validare prima di inserirle nel
+> prodotto, con accesso principale nella dashboard Oggi. Vedi la
+> [valutazione di prodotto](piano-routine-gruppi-di-azioni.md).
+
 ## Stato Delle Evidenze
 
 Questo documento usa documentazione ufficiale, store e recensioni pubbliche.
@@ -16,7 +22,7 @@ L'app non deve essere un task manager generico ne' la somma di cinque concorrent
 
 > Un daily planner visuale che trasforma le abitudini in blocchi realistici della giornata, le accompagna nell'esecuzione e aiuta a ripartire quando il piano salta.
 
-Promessa del prodotto: **Pianifica la tua giornata e costruisci routine che riesci davvero a seguire.**
+Promessa del prodotto: **Pianifica la tua giornata e costruisci abitudini che riesci davvero a seguire.**
 
 Categoria primaria: **daily planner con habit tracking**.
 
@@ -48,7 +54,7 @@ Riunisce recensioni pubbliche, documentazione dei concorrenti e richieste ricorr
 | --- | --- | --- | --- |
 | Giornata visibile | Timeline e review citano meno ansia e maggiore chiarezza | Forte | Timeline quotidiana come home |
 | Inserimento veloce | Inbox, brain dump, template e shortcut sono ricorrenti | Forte | Crea task da home, inbox e shortcut |
-| Routine ricorrenti | Sono primarie in Structured, Habitify e Routinery | Forte | Routine con frequenza, durata e step |
+| Sequenze ricorrenti | Sono primarie in Structured, Habitify e Routinery | Forte | Validare nella dashboard il valore di più azioni eseguite insieme, prima di creare un nuovo tipo |
 | Reminder azionabili | Orario, luogo, stacking e reminder ripetuti risolvono l'avvio | Forte | Completa, rinvia, salta, avvia |
 | Piano saltato | Replan, skip e modifica del piano risolvono la stessa frizione | Forte | Replan manuale prima di automazioni |
 | Timer per step | Tiimo e Routinery riducono il passaggio tra azioni | Media | Validare timer contro semplice check-off |
@@ -131,7 +137,8 @@ Questa e' un'opportunita', non la prova che esista gia' domanda pagante.
 
 ## Flusso Interno Fondamentale
 
-Il valore non e' mettere task e habit in due sezioni.
+Il valore non e' mettere task e habit in due sezioni. Il flusso seguente è
+un’ipotesi storica: il passaggio attraverso una sequenza non è implementato.
 
 ```text
 Intento o abitudine
@@ -155,12 +162,11 @@ Questa separazione evita di ridurre l'abitudine a un task ricorrente e rende pos
 
 ## MVP
 
-### Perimetro MVP proposto
+### Perimetro MVP proposto in origine (storico)
 
 - timeline del giorno;
 - inbox per task e idee;
 - task e abitudini ricorrenti nello stesso calendario;
-- routine con 2-5 step, durata stimata e avvio manuale;
 - persistenza del piano e dello storico sullo stesso desktop;
 - esecuzione locale con completa, rinvia e salta;
 - cronologia base e ripianificazione manuale;
@@ -168,11 +174,13 @@ Questa separazione evita di ridurre l'abitudine a un task ricorrente e rende pos
 
 Le ipotesi da verificare, le esclusioni e l’ordine delle decisioni sono nello
 [stato del progetto](stato-progetto.md#priorità-e-prossime-decisioni).
+Una sequenza di 2–5 azioni con avvio manuale resta una possibile evoluzione,
+subordinata alla verifica del suo valore nella dashboard.
 
 ## AI: Assistente Opzionale, Non Planner
 
 Nella prima release l'AI non e' una feature attiva. Il valore del prodotto deve reggere
-anche con connessione assente: profilo, piano, routine, storico e ripianificazione restano
+anche con connessione assente: profilo, piano, abitudini, storico e ripianificazione restano
 locali, deterministici e spiegabili.
 
 Se in futuro verra' introdotta, l'AI avra' un solo ruolo: **ridurre il lavoro di traduzione
@@ -193,7 +201,8 @@ settimanale e il simulatore sono stati rimossi.
 
 La dashboard Oggi e il primo modello di abitudine con piano settimanale sono ora
 disponibili. La direzione proposta richiede ancora inbox, occasioni senza orario,
-modifica del piano nel tempo, routine a step ed esecuzione guidata. Prima di estendere
+modifica del piano nel tempo ed esecuzione guidata. Le sequenze di azioni restano
+un’ipotesi separata da validare nella dashboard. Prima di estendere
 AI o simulazione va verificato il valore del ciclo Oggi → esito → percorso.
 
 Persistenza, storico, import/export e statistiche di base sono già implementati:

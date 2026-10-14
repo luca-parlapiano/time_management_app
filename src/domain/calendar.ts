@@ -29,7 +29,7 @@ export function eventAppearance(item: Pick<ItemData, "icon" | "color" | "kind">)
  */
 type ProgressActivity = Pick<CalendarItem, "kind" | "habitId" | "routine"> | Pick<Occurrence, "kind" | "habitId" | "routine">;
 
-/** Restituisce true soltanto per abitudini e routine ricorrenti di cui registrare i progressi. */
+/** Riconosce le abitudini a step e le attività ricorrenti legacy da mantenere negli esiti. */
 export function isProgressActivity(item: ProgressActivity): boolean {
   return item.kind === "flexible" && (Boolean(item.habitId) || item.routine === true);
 }
@@ -42,7 +42,7 @@ export function appearsOnTodayScreen(item: Pick<Occurrence, "kind" | "habitId" |
 /**
  * Restituisce il piano operativo della data civile richiesta dallo snapshot confermato.
  * Esclude le serie di abitudini chiuse, anche il giorno del traguardo, conservando
- * le occorrenze con esito delle serie ancora attive e delle routine.
+ * le occorrenze con esito delle serie ancora attive e delle attività monitorate legacy.
  * Non modifica lo storico consultabile nel calendario.
  */
 export function todayOccurrences(items: CalendarItem[], date: string): Occurrence[] {

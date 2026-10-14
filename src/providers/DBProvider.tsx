@@ -74,7 +74,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
   const statistics = useMemo(() => new StatisticsRepository(snapshot?.archive ?? emptyArchive), [snapshot?.archive]);
   const recordOutcome = useCallback((item: Occurrence, outcome: ItemOutcome, loading?: LoadingOptions) => mutate(archive => {
     const source = archive.calendar.items.find(entry => entry.id === item.sourceId);
-    if (!source || !isProgressActivity(source)) throw new Error("Gli esiti sono disponibili solo per abitudini e routine ricorrenti.");
+    if (!source || !isProgressActivity(source)) throw new Error("Gli esiti sono disponibili solo per abitudini e attività ricorrenti già monitorate.");
     if (source.habitClosedOn && item.date > source.habitClosedOn) throw new Error("La serie è già conclusa. Usa Ripeti serie per iniziare un nuovo percorso.");
     return { ...archive,
       calendar: setOccurrenceOutcome(archive.calendar, item.sourceId, item.occurrenceDate, outcome),

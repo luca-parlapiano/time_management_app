@@ -35,7 +35,7 @@ export function latestOutcomes(history: OutcomeRecord[]): OutcomeRecord[] {
 }
 
 /**
- * Seleziona gli esiti delle abitudini e routine ancora presenti nel calendario.
+ * Seleziona gli esiti delle abitudini e delle attività monitorate legacy ancora presenti nel calendario.
  * Per un’abitudine conserva anche le fonti rimosse cambiando i giorni pianificati,
  * tramite la sua identità stabile. Una fonte esistente ma non monitorata resta esclusa.
  * Le attività eliminate del tutto restano solo nell’archivio di audit e nei backup.

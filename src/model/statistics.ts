@@ -83,7 +83,7 @@ export interface ActivityYearStatistics {
   activity: StatisticsActivity;
   year: number;
   days: ActivityDayStatistics[];
-  /** Serie con tutti gli step valutati nell’anno, anche con step già confermati su date future. Null per routine senza traguardo. */
+  /** Serie con tutti gli step valutati nell’anno, anche con step già confermati su date future. Null per attività monitorate legacy senza traguardo. */
   completedSeries: number | null;
   /** Singoli eventi completati fino alla data di riferimento. */
   completed: number;

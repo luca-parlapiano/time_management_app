@@ -1,5 +1,9 @@
 # Piano di implementazione: abitudini con obiettivo di ore settimanali
 
+> Le menzioni della routine come scelta di creazione descrivono il flusso precedente.
+> Dal 14 ottobre 2026 resta modificabile solo negli archivi già esistenti;
+> vedi lo [stato del progetto](stato-progetto.md).
+
 > Piano iniziale dell’11 ottobre 2026, conservato come riferimento progettuale.
 > Implementato il 12 ottobre 2026: il comportamento disponibile e le differenze
 > rispetto al piano sono documentati in [Abitudini a ore](abitudini-ore.md).

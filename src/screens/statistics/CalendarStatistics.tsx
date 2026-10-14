@@ -66,7 +66,7 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
       </div>}
     </div>
     {view === "activity" ? <ActivityStatisticsList year={year} timeActivities={timeStatistics.activities} /> : <>
-    <p className="annual-hint">I cerchi mostrano gli esiti delle abitudini a step e delle routine. La barretta colorata indica tempo registrato: apri il giorno per vedere gli inserimenti. Le ore pianificate non vengono conteggiate.</p>
+    <p className="annual-hint">I cerchi mostrano gli esiti delle abitudini a step e delle attività ricorrenti già monitorate. La barretta colorata indica tempo registrato: apri il giorno per vedere gli inserimenti. Le ore pianificate non vengono conteggiate.</p>
     <div className="annual-matrix-wrapper">
       <table className="annual-matrix annual-planner" aria-label={`Calendario annuale ${year}`}>
         <thead><tr>
@@ -113,7 +113,7 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
       {(getDailyStatistics(selectedDate).total > 0 || !timeByDate.has(selectedDate)) && <DailyDoughnut statistics={getDailyStatistics(selectedDate)} />}
       {timeByDate.has(selectedDate) && <section aria-label="Tempo registrato"><h4>Tempo registrato · {formatDurationMinutes(timeByDate.get(selectedDate)!.minutes)}</h4><RecordedTimeEntries sessions={timeByDate.get(selectedDate)!.sessions} /></section>}
       {latest.some(record => record.eventDate === selectedDate) && <section><h4>Esiti salvati</h4><ul>{latest.filter(record => record.eventDate === selectedDate).map(record => <li key={record.id}>{record.title}: <strong>{statisticsOutcomeLabels[record.outcome]}</strong></li>)}</ul></section>}
-      {(byDate.get(selectedDate) ?? []).length === 0 ? (!timeByDate.has(selectedDate) && <p>Nessuna abitudine o routine monitorata per questa data.</p>) : <ul className="annual-event-list">
+      {(byDate.get(selectedDate) ?? []).length === 0 ? (!timeByDate.has(selectedDate) && <p>Nessuna abitudine o attività monitorata per questa data.</p>) : <ul className="annual-event-list">
         {byDate.get(selectedDate)!.map(item => {
           const appearance = eventAppearance(item);
           return <li key={item.id} style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>

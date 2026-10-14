@@ -154,9 +154,10 @@ storico. Creazione e modifica aggiornano abitudine e appuntamenti nella stessa r
 transazione; un conflitto lascia invariato l'intero snapshot. Step e completamento sono
 derivati dagli ultimi esiti confermati e non vengono salvati come totali.
 
-Una routine è invece una normale serie ricorrente del calendario. Non viene salvata
-nella tabella `habits`, non ha `habitId`, step o percorso: serve soltanto a ricordare
-un'attività periodica e usa le operazioni calendario già esistenti.
+Il campo legacy `routine: true` identifica una serie ricorrente monitorata del
+calendario. Non viene salvata nella tabella `habits` e non ha `habitId` o step.
+Dal 14 ottobre 2026 non è più offerta come nuova scelta: resta leggibile e
+modificabile negli archivi esistenti, con esiti e statistiche invariati.
 
 Le [abitudini a ore](abitudini-ore.md) hanno identità e storico dei target separati.
 Il diario conserva sessioni correnti e audit, mentre `StatisticsRepository` calcola
@@ -203,7 +204,7 @@ const activities = getStatisticsActivities();
 const year = activities.length ? getActivityYearStatistics(activities[0].id, 2026, "2026-09-23") : null;
 ```
 
-Le statistiche includono solo le abitudini e le routine ricorrenti attualmente monitorate. I metodi settimanali, privi di utilizzatori nell’interfaccia, sono stati rimossi. I modelli sono in `src/model/statistics.ts`; i test delle regole in `tests/statistics.test.cjs`.
+Le statistiche includono le abitudini e le attività ricorrenti legacy ancora monitorate. I metodi settimanali, privi di utilizzatori nell’interfaccia, sono stati rimossi. I modelli sono in `src/model/statistics.ts`; i test delle regole in `tests/statistics.test.cjs`.
 
 ## Statistiche giornaliere
 

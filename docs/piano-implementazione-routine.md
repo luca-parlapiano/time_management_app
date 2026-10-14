@@ -1,5 +1,11 @@
 # Piano di implementazione: routine su desktop, Android e iOS
 
+> [Valutazione di prodotto del 14 ottobre](piano-routine-gruppi-di-azioni.md):
+> documenta la rimozione della routine attuale dalle nuove creazioni e propone di validare
+> l’utilità di una sequenza nella dashboard prima di implementarla. Il piano qui
+> sotto resta una proposta tecnica storica; l’enfasi sul Calendario e le versioni
+> di archivio indicate non rappresentano la decisione di prodotto corrente.
+
 > Proposta del 9 ottobre 2026. Questo documento definisce lavoro da realizzare;
 > non dichiara funzionalità già disponibili. La richiesta corrente riguarda il piano,
 > non l’implementazione o la pubblicazione. Destinazioni confermate: app desktop

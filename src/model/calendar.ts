@@ -32,7 +32,7 @@ export interface CalendarItem extends ItemData {
   habitClosedOn?: string;
   /** Ultima data originale pianificata per gli step della serie; derivata dal traguardo. */
   habitPlannedUntil?: string;
-  /** Identifica una routine monitorata, distinta da una normale serie del calendario. */
+  /** Compatibilità: identifica una vecchia attività ricorrente monitorata. Non usarlo per nuove creazioni. */
   routine?: true;
   outcomes?: Record<string, ItemOutcome>;
   // Weekly on the weekday of date, inclusive until; no end means indefinite.
