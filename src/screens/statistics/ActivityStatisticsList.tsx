@@ -5,16 +5,19 @@ import { eventColors } from '../../constants';
 import { displayDate, today } from '../../utils/dates';
 import { EventIcon } from '../../icons/EventIcon';
 import { ActivityHeatmap, dayDescription } from './ActivityHeatmap';
+import type { TimeActivityStatistics } from '../../model/statistics';
+import { TimeActivityStatisticsList } from './TimeStatistics';
 
 /** Elenca i risultati annuali confermati; il calendario viene montato solo quando richiesto. */
-export function ActivityStatisticsList({ year }: { year: number }) {
+export function ActivityStatisticsList({ year, timeActivities }: { year: number; timeActivities: TimeActivityStatistics[] }) {
   const { getStatisticsActivities, getActivityYearStatistics } = useDB();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const referenceDate = today();
   const activities = useMemo(() => getStatisticsActivities().map(activity => getActivityYearStatistics(activity.id, year, referenceDate)), [getStatisticsActivities, getActivityYearStatistics, year, referenceDate]);
-  if (!activities.length) return <p>Nessuna attività monitorata. Crea un’abitudine o una routine per iniziare.</p>;
+  if (!activities.length && !timeActivities.length) return <p>Nessun esito o tempo registrato da mostrare. Crea un’abitudine o una routine per iniziare.</p>;
   return <div className="activity-statistics-list">
-    <p className="annual-hint">Ogni serie conta una volta quando tutti gli step scelti hanno un esito, Fatto o Non fatto, nell’anno dell’ultimo step. Sono inclusi gli esiti già registrati su date future. Per le routine senza traguardo contiamo i singoli eventi fino a oggi. Apri il calendario per esplorare i singoli giorni.</p>
+    <TimeActivityStatisticsList activities={timeActivities} />
+    {activities.length > 0 && <p className="annual-hint">Ogni serie conta una volta quando tutti gli step scelti hanno un esito, Fatto o Non fatto, nell’anno dell’ultimo step. Sono inclusi gli esiti già registrati su date future. Per le routine senza traguardo contiamo i singoli eventi fino a oggi. Apri il calendario per esplorare i singoli giorni.</p>}
     {activities.map(statistics => {
       const { activity, completedSeries, completed, futureCompleted, skipped, recentDays } = statistics;
       const expanded = expandedId === activity.id;

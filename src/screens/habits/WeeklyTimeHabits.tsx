@@ -7,6 +7,7 @@ import { AppIcon } from '../../icons/AppIcon';
 import { eventColors } from '../../constants';
 import { displayDate, today } from '../../utils/dates';
 import { formatDurationMinutes } from '../../utils/time';
+import { HabitStatusTabs } from './HabitStatusTabs';
 import { WeeklyTimeSummary } from './WeeklyTimeSummary';
 import type { TimeSession } from '../../model/weeklyTime';
 
@@ -39,10 +40,10 @@ export function WeeklyTimeHabits({ selectedId, onSelect, onEditWeekly, onAddTime
   const run = async (action: () => Promise<void>) => { try { await action(); setError(''); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Operazione non riuscita.'); } };
   function choose(id: string, showArchive = archived) { setView({ selectedId: id, archived: showArchive }); onSelect(id); setSeriesId(''); setError(''); }
   return <div className="weekly-habits">
-    <div className="calendar-view-switch" role="group" aria-label="Stato degli obiettivi a ore">
-      <StandardButton variant="ghost" aria-pressed={!archived} onClick={() => choose(ongoing.find(habit => habit.id === selectedId)?.id ?? ongoing[0]?.id ?? '', false)}>In corso</StandardButton>
-      <StandardButton variant="ghost" aria-pressed={archived} onClick={() => choose(completed.find(habit => habit.id === selectedId)?.id ?? completed[0]?.id ?? '', true)}>Archivio</StandardButton>
-    </div>
+    <HabitStatusTabs label="Stato degli obiettivi a ore" archived={archived} onChange={showArchive => {
+      const habits = showArchive ? completed : ongoing;
+      choose(habits.find(habit => habit.id === selectedId)?.id ?? habits[0]?.id ?? '', showArchive);
+    }}>
     {!selected ? <div className="habit-empty"><h3>{archived ? 'Nessuna serie conclusa' : 'Fai spazio a ciò che vuoi imparare'}</h3><p>{archived ? 'Qui ritroverai le serie concluse, anche quando scegli di ripeterle.' : 'Scegli le ore da raggiungere in una settimana o in un mese.'}</p>{!archived && <p className="editor-hint">Usa Crea nell’header per iniziare un nuovo percorso.</p>}</div> : <div className="habits-layout">
       <nav className="habit-list" aria-label="Abitudini a ore">{visible.map(habit => <button key={habit.id} aria-current={habit.id === selected.id ? 'true' : undefined} style={{ '--event-color': eventColors[habit.color].value } as CSSProperties} onClick={() => choose(habit.id)}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{archived ? `${habit.series?.filter(entry => entry.decision).length ?? 0} ${habit.series?.filter(entry => entry.decision).length === 1 ? 'serie conclusa' : 'serie concluse'}` : habit.series?.at(-1)?.period === 'month' ? 'Serie mensile' : 'Serie settimanale'}</small></button>)}</nav>
       {series && <article className="habit-detail weekly-time-detail" style={{ '--event-color': eventColors[selected.color].value } as CSSProperties}>
@@ -61,5 +62,6 @@ export function WeeklyTimeHabits({ selectedId, onSelect, onEditWeekly, onAddTime
         {error && <p role="alert" className="capacity-warning">{error}</p>}
       </article>}
     </div>}
+    </HabitStatusTabs>
   </div>;
 }

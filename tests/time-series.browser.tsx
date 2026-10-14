@@ -6,6 +6,7 @@ import { LoadingProvider } from '../src/providers/LoadingProvider';
 import { createDevRepository } from '../src/repository/DevRepository';
 import { useDB } from '../src/hooks/useDB';
 import { addDays, today, weekStart } from '../src/utils/dates';
+import { formatDurationMinutes } from '../src/utils/time';
 import type { DBContextValue } from '../src/model/database';
 import '../src/styles.css';
 import '../src/themes.css';
@@ -80,6 +81,20 @@ try {
   await act(async () => { ongoingButton.click(); });
   const ongoingSeries = document.querySelector<HTMLSelectElement>('#panel-habits .time-series-selector select')!;
   check(ongoingSeries.options.length === 1 && ongoingSeries.value === db!.weeklyTimeHabits[0].series!.at(-1)!.id && !document.querySelector('#panel-habits .time-session-list'), 'In corso torna alla nuova serie con diario vuoto e senza mescolare lo storico');
+  await act(async () => { document.getElementById('tab-statistics')!.click(); });
+  const timeCard = document.querySelector('#panel-statistics .time-statistics-card')!;
+  check(timeCard?.textContent?.includes('Serie di prova') && timeCard.textContent.includes(formatDurationMinutes(db!.getTimeYearStatistics(Number(date.slice(0, 4))).minutes)), 'Statistiche Attività include le ore delle serie concluse');
+  await act(async () => { timeCard.querySelector<HTMLButtonElement>('button')!.click(); });
+  check(timeCard.textContent?.includes('Obiettivo superato oggi'), 'Mostra inserimenti rende visibile il diario registrato senza appuntamenti');
+  await act(async () => { await db.saveTimeSession({ commandId: 'statistics-live', session: { id: 'statistics-live', habitId: 'roundtrip', date, minutes: 15, notes: 'Nuovo inserimento nelle statistiche', removed: false } }); });
+  check(document.querySelector('#panel-statistics .time-statistics-card')?.textContent?.includes('Nuovo inserimento nelle statistiche'), 'Il salvataggio aggiorna gli inserimenti nelle statistiche senza ricaricare');
+  const overviewButton = Array.from(document.querySelectorAll<HTMLButtonElement>('#panel-statistics button')).find(button => button.textContent === 'Panoramica')!;
+  await act(async () => { overviewButton.click(); });
+  const todayStatistics = document.querySelector<HTMLButtonElement>('#panel-statistics .annual-day[aria-current="date"]')!;
+  check(todayStatistics.querySelector('.annual-time-marker') && todayStatistics.getAttribute('aria-label')?.includes('2 h 23 min registrate'), 'La panoramica indica il tempo registrato nella giornata, senza aggiungerlo alle percentuali degli step');
+  await act(async () => { todayStatistics.click(); });
+  check(document.querySelector('dialog')?.textContent?.includes('Obiettivo superato oggi') && document.querySelector('dialog')?.textContent?.includes('Nuovo inserimento nelle statistiche'), 'Il dettaglio giornaliero mostra insieme inserimenti di serie precedenti e correnti');
+  await act(async () => { document.querySelector<HTMLButtonElement>('dialog button[aria-label="Chiudi"]')!.click(); });
   await act(async () => {
     await db.saveWeeklyTimeHabit('guitar', { ...draft, title: 'Imparare a suonare la chitarra', targetMinutes: 1200 });
     await db.saveTimeSession({ commandId: 'guitar-1', session: { id: 'guitar-1', habitId: 'guitar', date: previousStart, minutes: 600, notes: 'Accordi e ritmo', removed: false } });

@@ -5,6 +5,7 @@ import { useDB } from "../../hooks/useDB";
 import { AppIcon } from "../../icons/AppIcon";
 import { EventIcon } from "../../icons/EventIcon";
 import { StandardButton } from "../../components/ui/StandardButton";
+import { HabitStatusTabs } from "./HabitStatusTabs";
 import { HabitJourney } from "./HabitJourney";
 
 export interface HabitsScreenProps { active: boolean; selectedHabitId?: string; onSelectHabit: (habitId: string | undefined) => void; onAdd: () => void; onEdit: (habitId: string) => void; onRepeat: (habitId: string) => void }
@@ -33,10 +34,7 @@ export function StepHabitsView({ active, selectedHabitId, onSelectHabit, onEdit,
   return (
     <div hidden={!active}>
       <header className="calendar-header"><div><p className="eyebrow">Il percorso nel tempo</p><h2>Abitudini da acquisire</h2><p>Ogni evento valutato fa avanzare la serie, sia fatto sia non fatto.</p></div></header>
-      <div className="calendar-view-switch habit-view-switch" role="group" aria-label="Stato delle abitudini">
-        <StandardButton variant="ghost" aria-pressed={view === "ongoing"} onClick={() => changeView("ongoing")}>In corso ({habits.length - completedCount})</StandardButton>
-        <StandardButton variant="ghost" aria-pressed={view === "archive"} onClick={() => changeView("archive")}>Archivio ({completedCount})</StandardButton>
-      </div>
+      <HabitStatusTabs label="Stato delle abitudini" archived={view === "archive"} onChange={archived => changeView(archived ? "archive" : "ongoing")} counts={[habits.length - completedCount, completedCount]}>
       <div className="habits-layout">
         {visibleHabits.length === 0 ? <div className="habit-empty">
           <h3>{view === "archive" ? "Nessuna abitudine in archivio" : habits.length === 0 ? "Acquisisci la prima abitudine" : "Nessuna abitudine in corso"}</h3>
@@ -59,6 +57,7 @@ export function StepHabitsView({ active, selectedHabitId, onSelectHabit, onEdit,
           </article>}
         </>}
       </div>
+      </HabitStatusTabs>
     </div>
   );
 }

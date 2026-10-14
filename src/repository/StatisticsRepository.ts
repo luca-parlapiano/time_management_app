@@ -1,4 +1,5 @@
 import { weeklyTimeProgress } from "../domain/weeklyTime.js";
+import type { TimeActivityStatistics, TimeDayStatistics, TimeYearStatistics } from "../model/statistics.js";
 import { timeSeriesResults, seriesForSession } from "../domain/timeSeries.js";
 import type { ActivityDayStatistics, ActivityYearStatistics, DailyActivitySegment, DailyStatistics, DailyStatisticsEntry, StatisticsActivity, StatisticsEntry } from "../model/statistics.js";
 import { isIntegerInRange } from "../utils/numbers.js";
@@ -67,6 +68,46 @@ export class StatisticsRepository {
     if (!validDate(date)) throw new Error("Data non valida.");
     return (this.archive.timeSessions ?? []).filter(session => !session.removed && session.date === date && (!habitId || session.habitId === habitId))
       .reduce((total, session) => total + session.minutes, 0);
+  }
+
+  /** Aggrega il tempo confermato dell’anno fino alla data di riferimento, comprese abitudini archiviate e serie ripetute.
+   * Conta le sessioni correnti una sola volta: rimozioni, audit delle correzioni e pianificazioni non contribuiscono.
+   * Restituisce giorni e attività con durata e diario; rifiuta anni o date non validi.
+   */
+  getTimeYearStatistics(year: number, referenceDate = today()): TimeYearStatistics {
+    if (!isIntegerInRange(year, 1900, 9998) || !validDate(referenceDate)) throw new Error('Periodo non valido.');
+    const from = `${year}-01-01`, through = `${year}-12-31`;
+    const days = new Map<string, TimeDayStatistics>();
+    const activities = new Map<string, TimeActivityStatistics>();
+    const habits = new Map((this.archive.weeklyTimeHabits ?? []).map(habit => [habit.id, habit]));
+    const concluded = this.getTimeSeriesResults(referenceDate).filter(result => {
+      const date = result.series.closedOn ?? result.series.endsOn;
+      return result.series.decision && date >= from && date <= through && date <= referenceDate;
+    });
+    for (const habit of habits.values()) {
+      activities.set(habit.id, { activity: { id: habit.id, title: habit.title, color: habit.color, icon: habit.icon }, minutes: 0, sessionCount: 0,
+        completedSeries: concluded.filter(result => result.habit.id === habit.id).length, days: [] });
+    }
+    for (const session of this.archive.timeSessions ?? []) {
+      if (session.removed || session.date < from || session.date > through || session.date > referenceDate) continue;
+      const habit = habits.get(session.habitId), activity = activities.get(session.habitId);
+      if (!habit || !activity) continue;
+      const entry = { ...session, title: habit.title, color: habit.color, icon: habit.icon };
+      const day = days.get(session.date) ?? { date: session.date, minutes: 0, sessions: [] };
+      day.minutes += session.minutes;
+      day.sessions.push(entry);
+      days.set(session.date, day);
+      let activityDay = activity.days.find(value => value.date === session.date);
+      if (!activityDay) { activityDay = { date: session.date, minutes: 0, sessions: [] }; activity.days.push(activityDay); }
+      activityDay.minutes += session.minutes;
+      activityDay.sessions.push(entry);
+      activity.minutes += session.minutes;
+      activity.sessionCount++;
+    }
+    const visible = [...activities.values()].filter(activity => activity.sessionCount || activity.completedSeries);
+    visible.forEach(activity => activity.days.sort((a, b) => b.date.localeCompare(a.date)));
+    return { year, days: [...days.values()].sort((a, b) => b.date.localeCompare(a.date)), activities: visible,
+      minutes: visible.reduce((sum, activity) => sum + activity.minutes, 0), sessionCount: visible.reduce((sum, activity) => sum + activity.sessionCount, 0) };
   }
 
   /** Cerca l’abitudine nello snapshot corrente; rifiuta identità inesistenti o eliminate. */

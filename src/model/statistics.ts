@@ -1,4 +1,33 @@
 import type { EventColor, EventIcon, ItemOutcome } from "./calendar.js";
+import type { TimeSession } from "./weeklyTime.js";
+
+export interface TimeStatisticsSession extends TimeSession {
+  title: string;
+  color: EventColor;
+  icon: EventIcon;
+}
+
+export interface TimeDayStatistics {
+  date: string;
+  minutes: number;
+  sessions: TimeStatisticsSession[];
+}
+
+export interface TimeActivityStatistics {
+  activity: StatisticsActivity;
+  minutes: number;
+  sessionCount: number;
+  completedSeries: number;
+  days: TimeDayStatistics[];
+}
+
+export interface TimeYearStatistics {
+  year: number;
+  minutes: number;
+  sessionCount: number;
+  days: TimeDayStatistics[];
+  activities: TimeActivityStatistics[];
+}
 
 export interface StatisticsEntry {
   date: string;

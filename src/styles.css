@@ -441,11 +441,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .time-series-score dt { font-size: 13px; color: var(--text-muted); }
 .time-series-score dd { margin: 8px 0 0; font-size: clamp(22px, 4vw, 32px); font-weight: 750; }
 .time-series-earned { display: flex; align-items: center; gap: 8px; color: rgb(var(--accent-rgb)); }
-.time-trophy-list { display: grid; gap: 16px; list-style: none; margin: 0; padding: 0; }
-.time-trophy-list li { display: flex; align-items: center; gap: 20px; padding: 24px; border: 1px solid rgba(var(--accent-rgb), .2); border-radius: 20px; background: rgb(var(--surface-rgb)); }
-.time-trophy-list svg { flex-shrink: 0; color: rgb(var(--accent-rgb)); }
-.time-trophy-list h3 { margin: 0; }
-.time-trophy-list p { font-size: 13px; color: var(--text-muted); }
+.trophies-empty { display: grid; justify-items: center; gap: 14px; padding: clamp(36px, 8vw, 80px) 20px; text-align: center; }
+.trophies-empty > svg { color: var(--text-muted); }
+.trophies-empty h3 { margin: 0; font-size: clamp(20px, 3vw, 24px); }
+.trophies-empty p { margin: 0; color: var(--text-muted); line-height: 1.6; }
 .weekly-hours-picker { min-width: 0; margin: 0; padding: 0; border: 0; grid-template-columns: minmax(0, 1fr); }
 .weekly-time-editor .modal-actions { position: static; }
 .weekly-hours-picker legend { margin-bottom: 12px; font-weight: 700; }
@@ -460,8 +459,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .duration-fields legend { margin-bottom: 10px; font-weight: 700; }
 .duration-fields .form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .time-session-habit { margin: 0; font-size: 20px; font-weight: 700; }
-.habit-mode-switch { margin-bottom: 18px; flex-shrink: 0; }
-.weekly-habits > .calendar-view-switch { margin-bottom: 16px; }
+.habit-mode-switch { width: fit-content; max-width: 100%; margin: 0 auto 18px; flex-shrink: 0; gap: 5px; padding: 5px; border-radius: 16px; }
+.habit-mode-switch button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 22px; border-radius: 11px; font-size: 18px; font-weight: 700; white-space: nowrap; }
+.habit-mode-switch button svg { flex-shrink: 0; }
 .weekly-time-today { min-width: 0; }
 .weekly-time-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(270px, 100%), 1fr)); gap: 16px; }
 .weekly-time-card { padding: 20px; border: 1px solid color-mix(in srgb, var(--event-color) 40%, transparent); border-radius: 18px; background: linear-gradient(145deg, color-mix(in srgb, var(--event-color) 9%, transparent), transparent 80%), rgb(var(--surface-rgb)); }
@@ -607,7 +607,14 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .today-outcomes button[aria-pressed="true"] { border-color: var(--event-color); background: var(--event-color); color: white; }
 
 /* Percorso delle abitudini */
-.habit-view-switch { align-self: flex-start; width: fit-content; margin-bottom: 18px; }
+.habit-folder { --folder-background: rgb(var(--surface-rgb)); }
+.habit-status-tabs { display: flex; align-items: flex-end; gap: 6px; width: 100%; }
+.habit-status-tabs button { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; position: relative; padding: 13px 20px; border: 1px solid rgba(var(--ink-rgb), .16); border-bottom: 0; border-radius: 14px 14px 0 0; background: rgba(var(--ink-rgb), .05); color: rgba(var(--ink-rgb), .65); font-size: 15px; font-weight: 700; }
+.habit-status-tabs button[aria-selected="true"] { z-index: 1; background: var(--folder-background); color: rgb(var(--ink-rgb)); box-shadow: inset 0 3px rgb(var(--accent-rgb)); }
+.habit-status-tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--folder-background); }
+.habit-status-tabs button:focus-visible { outline: 2px solid rgb(var(--accent-rgb)); outline-offset: -5px; }
+.habit-status-count { padding: 2px 7px; border-radius: 8px; background: rgba(var(--ink-rgb), .07); font-size: 12px; }
+.habit-folder-content { padding: clamp(8px, 2vw, 18px); border: 1px solid rgba(var(--ink-rgb), .16); border-radius: 0 0 12px 12px; background: var(--folder-background); }
 .habits-layout { display: grid; grid-template-columns: minmax(210px, 280px) minmax(0, 1fr); gap: 18px; padding: 4px; }
 .habit-empty { grid-column: 1 / -1; }
 .habit-list { display: grid; align-content: start; gap: 8px; }
@@ -859,8 +866,13 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .activity-recent-days { display: flex; flex-wrap: wrap; gap: 4px; }
 .activity-recent-days .heatmap-swatch { width: 12px; border-radius: 50%; }
 .activity-statistics-card .activity-heatmap { margin-top: 20px; border-top: 1px solid rgba(var(--ink-rgb), .15); padding-top: 16px; }
+.time-statistics-heading { margin: 8px 0 0; font-size: 18px; }
+.time-statistics-card .activity-statistics-row { grid-template-columns: minmax(150px, 1fr) minmax(150px, auto) minmax(140px, 1fr) auto; }
+.time-statistics-card .activity-completed strong { font-size: 25px; overflow-wrap: anywhere; }
+.time-statistics-entries { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(var(--ink-rgb), .15); }
+.recorded-time-entries p { overflow-wrap: anywhere; }
 @media (max-width: 1100px) {
-  .activity-statistics-row { grid-template-columns: minmax(0, 1fr) auto; gap: 16px; }
+  .activity-statistics-row, .time-statistics-card .activity-statistics-row { grid-template-columns: minmax(0, 1fr) auto; gap: 16px; }
   .activity-completed { text-align: right; }
 }
 @media (max-width: 480px) {
@@ -928,6 +940,7 @@ button.heatmap-swatch { cursor: pointer; }
 .annual-planner .annual-event-dots:has(i:nth-child(3)) i { width: min(clamp(6px, 22cqw, 18px), calc((100cqw - 4px - clamp(2px, 6cqw, 8px)) / 3)); }
 .annual-planner .annual-event-dots:has(.daily-pending-dots) { flex-wrap: wrap; }
 .planner-day-number { font-size: 9px; font-variant-numeric: tabular-nums; }
+.annual-time-marker { position: absolute; bottom: 4px; width: 65%; height: 4px; border-radius: 2px; background: rgb(var(--accent-rgb)); }
 
 /* Agenda cards: distinct header, quiet patterned body, direct outcomes. */
 /* Agenda settimanale: schede in ordine cronologico, indipendenti dalla durata. */

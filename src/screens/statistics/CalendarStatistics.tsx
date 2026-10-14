@@ -1,3 +1,5 @@
+import { formatDurationMinutes } from "../../utils/time";
+import { RecordedTimeEntries } from "./TimeStatistics";
 import { ActivityStatisticsList } from "./ActivityStatisticsList";
 import { useDB } from "../../hooks/useDB";
 import { DailyDoughnut } from "./DailyDoughnut";
@@ -14,9 +16,12 @@ import { EventIcon } from "../../icons/EventIcon";
 interface CalendarStatisticsProps { state: CalendarState; history: OutcomeRecord[] }
 
 function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) {
-  const { getDailyStatistics } = useDB();
+  const { getDailyStatistics, getTimeYearStatistics } = useDB();
   const [view, setView] = useState<"overview" | "activity">("activity");
   const [year, setYear] = useState(() => Number(today().slice(0, 4)));
+  const referenceDate = today();
+  const timeStatistics = useMemo(() => getTimeYearStatistics(year, referenceDate), [getTimeYearStatistics, year, referenceDate]);
+  const timeByDate = useMemo(() => new Map(timeStatistics.days.map(day => [day.date, day])), [timeStatistics]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLimit, setHistoryLimit] = useState(50);
   const progressHistory = useMemo(() => progressOutcomeHistory(state, history), [state, history]);
@@ -54,13 +59,14 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
         <StandardButton variant="ghost" type="button" onClick={() => setYear(Number(today().slice(0, 4)))}>Anno attuale</StandardButton>
       </nav>
       {view === "overview" && <div className="outcome-summary" aria-live="polite">
+        <span>{formatDurationMinutes(timeStatistics.minutes)} registrate · {timeStatistics.sessionCount} inserimenti</span>
         <span>{yearOutcomes.filter(record => record.outcome === "completed").length} superate</span>
         <span>{yearOutcomes.filter(record => record.outcome === "skipped").length} non superate</span>
         <StandardButton variant="secondary" type="button" onClick={() => { setHistoryLimit(50); setShowHistory(true); }}>Registro esiti</StandardButton>
       </div>}
     </div>
-    {view === "activity" ? <ActivityStatisticsList year={year} /> : <>
-    <p className="annual-hint">Le statistiche considerano soltanto abitudini e routine ricorrenti. Appuntamenti fissi, tempo protetto ed eventi singoli non vengono conteggiati.</p>
+    {view === "activity" ? <ActivityStatisticsList year={year} timeActivities={timeStatistics.activities} /> : <>
+    <p className="annual-hint">I cerchi mostrano gli esiti delle abitudini a step e delle routine. La barretta colorata indica tempo registrato: apri il giorno per vedere gli inserimenti. Le ore pianificate non vengono conteggiate.</p>
     <div className="annual-matrix-wrapper">
       <table className="annual-matrix annual-planner" aria-label={`Calendario annuale ${year}`}>
         <thead><tr>
@@ -83,10 +89,12 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
               const events = byDate.get(date) ?? [];
               const recorded = yearOutcomes.filter(record => record.eventDate === date);
               const daily = getDailyStatistics(date);
+              const timeDay = timeByDate.get(date);
               return <td key={column} className={column % 7 >= 5 ? "planner-weekend" : undefined}>
-                <button type="button" className={`annual-day${events.length || recorded.length ? " annual-day-events" : ""}`} aria-current={date === today() ? "date" : undefined} aria-label={`${displayDate(date, { weekday: "long", year: "numeric" })}, ${daily.total} attività monitorate, ${daily.recorded ? `${Math.round(daily.completionPercent)}% completato` : "nessun esito"}: ${daily.activities.map(item => `${item.title} ${item.count}`).join(", ")}, ${recorded.length} esiti`} title={daily.total ? daily.activities.map(item => `${item.title}: ${item.count}`).join("\n") : `${displayDate(date)}: nessuna attività monitorata`} onClick={() => setSelectedDate(date)}>
+                <button type="button" className={`annual-day${events.length || recorded.length || timeDay ? " annual-day-events" : ""}`} aria-current={date === today() ? "date" : undefined} aria-label={`${displayDate(date, { weekday: "long", year: "numeric" })}, ${daily.total} attività monitorate, ${daily.recorded ? `${Math.round(daily.completionPercent)}% completato` : "nessun esito"}: ${daily.activities.map(item => `${item.title} ${item.count}`).join(", ")}, ${recorded.length} esiti${timeDay ? `, ${formatDurationMinutes(timeDay.minutes)} registrate` : ''}`} title={timeDay ? `${displayDate(date)}: ${formatDurationMinutes(timeDay.minutes)} registrate` : daily.total ? daily.activities.map(item => `${item.title}: ${item.count}`).join("\n") : `${displayDate(date)}: nessuna attività monitorata`} onClick={() => setSelectedDate(date)}>
                   <span className="planner-day-number">{day}</span>
                   {daily.total > 0 && <DailyDoughnut statistics={daily} compact />}
+                  {timeDay && <span className="annual-time-marker" aria-hidden="true" />}
                 </button>
               </td>;
             })}
@@ -102,9 +110,10 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
       </tbody></table></div>{yearHistory.length > historyLimit && <StandardButton variant="secondary" onClick={() => setHistoryLimit(value => value + 50)}>Mostra altre registrazioni</StandardButton>}</>}
     </CalendarDialog>}
     {selectedDate && <CalendarDialog title={displayDate(selectedDate, { weekday: "long", year: "numeric" })} onClose={() => setSelectedDate(null)}>
-      <DailyDoughnut statistics={getDailyStatistics(selectedDate)} />
+      {(getDailyStatistics(selectedDate).total > 0 || !timeByDate.has(selectedDate)) && <DailyDoughnut statistics={getDailyStatistics(selectedDate)} />}
+      {timeByDate.has(selectedDate) && <section aria-label="Tempo registrato"><h4>Tempo registrato · {formatDurationMinutes(timeByDate.get(selectedDate)!.minutes)}</h4><RecordedTimeEntries sessions={timeByDate.get(selectedDate)!.sessions} /></section>}
       {latest.some(record => record.eventDate === selectedDate) && <section><h4>Esiti salvati</h4><ul>{latest.filter(record => record.eventDate === selectedDate).map(record => <li key={record.id}>{record.title}: <strong>{statisticsOutcomeLabels[record.outcome]}</strong></li>)}</ul></section>}
-      {(byDate.get(selectedDate) ?? []).length === 0 ? <p>Nessuna abitudine o routine monitorata per questa data.</p> : <ul className="annual-event-list">
+      {(byDate.get(selectedDate) ?? []).length === 0 ? (!timeByDate.has(selectedDate) && <p>Nessuna abitudine o routine monitorata per questa data.</p>) : <ul className="annual-event-list">
         {byDate.get(selectedDate)!.map(item => {
           const appearance = eventAppearance(item);
           return <li key={item.id} style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>

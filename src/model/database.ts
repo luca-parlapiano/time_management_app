@@ -1,5 +1,5 @@
 import type { TimeSeriesResult, WeeklyTimeHabit, WeeklyTimeHabitDraft, TimeSession, TimeSessionCommand, WeeklyTimeProgress } from "./weeklyTime.js";
-import type { ActivityYearStatistics, DailyStatistics, StatisticsActivity } from "./statistics.js";
+import type { ActivityYearStatistics, DailyStatistics, StatisticsActivity, TimeYearStatistics } from "./statistics.js";
 import type { CalendarGoal, CalendarItem, CalendarProfile, CalendarState, EditTarget, ItemOutcome, Occurrence } from "./calendar.js";
 import type { LoadingOptions } from "./loading.js";
 import type { PlannerArchive } from "./outcomeArchive.js";
@@ -53,6 +53,7 @@ export interface DBContextValue {
   getTimeSessions(id: string, from: string, through: string, seriesId?: string): TimeSession[];
   getRecentTimeSessions(id: string, referenceDate?: string): TimeSession[];
   getTimeMinutes(date: string, habitId?: string): number;
+  getTimeYearStatistics(year: number, referenceDate?: string): TimeYearStatistics;
   getTimeSeriesResults(referenceDate?: string): TimeSeriesResult[];
   resolveTimeSeries(habitId: string, seriesId: string, repeat: boolean, nextId: string): Promise<void>;
 

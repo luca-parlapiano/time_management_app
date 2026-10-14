@@ -273,3 +273,34 @@ test('legacy migration preserves current sessions and audit, partitions weeks, a
   assert.equal(converted.weeklyTimeHabits[0].series[1].decision, undefined);
   assert.deepEqual(a.upgradeArchive(converted), converted);
 });
+
+test('annual time statistics include archived and repeated series without counting corrections, removed entries or future days twice', () => {
+  const date = '2026-10-13';
+  let archive = periodic('month', '2026-10-01', 120);
+  const dailyBefore = new StatisticsRepository(archive).getDailyStatistics(date);
+  archive = save(archive, session('a', date, 120), 'original', date);
+  archive = save(archive, session('a', date, 128, { notes: 'Correzione confermata' }), 'corrected', date);
+  archive = save(archive, session('removed', date, 30), 'extra', date);
+  archive = save(archive, session('removed', date, 30, { removed: true }), 'remove', date);
+  archive = seriesDomain.resolveTimeSeries(archive, 'hours', archive.weeklyTimeHabits[0].series[0].id, true, 'next', date);
+  archive = save(archive, session('b', date, 120), 'second-series', date);
+  archive = seriesDomain.resolveTimeSeries(archive, 'hours', 'next', false, '', date);
+  archive = w.saveWeeklyTimeHabit(archive, 'same-name', { ...draft, startsOn: date, period: 'month', targetMinutes: 120 }, date);
+  archive = save(archive, session('other', date, 10, { habitId: 'same-name' }), 'other', date);
+  const repository = new StatisticsRepository(archive);
+  const statistics = repository.getTimeYearStatistics(2026, date);
+  assert.equal(statistics.minutes, 258);
+  assert.equal(statistics.sessionCount, 3);
+  assert.equal(statistics.activities.length, 2);
+  const archived = statistics.activities.find(value => value.activity.id === 'hours');
+  assert.equal(archived.minutes, 248);
+  assert.equal(archived.completedSeries, 2);
+  assert.equal(archived.sessionCount, 2);
+  assert.equal(statistics.days[0].minutes, 258);
+  assert.deepEqual(statistics.days[0].sessions.map(entry => entry.id).sort(), ['a', 'b', 'other']);
+  assert.equal(statistics.days[0].sessions.find(entry => entry.id === 'a').notes, 'Correzione confermata');
+  assert.equal(repository.getTimeYearStatistics(2026, '2026-10-12').sessionCount, 0);
+  assert.equal(repository.getTimeYearStatistics(2025, date).minutes, 0);
+  assert.deepEqual(repository.getDailyStatistics(date), dailyBefore);
+  assert.throws(() => repository.getTimeYearStatistics(0, date), /Periodo/);
+});

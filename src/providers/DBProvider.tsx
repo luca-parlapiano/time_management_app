@@ -114,6 +114,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     getTimeSessions: (id, from, through, seriesId) => statistics.getTimeSessions(id, from, through, seriesId),
     getRecentTimeSessions: (id, referenceDate) => statistics.getRecentTimeSessions(id, referenceDate),
     getTimeMinutes: (date, habitId) => statistics.getTimeMinutes(date, habitId),
+    getTimeYearStatistics: (year, referenceDate) => statistics.getTimeYearStatistics(year, referenceDate),
     getTimeSeriesResults: referenceDate => statistics.getTimeSeriesResults(referenceDate),
     resolveTimeSeries: (habitId, seriesId, repeat, nextId) => mutate(archive => resolveTimeSeries(archive, habitId, seriesId, repeat, nextId, today())),
     getHabitCompletionDate: id => statistics.getHabitCompletionDate(id),
