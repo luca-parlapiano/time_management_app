@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-electron
+.DS_Store
+ai-lab/data/private/
+ai-lab/.venv/
+ai-lab/results/
+ai-lab/adapters/
+ai-lab/archive/
+__pycache__/
+*.pyc
+resources/ai/models/*
+!resources/ai/models/.gitkeep
+resources/ai/adapters/*
+!resources/ai/adapters/.gitkeep
+resources/ai/bin/*
+!resources/ai/bin/.gitkeep
