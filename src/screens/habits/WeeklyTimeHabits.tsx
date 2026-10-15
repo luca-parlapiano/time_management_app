@@ -21,7 +21,7 @@ interface Props extends WeeklyTimeActions { selectedId?: string; onSelect: (id: 
 
 /** Consulta le serie isolate e il loro diario. Le serie confermate rimangono nello storico in sola lettura. */
 export function WeeklyTimeHabits({ selectedId, onSelect, onEditWeekly, onAddTime, onPlanTime, onReviewSeries }: Props) {
-  const { weeklyTimeHabits, getWeeklyTimeProgress, getTimeSessions, getTimeSeriesResults, saving, saveTimeSession } = useDB();
+  const { weeklyTimeHabits, getWeeklyTimeProgress, getTimeSessions, getTimeSeriesResults, setTimeSeriesTrophiesEnabled, saving, saveTimeSession } = useDB();
   const [view, setView] = useState(() => ({ selectedId, archived: Boolean(weeklyTimeHabits.find(habit => habit.id === selectedId)?.archivedOn) }));
   const [seriesId, setSeriesId] = useState('');
   const [error, setError] = useState('');
@@ -50,7 +50,8 @@ export function WeeklyTimeHabits({ selectedId, onSelect, onEditWeekly, onAddTime
         <header><span className="habit-detail-icon"><EventIcon icon={selected.icon} /></span><div><h3>{selected.title}</h3>{selected.motivation && <p>{selected.motivation}</p>}</div>{!ended && !series.decision && <StandardButton variant="ghost" onClick={() => onEditWeekly(selected.id)}>Modifica obiettivo</StandardButton>}</header>
         <label className="time-series-selector">Serie<select value={series.id} onChange={event => setSeriesId(event.target.value)}>{[...visibleSeries].reverse().map(entry => <option key={entry.id} value={entry.id}>Serie {selected.series!.findIndex(value => value.id === entry.id) + 1} · {entry.period === 'month' ? 'Mese' : 'Settimana'} · {displayDate(entry.startsOn, { year: 'numeric' })} – {displayDate(entry.closedOn ?? entry.endsOn, { year: 'numeric' })}{entry.decision ? ' · Conclusa' : entry.endsOn < today() ? ' · Da concludere' : ' · In corso'}</option>)}</select></label>
         <WeeklyTimeSummary progress={getWeeklyTimeProgress(selected.id, series.startsOn, today(), series.id)} />
-        {result?.reached && <p className="time-series-earned"><AppIcon name="trophies" /> Trofeo conquistato per questa serie</p>}
+        <label className="series-trophy-option"><input type="checkbox" checked={Boolean(series.trophiesEnabled)} disabled={saving} onChange={event => run(() => setTimeSeriesTrophiesEnabled(selected.id, series.id, event.target.checked))} /><span><strong>Usa trofei per questa serie</strong><small>Il trofeo compare nella raccolta se raggiungi le ore scelte e concludi la serie.</small></span></label>
+        {series.trophiesEnabled && result?.reached && series.decision && <p className="time-series-earned"><AppIcon name="trophies" /> Trofeo conquistato per questa serie</p>}
         {canConclude && !series.decision && <StandardButton onClick={() => onReviewSeries(selected.id, series.id)}>Concludi la serie</StandardButton>}
         {!series.decision && !canConclude && <div className="time-detail-actions"><StandardButton disabled={ended || series.startsOn > today()} onClick={() => onAddTime(selected.id)}>Aggiungi tempo</StandardButton>{!ended && <StandardButton variant="secondary" onClick={() => onPlanTime(selected.id)}>Pianifica una sessione</StandardButton>}</div>}
         <h4>Diario della serie</h4>

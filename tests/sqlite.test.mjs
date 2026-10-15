@@ -342,7 +342,7 @@ test('SQLite time series: monthly result, repeat decision and isolated totals su
  const { resolveTimeSeries, timeSeriesResults } = await import('../dist-electron/src/domain/timeSeries.js');
  const dir=mkdtempSync(join(tmpdir(),'agenda-series-')); const filename=join(dir,'agenda.sqlite'); let store=new SQLiteStore(filename);
  try {
-  let archive=saveWeeklyTimeHabit(initial(),'monthly',{title:'Chitarra',motivation:'',icon:'study',color:'teal',startsOn:'2026-09-01',period:'month',targetMinutes:1200},'2026-09-01');
+  let archive=saveWeeklyTimeHabit(initial(),'monthly',{title:'Chitarra',motivation:'',icon:'study',color:'teal',startsOn:'2026-09-01',period:'month',targetMinutes:1200,trophiesEnabled:true},'2026-09-01');
   archive=saveTimeSession(archive,{commandId:'one',session:{id:'one',habitId:'monthly',date:'2026-09-10',minutes:1320,notes:'Pratica',removed:false}},'2026-09-30','2026-09-30T10:00:00Z');
   let saved=store.write({archive,expectedRevision:null});
   const seriesId=saved.archive.weeklyTimeHabits[0].series[0].id;
@@ -350,6 +350,7 @@ test('SQLite time series: monthly result, repeat decision and isolated totals su
   saved=store.write({archive,expectedRevision:saved.revision});
   store.close();store=new SQLiteStore(filename);
   assert.deepEqual(store.read(),saved);
+  assert.equal(store.read().archive.weeklyTimeHabits[0].series[0].trophiesEnabled,true);
   const results=timeSeriesResults(store.read().archive,'2026-10-13');
   assert.deepEqual(results.map(result=>result.completedMinutes),[1320,0]);
   assert.equal(results[0].reached,true);
@@ -357,6 +358,7 @@ test('SQLite time series: monthly result, repeat decision and isolated totals su
   assert.equal(results[1].series.startsOn,'2026-10-13');
   assert.equal(results[1].series.endsOn,'2026-10-31');
   assert.deepEqual(parseArchive(exportArchive(saved.archive)),saved.archive);
+  assert.equal(parseArchive(exportArchive(saved.archive)).weeklyTimeHabits[0].series[0].trophiesEnabled,true);
   archive=saveTimeSession(saved.archive,{commandId:'early',session:{id:'early',habitId:'monthly',date:'2026-10-13',minutes:1200,notes:'Obiettivo raggiunto oggi',removed:false}},'2026-10-13','2026-10-13T18:00:00Z');
   archive=resolveTimeSeries(archive,'monthly','october',true,'october-again','2026-10-13');
   archive=saveTimeSession(archive,{commandId:'restart',session:{id:'restart',habitId:'monthly',date:'2026-10-13',minutes:30,notes:'Nuova serie',removed:false}},'2026-10-13','2026-10-13T19:00:00Z');

@@ -54,11 +54,12 @@ export function validateWeeklyTime(archive: PlannerArchive): void {
       let closedOn: string | undefined;
       const seriesIds = new Set<string>();
       for (const [index, raw] of h.series.entries()) {
-        const series = object(raw, ['id', 'period', 'startsOn', 'endsOn', 'targetMinutes', 'decision', 'nextSeriesId', 'closedOn', 'sessionIds']);
+        const series = object(raw, ['id', 'period', 'startsOn', 'endsOn', 'targetMinutes', 'trophiesEnabled', 'decision', 'nextSeriesId', 'closedOn', 'sessionIds']);
         if (!identity(series.id) || seriesIds.has(series.id) || (series.period !== 'week' && series.period !== 'month') ||
           !validDate(series.startsOn) || !validDate(series.endsOn) || series.startsOn < h.startsOn || (series.startsOn <= end && (!closedOn || series.startsOn < closedOn)) ||
           series.endsOn !== timePeriodBounds(series.startsOn, series.period).end ||
           !isIntegerInRange(series.targetMinutes, 1, series.period === 'month' ? MAX_MONTHLY_MINUTES : MAX_WEEKLY_MINUTES) ||
+          (series.trophiesEnabled !== undefined && typeof series.trophiesEnabled !== 'boolean') ||
           (series.decision !== undefined && series.decision !== 'repeat' && series.decision !== 'stop') ||
           (index < h.series.length - 1 && !series.decision)) throw new Error('Serie delle ore non valida.');
         if ((series.closedOn !== undefined && (!series.decision || !validDate(series.closedOn) || series.closedOn < series.startsOn || series.closedOn > series.endsOn || !Array.isArray(series.sessionIds))) ||
@@ -128,13 +129,17 @@ export function saveWeeklyTimeHabit(archive: PlannerArchive, id: string, draft: 
   if (previous?.archivedOn) throw new Error('L’abitudine è archiviata.');
   if (previous && previous.startsOn !== draft.startsOn) throw new Error('La data iniziale non può essere modificata.');
   if (!isIntegerInRange(draft.targetMinutes, 1, draft.period === 'month' ? MAX_MONTHLY_MINUTES : MAX_WEEKLY_MINUTES)) throw new Error('Scegli un obiettivo valido per il periodo selezionato.');
+  if (draft.trophiesEnabled !== undefined && typeof draft.trophiesEnabled !== 'boolean') throw new Error('Preferenza dei trofei non valida.');
   requireDate(draft.startsOn);
   if (draft.period || previous?.series) {
     const current = previous?.series?.at(-1);
     if (current && (current.decision || current.endsOn < referenceDate)) throw new Error('La serie è terminata: scegli se ripeterla dal riepilogo.');
     const period = draft.period ?? current?.period ?? 'week';
     if (current && period !== current.period) throw new Error('Il periodo di una serie avviata non può cambiare.');
-    const series = current ? { ...current, targetMinutes: draft.targetMinutes } : createTimeSeries(`${id}:first`, period, draft.startsOn, draft.targetMinutes);
+    const series = current
+      ? { ...current, targetMinutes: draft.targetMinutes, ...(draft.trophiesEnabled ? { trophiesEnabled: true } : {}) }
+      : createTimeSeries(`${id}:first`, period, draft.startsOn, draft.targetMinutes, draft.trophiesEnabled);
+    if (!draft.trophiesEnabled) delete series.trophiesEnabled;
     const habit: WeeklyTimeHabit = { id, title: draft.title.trim(), motivation: draft.motivation, icon: draft.icon, color: draft.color, startsOn: draft.startsOn,
       targets: previous?.targets ?? [{ effectiveFrom: weekStart(draft.startsOn), minutes: Math.min(draft.targetMinutes, MAX_WEEKLY_MINUTES) }],
       series: current ? previous!.series!.map(entry => entry.id === current.id ? series : entry) : [series] };

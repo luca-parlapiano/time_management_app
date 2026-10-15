@@ -6,6 +6,19 @@ import type { DatabaseBridge, DatabaseSnapshot, DatabaseWrite, DBRepository } fr
 import type { PlannerArchive } from "../model/outcomeArchive.js";
 import type { Palette } from "../model/theme.js";
 
+/** Indica se l'archivio usa almeno una preferenza trofei introdotta nel formato corrente. */
+function hasTrophyPreferences(archive: PlannerArchive): boolean {
+  return Boolean(archive.habits?.some(habit => habit.trophiesEnabled) ||
+    archive.weeklyTimeHabits?.some(habit => habit.series?.some(series => series.trophiesEnabled)));
+}
+
+/** Riconosce il rifiuto di un processo Electron precedente che non conosce ancora i campi dei trofei. */
+function isStaleTrophyValidatorError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes('Dati delle ore non validi') ||
+    error.message.includes('campo non previsto') && error.message.includes('trophiesEnabled');
+}
+
 export class RepositoryDB implements DBRepository {
   constructor(
     private readonly bridge: () => DatabaseBridge | undefined = () => window.plannerDB,
@@ -56,7 +69,15 @@ export class RepositoryDB implements DBRepository {
   /** Invia solo dati persistenti al worker e ricostruisce la chiusura sullo snapshot confermato, anche con un worker già avviato. */
   async save(input: DatabaseWrite) {
     validateArchive(input.archive);
-    const saved = await this.connection().write({ ...input, archive: archiveForStorage(input.archive) });
+    let saved: DatabaseSnapshot;
+    try {
+      saved = await this.connection().write({ ...input, archive: archiveForStorage(input.archive) });
+    } catch (error) {
+      if (hasTrophyPreferences(input.archive) && isStaleTrophyValidatorError(error)) {
+        throw new Error('La parte desktop dell\'app deve essere riavviata per attivare i trofei. I dati non sono stati modificati: chiudi e riapri l\'app, poi riprova.', { cause: error });
+      }
+      throw error;
+    }
     return this.prepareSnapshot(saved);
   }
   async reset(expectedRevision: number) { return this.prepareSnapshot(await this.connection().reset(expectedRevision)); }

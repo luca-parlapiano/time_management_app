@@ -191,6 +191,18 @@ test('saving to an already running worker omits derived closure fields and resto
   await assert.rejects(broken.save({archive, expectedRevision:7}), /Disk failure/);
 });
 
+test('repository explains that Electron must restart when an older worker rejects trophy preferences', async () => {
+  const archive={...emptyArchive(),weeklyTimeHabits:[{
+    id:'hours',title:'Studio',motivation:'',icon:'study',color:'teal',startsOn:'2026-10-05',
+    targets:[{effectiveFrom:'2026-10-05',minutes:120}],
+    series:[{id:'first',period:'week',startsOn:'2026-10-05',endsOn:'2026-10-11',targetMinutes:120,trophiesEnabled:true}],
+  }],timeSessions:[],timeSessionHistory:[]};
+  const repository=new RepositoryDB(()=>({
+    write:async()=>{throw new Error("Error invoking remote method 'planner-db:write': Error: Dati delle ore non validi.");},
+  }));
+  await assert.rejects(repository.save({archive,expectedRevision:0}), /riavviata per attivare i trofei/);
+});
+
 test('repository converts outcomes from an older running worker without mutating its snapshot', async () => {
   const item={id:'old',title:'Test',date:'2026-10-08',endDate:'2026-10-08',start:'10:00',end:'11:00',kind:'flexible',notes:'',exceptions:{},outcomes:{'2026-10-08':'partial'}};
   const old={...emptyArchive(),calendar:{...emptyCalendar(),items:[item]},history:[{id:'old-result',sourceId:'old',activityId:'old',occurrenceDate:item.date,eventDate:item.date,title:item.title,icon:'sport',color:'green',outcome:'partial',recordedAt:null}]};

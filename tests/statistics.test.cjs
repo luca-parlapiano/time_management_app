@@ -4,7 +4,7 @@ const {join}=require('node:path');
 const {StatisticsRepository}=require(join(process.env.CALENDAR_TEST_BUILD,'repository/StatisticsRepository.js'));
 const c=require(join(process.env.CALENDAR_TEST_BUILD,'domain/calendar.js'));
 const a=require(join(process.env.CALENDAR_TEST_BUILD,'domain/outcomeArchive.js'));
-const {createHabit,updateHabit,deleteHabit}=require(join(process.env.CALENDAR_TEST_BUILD,'domain/habits.js'));
+const {createHabit,updateHabit,deleteHabit,setHabitTrophiesEnabled}=require(join(process.env.CALENDAR_TEST_BUILD,'domain/habits.js'));
 const {reconcileHabitCompletion}=require(join(process.env.CALENDAR_TEST_BUILD,'domain/habitCompletion.js'));
 const item=(id,date='2026-09-21',patch={})=>({id,title:'Palestra',date,endDate:date,start:'09:00',end:'10:00',kind:'flexible',notes:'',recurrence:{until:date},routine:true,exceptions:{},...patch});
 const archive=(items,history=[])=>({format:'time-planner-backup',version:3,calendar:{...c.emptyCalendar(),items},habits:[],history});
@@ -273,4 +273,23 @@ test('a series spanning years belongs to the year of its final step',()=>{
  const repo=new StatisticsRepository(reconcileHabitCompletion(data));
  assert.equal(repo.getActivityYearStatistics('gym-0',2026,'2027-01-04').completedSeries,0);
  assert.equal(repo.getActivityYearStatistics('gym-0',2027,'2027-01-04').completedSeries,1);
+});
+
+test('step trophies are opt-in, derived from completed outcomes and follow corrections',()=>{
+ const draft={title:'Lettura',motivation:'',icon:'study',color:'teal',stepTarget:2,trophiesEnabled:true,startsOn:'2026-10-05',weekdays:[0,2],start:'18:00',durationMinutes:20};
+ const data={...archive([]),...createHabit(c.emptyCalendar(),[],draft,{habitId:'reading'})};
+ for(const date of ['2026-10-05','2026-10-07']){
+  const event=c.occurrences(data.calendar.items,date,date)[0];
+  data.history.push(a.outcomeRecord(data.calendar,event,'completed'));
+ }
+ const closed=reconcileHabitCompletion(data);
+ assert.deepEqual(new StatisticsRepository(closed).getTrophies('2026-10-07').map(trophy=>[trophy.kind,trophy.title,trophy.earnedOn,trophy.concluded,trophy.achieved]),[['steps','Lettura','2026-10-07',true,2]]);
+ const corrected={...closed,history:[...closed.history,{...closed.history[1],id:'correction',outcome:'skipped'}]};
+ const notEarned=new StatisticsRepository(reconcileHabitCompletion(corrected)).getTrophies('2026-10-07');
+ assert.deepEqual(notEarned.map(trophy=>[trophy.earnedOn,trophy.concluded,trophy.achieved,trophy.target]),[[undefined,true,1,2]]);
+ const optedOut={...closed,habits:setHabitTrophiesEnabled(closed.habits,'reading',false)};
+ assert.deepEqual(new StatisticsRepository(optedOut).getTrophies('2026-10-07'),[]);
+ const restored=a.parseArchive(a.exportArchive(closed));
+ assert.equal(restored.habits[0].trophiesEnabled,true);
+ assert.equal(new StatisticsRepository(reconcileHabitCompletion(restored)).getTrophies('2026-10-07').length,1);
 });

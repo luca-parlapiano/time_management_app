@@ -109,7 +109,7 @@ function validateArchiveFields(value: Record<string, unknown>): void {
   if (value.habits !== undefined) {
     if (!Array.isArray(value.habits)) throw new Error('Archivio delle abitudini non valido.');
     for (const habit of value.habits) {
-      requireFields(habit, ['id', 'title', 'motivation', 'icon', 'color', 'stepTarget'], 'Abitudine');
+      requireFields(habit, ['id', 'title', 'motivation', 'icon', 'color', 'stepTarget', 'trophiesEnabled'], 'Abitudine');
     }
   }
 }

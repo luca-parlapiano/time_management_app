@@ -8,6 +8,8 @@ export interface TimeSeries {
   startsOn: string;
   endsOn: string;
   targetMinutes: number;
+  /** Se true, il raggiungimento dell'obiettivo compare nella raccolta Trofei. */
+  trophiesEnabled?: boolean;
   decision?: 'repeat' | 'stop';
   nextSeriesId?: string;
   closedOn?: string;
@@ -40,6 +42,7 @@ export interface WeeklyTimeHabitDraft {
   color: EventColor;
   startsOn: string;
   targetMinutes: number;
+  trophiesEnabled?: boolean;
   period?: TimePeriod;
 }
 

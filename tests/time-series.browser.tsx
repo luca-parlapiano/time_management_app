@@ -21,7 +21,7 @@ function check(value: unknown, message: string) { if (!value) throw new Error(me
 try {
   await act(async () => { root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><Probe /></DBProvider></LoadingProvider></StrictMode>); });
   const date = today(), previousEnd = addDays(`${date.slice(0, 7)}-01`, -1), previousStart = `${previousEnd.slice(0, 7)}-01`;
-  const draft = { title: 'Serie di prova', motivation: '', startsOn: previousStart, period: 'month' as const, targetMinutes: 120, icon: 'study' as const, color: 'teal' as const };
+  const draft = { title: 'Serie di prova', motivation: '', startsOn: previousStart, period: 'month' as const, targetMinutes: 120, trophiesEnabled: true, icon: 'study' as const, color: 'teal' as const };
   await act(async () => {
     await db.saveWeeklyTimeHabit('roundtrip', draft);
     await db.saveTimeSession({ commandId: 'sample', session: { id: 'sample', habitId: 'roundtrip', date: previousStart, minutes: 180, notes: 'Tempo della vecchia serie', removed: false } });
@@ -72,7 +72,7 @@ try {
   const archiveButton = Array.from(document.querySelectorAll<HTMLButtonElement>('#panel-habits .weekly-habits button')).find(button => button.textContent === 'Archivio')!;
   await act(async () => { archiveButton.click(); });
   const archivedSeries = document.querySelector<HTMLSelectElement>('#panel-habits .time-series-selector select')!;
-  check(archiveButton.getAttribute('aria-pressed') === 'true' && archivedSeries.options.length === 2 && archivedSeries.value === 'next', 'Archivio mostra le due serie concluse anche se l’abitudine ha una nuova serie in corso');
+  check(archiveButton.getAttribute('aria-selected') === 'true' && archivedSeries.options.length === 2 && archivedSeries.value === 'next', 'Archivio mostra le due serie concluse anche se l’abitudine ha una nuova serie in corso');
   check(document.querySelector('#panel-habits .time-session-list')?.textContent?.includes('Obiettivo superato oggi'), 'La serie conclusa nello stesso giorno conserva il proprio diario');
   check(!document.querySelector('#panel-habits .time-session-actions') && !document.querySelector('#panel-habits .time-detail-actions'), 'Le serie in archivio sono consultabili in sola lettura');
   await act(async () => { archivedSeries.value = series.id; archivedSeries.dispatchEvent(new Event('change', { bubbles: true })); });
@@ -103,7 +103,16 @@ try {
     await db.saveWeeklyTimeHabit('reading', { ...draft, title: 'Leggere in inglese', period: 'week', startsOn: pastWeek, targetMinutes: 300 });
     await db.saveTimeSession({ commandId: 'reading', session: { id: 'reading', habitId: 'reading', date: pastWeek, minutes: 60, notes: 'Primo capitolo', removed: false } });
   });
-  results.push('TUTTI I TEST SERIE SUPERATI');
   await act(async () => { root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><App /></DBProvider></LoadingProvider></StrictMode>); });
+  await act(async () => { document.getElementById('tab-trophies')!.click(); });
+  const trophyTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('#panel-trophies [role="tab"]'));
+  check(trophyTabs.map(button => button.textContent?.replace(/\d+$/, '')).join(',') === 'A step,A tempo', 'Trofei separa la raccolta nelle tab A step e A tempo');
+  await act(async () => { trophyTabs[1].click(); });
+  check(document.querySelectorAll('#panel-trophies .trophy-tile').length === 2, 'La bacheca mostra inizialmente solo i trofei conquistati');
+  const showUnearned = document.querySelector<HTMLInputElement>('#panel-trophies .trophy-visibility-option input')!;
+  await act(async () => { showUnearned.click(); });
+  const trophyTiles = Array.from(document.querySelectorAll<HTMLElement>('#panel-trophies .trophy-tile'));
+  check(trophyTiles.filter(tile => tile.dataset.earned === 'true').length === 2 && trophyTiles.some(tile => tile.dataset.earned === 'false'), 'La griglia distingue trofei conquistati e non conquistati');
+  results.push('TUTTI I TEST SERIE SUPERATI');
 } catch (cause) { results.push(`FAIL ${cause instanceof Error ? cause.stack : String(cause)}`); }
 finally { document.getElementById('results')!.textContent = results.join('\n'); globalThis.IS_REACT_ACT_ENVIRONMENT = false; }

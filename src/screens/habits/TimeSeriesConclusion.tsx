@@ -19,7 +19,7 @@ export function TimeSeriesConclusion({ result, onClose }: { result: TimeSeriesRe
   }
   return <CalendarDialog title="La tua serie è terminata" onClose={onClose}>
     <div className="time-series-conclusion">
-      {result.reached && <div className="time-series-trophy"><AppIcon name="trophies" size={52} /><strong>Obiettivo raggiunto!</strong><span>Un nuovo trofeo per il tuo percorso</span></div>}
+      {result.reached && result.series.trophiesEnabled && <div className="time-series-trophy"><AppIcon name="trophies" size={52} /><strong>Obiettivo raggiunto!</strong><span>Concludi la serie per aggiungere il trofeo alla raccolta</span></div>}
       <h4>{result.habit.title}</h4>
       <p className="editor-hint">{displayDate(result.series.startsOn, { year: 'numeric' })} – {displayDate(result.series.closedOn ?? (result.reached && result.series.endsOn > today() ? today() : result.series.endsOn), { year: 'numeric' })}</p>
       <dl className="time-series-score"><div><dt>Obiettivo</dt><dd>{formatDurationMinutes(result.series.targetMinutes)}</dd></div><div><dt>Ore raggiunte</dt><dd>{formatDurationMinutes(result.completedMinutes)}</dd></div></dl>

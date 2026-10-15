@@ -12,8 +12,9 @@ export interface HabitsScreenProps { active: boolean; selectedHabitId?: string; 
 
 /** Percorso delle abitudini nel tempo, derivato da occasioni ed esiti confermati. */
 export function StepHabitsView({ active, selectedHabitId, onSelectHabit, onEdit, onRepeat }: HabitsScreenProps) {
-  const { habits, state, getHabitCompletionDate, getHabitProgress, getHabitTimeline } = useDB();
+  const { habits, state, getHabitCompletionDate, getHabitProgress, getHabitTimeline, setHabitTrophiesEnabled, saving } = useDB();
   const [emptyView, setEmptyView] = useState<"ongoing" | "archive">("ongoing");
+  const [trophyError, setTrophyError] = useState("");
   const completionDates = useMemo(() => new Map(habits.map(habit => [habit.id, getHabitCompletionDate(habit.id)])), [habits, getHabitCompletionDate]);
   const requestedHabit = habits.find(habit => habit.id === selectedHabitId);
   const view = requestedHabit ? (completionDates.get(requestedHabit.id) ? "archive" : "ongoing") : emptyView;
@@ -46,11 +47,16 @@ export function StepHabitsView({ active, selectedHabitId, onSelectHabit, onEdit,
             const completedOn = completionDates.get(habit.id);
             const progress = view === "archive" ? getHabitProgress(habit.id) : null;
             const allStepsDone = progress?.stepOutcomes.length === habit.stepTarget && progress.stepOutcomes.every(outcome => outcome === "completed");
-            return <button key={habit.id} aria-current={habit.id === selected?.id ? "true" : undefined} onClick={() => onSelectHabit(habit.id)} style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{completedOn ? `Conclusa - ${displayDate(completedOn, { day: "2-digit", month: "2-digit", year: "numeric" })}` : `${weeklyOccurrences} ${weeklyOccurrences === 1 ? "volta" : "volte"} a settimana · ${habit.stepTarget} step`}</small>{allStepsDone && <span className="habit-list-trophy" role="img" aria-label="Tutti gli step fatti" title="Tutti gli step fatti"><AppIcon name="trophies" size={20} /></span>}</button>;
+            return <button key={habit.id} aria-current={habit.id === selected?.id ? "true" : undefined} onClick={() => onSelectHabit(habit.id)} style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{completedOn ? `Conclusa - ${displayDate(completedOn, { day: "2-digit", month: "2-digit", year: "numeric" })}` : `${weeklyOccurrences} ${weeklyOccurrences === 1 ? "volta" : "volte"} a settimana · ${habit.stepTarget} step`}</small>{habit.trophiesEnabled && allStepsDone && <span className="habit-list-trophy" role="img" aria-label="Trofeo conquistato" title="Trofeo conquistato"><AppIcon name="trophies" size={20} /></span>}</button>;
           })}</nav>
           {selected && journey && <article className="habit-detail" style={{ "--event-color": eventColors[selected.color].value } as CSSProperties}>
             <header><span className="habit-detail-icon"><EventIcon icon={selected.icon} /></span><div><h3>{selected.title}</h3>{selected.motivation && <p>{selected.motivation}</p>}</div><StandardButton variant="ghost" onClick={() => onEdit(selected.id)}>Modifica</StandardButton></header>
             <HabitJourney progress={journey} />
+            <label className="series-trophy-option"><input type="checkbox" checked={Boolean(selected.trophiesEnabled)} disabled={saving} onChange={async event => {
+              try { await setHabitTrophiesEnabled(selected.id, event.target.checked); setTrophyError(""); }
+              catch (cause) { setTrophyError(cause instanceof Error ? cause.message : "Impossibile aggiornare i trofei."); }
+            }} /><span><strong>Usa trofei per questa serie</strong><small>Il trofeo compare nella raccolta solo se tutti gli step sono fatti.</small></span></label>
+            {trophyError && <p role="alert" className="capacity-warning">{trophyError}</p>}
             {closedOn && <div className="habit-completion" role="status"><p><strong>Serie conclusa.</strong> Non genera altre occasioni dopo il {displayDate(closedOn, { day: "numeric", month: "long", year: "numeric" })}. Vuoi ripeterla?</p><StandardButton variant="primary" onClick={() => onRepeat(selected.id)}>Ripeti serie</StandardButton></div>}
             <h4>{closedOn ? "Storico del percorso" : "Percorso recente e prossimi passi"}</h4>
             <ol className="habit-timeline">{entries.map(entry => <li key={`${entry.sourceId}@${entry.occurrenceDate}`} className={entry.outcome ?? (entry.date > reference ? "future" : "pending")}><span className="habit-timeline-node" aria-hidden="true">{entry.outcome === "completed" ? "✓" : entry.outcome === "skipped" ? "×" : ""}</span><div><time>{displayDate(entry.date, { weekday: "short", day: "numeric", month: "short" })}{entry.start && ` · ${entry.start}`}</time><strong>{entry.outcome === "completed" ? "Completata" : entry.outcome === "skipped" ? "Non fatta" : entry.date > reference ? "Pianificata" : "Da registrare"}</strong>{entry.moved && <small>Spostata rispetto al piano originale</small>}{entry.removed && <small>Rimossa dal calendario · esito conservato</small>}</div></li>)}</ol>

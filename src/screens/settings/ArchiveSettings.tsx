@@ -28,7 +28,7 @@ export function ArchiveSettings() {
   }
   return <div className="summary-card">
     <h3>Database locale e backup</h3>
-    <p>Calendario, abitudini a ore, diario, profilo, obiettivi e storico degli esiti sono salvati su questo dispositivo. Esporta un backup per conservarli o trasferirli.</p>
+    <p>Calendario, abitudini, diario, preferenze dei trofei, profilo, obiettivi e storico degli esiti sono salvati su questo dispositivo. Esporta un backup per conservarli o trasferirli.</p>
     <div className="hero-actions">
       <StandardButton variant="primary" type="button" disabled={disabled || busy} onClick={() => void exportFile()}>Esporta</StandardButton>
       <StandardButton variant="secondary" type="button" disabled={disabled || busy} onClick={() => input.current?.click()}>Importa</StandardButton>
@@ -49,7 +49,7 @@ export function ArchiveSettings() {
     {candidate && <CalendarDialog title="Importa backup" onClose={() => { if (!busy) setCandidate(null); }}>
       <p>Il file contiene {candidate.calendar.items.length} elementi del calendario e {latestOutcomes(candidate.history).length} appuntamenti con esito ({candidate.history.length} registrazioni nello storico).</p>
       <p>Abitudini a ore: {candidate.weeklyTimeHabits?.length ?? 0}. Sessioni di tempo: {candidate.timeSessions?.filter(session => !session.removed).length ?? 0}.</p>
-      <p>Il backup sostituirà calendario, abitudini, diario, profilo, obiettivi e storico attuali. Una copia dei dati attuali sarà conservata automaticamente e potrai esportarla dalle Impostazioni.</p>
+      <p>Il backup sostituirà calendario, abitudini, diario, preferenze dei trofei, profilo, obiettivi e storico attuali. Una copia dei dati attuali sarà conservata automaticamente e potrai esportarla dalle Impostazioni.</p>
       <p>Sono accettati i backup dell’app nel formato corrente e nelle versioni precedenti supportate.</p>
       {error && <p role="alert" className="capacity-warning">{error}</p>}
       <div className="modal-actions"><StandardButton variant="secondary" type="button" disabled={busy} onClick={() => setCandidate(null)}>Annulla</StandardButton><StandardButton variant="primary" type="button" disabled={busy || disabled} onClick={async () => {

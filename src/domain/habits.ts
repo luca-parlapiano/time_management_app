@@ -44,6 +44,7 @@ export function validateHabitDraft(input: HabitDraft): void {
   if (typeof input.motivation !== "string") throw new Error("Motivazione non valida.");
   if (!Object.hasOwn(eventIcons, input.icon) || !Object.hasOwn(eventColors, input.color)) throw new Error("Aspetto dell’abitudine non valido.");
   if (!isHabitStepTarget(input.stepTarget)) throw new Error("Scegli un traguardo da 1 a 12 step.");
+  if (input.trophiesEnabled !== undefined && typeof input.trophiesEnabled !== "boolean") throw new Error("Preferenza dei trofei non valida.");
   if (!validDate(input.startsOn)) throw new Error("Data iniziale non valida.");
   if (!Array.isArray(input.weekdays) || !input.weekdays.length || input.weekdays.some(day => !isIntegerInRange(day, 0, 6)) || new Set(input.weekdays).size !== input.weekdays.length) {
     throw new Error("Scegli almeno un giorno della settimana.");
@@ -78,7 +79,8 @@ function proposedItem(draft: HabitDraft, habitId: string): CalendarItem {
 }
 
 function habitOf(id: string, draft: HabitDraft): Habit {
-  return { id, title: draft.title.trim(), motivation: draft.motivation, icon: draft.icon, color: draft.color, stepTarget: draft.stepTarget };
+  return { id, title: draft.title.trim(), motivation: draft.motivation, icon: draft.icon, color: draft.color, stepTarget: draft.stepTarget,
+    ...(draft.trophiesEnabled ? { trophiesEnabled: true } : {}) };
 }
 
 /**
@@ -140,6 +142,7 @@ export function habitDraft(calendar: CalendarState, habit: Habit): HabitDraft {
     icon: habit.icon,
     color: habit.color,
     stepTarget: habit.stepTarget,
+    trophiesEnabled: habit.trophiesEnabled,
     startsOn: first.date,
     weekdays,
     start: first.start,
@@ -154,6 +157,7 @@ export function validateHabits(habits: unknown, calendar: CalendarState): assert
   for (const habit of habits) {
     if (!habit || typeof habit !== "object" || typeof habit.id !== "string" || !habit.id || habitIds.has(habit.id) ||
       typeof habit.title !== "string" || !habit.title.trim() || typeof habit.motivation !== "string" || !isHabitStepTarget(habit.stepTarget) ||
+      (habit.trophiesEnabled !== undefined && typeof habit.trophiesEnabled !== "boolean") ||
       !Object.hasOwn(eventIcons, habit.icon) || !Object.hasOwn(eventColors, habit.color)) throw new Error("Abitudine non valida.");
     habitIds.add(habit.id);
     const sources = calendar.items.filter(item => item.habitId === habit.id);
@@ -162,4 +166,17 @@ export function validateHabits(habits: unknown, calendar: CalendarState): assert
   for (const item of calendar.items) {
     if (item.habitId && !habitIds.has(item.habitId)) throw new Error("Appuntamento collegato a un’abitudine mancante.");
   }
+}
+
+/** Aggiorna soltanto l'adesione ai trofei di una serie a step, senza ricrearne la pianificazione. */
+export function setHabitTrophiesEnabled(habits: Habit[], id: string, enabled: boolean): Habit[] {
+  if (typeof enabled !== "boolean") throw new Error("Preferenza dei trofei non valida.");
+  if (!habits.some(habit => habit.id === id)) throw new Error("Abitudine non trovata.");
+  return habits.map(habit => {
+    if (habit.id !== id) return habit;
+    const next = { ...habit };
+    if (enabled) next.trophiesEnabled = true;
+    else delete next.trophiesEnabled;
+    return next;
+  });
 }

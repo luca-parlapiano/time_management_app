@@ -11,6 +11,7 @@ import { habitCompletionDate } from '../domain/habitCompletion.js';
 import { habitJourneyProgress, habitTimeline } from '../domain/habitTimeline.js';
 import type { CalendarItem } from '../model/calendar.js';
 import type { PlannerArchive } from '../model/outcomeArchive.js';
+import type { Trophy } from '../model/trophy.js';
 import { habitDashboard } from '../domain/habitDashboard.js';
 import { progressOutcomeHistory } from '../domain/outcomeArchive.js';
 
@@ -62,6 +63,37 @@ export class StatisticsRepository {
 
   /** Restituisce i risultati delle serie, inclusi quelli scaduti in attesa di una scelta e quelli archiviati. */
   getTimeSeriesResults(referenceDate = today()) { return timeSeriesResults(this.archive, referenceDate); }
+
+  /**
+   * Ricostruisce la griglia dei trofei scelti dall'utente sullo snapshot confermato.
+   * Include serie in corso, concluse senza premio e conquistate; earnedOn esiste soltanto
+   * per un obiettivo interamente raggiunto e concluso entro il riferimento.
+   * Un campo di adesione assente equivale a false per mantenere compatibili gli archivi precedenti.
+   */
+  getTrophies(referenceDate = today()): Trophy[] {
+    if (!validDate(referenceDate)) throw new Error('Data non valida.');
+    const trophies: Trophy[] = [];
+    for (const habit of this.archive.habits ?? []) {
+      if (!habit.trophiesEnabled) continue;
+      const concludedOn = this.getHabitCompletionDate(habit.id);
+      const progress = this.getHabitProgress(habit.id);
+      const achieved = progress.stepOutcomes.filter(outcome => outcome === 'completed').length;
+      const concluded = Boolean(concludedOn && concludedOn <= referenceDate);
+      const earnedOn = concluded && achieved === habit.stepTarget ? concludedOn : undefined;
+      trophies.push({ id: `steps:${habit.id}`, kind: 'steps', title: habit.title, icon: habit.icon, color: habit.color,
+        ...(earnedOn ? { earnedOn } : {}), concluded, achieved, target: habit.stepTarget });
+    }
+    for (const result of this.getTimeSeriesResults(referenceDate)) {
+      if (!result.series.trophiesEnabled) continue;
+      const concluded = Boolean(result.series.decision && result.series.closedOn && result.series.closedOn <= referenceDate);
+      const earnedOn = concluded && result.reached ? result.series.closedOn : undefined;
+      trophies.push({ id: `time:${result.habit.id}:${result.series.id}`, kind: 'time', title: result.habit.title,
+        icon: result.habit.icon, color: result.habit.color, ...(earnedOn ? { earnedOn } : {}), concluded,
+        achieved: result.completedMinutes, target: result.series.targetMinutes });
+    }
+    return trophies.sort((a, b) => Number(Boolean(b.earnedOn)) - Number(Boolean(a.earnedOn)) ||
+      (b.earnedOn ?? '').localeCompare(a.earnedOn ?? '') || a.id.localeCompare(b.id));
+  }
 
   /** Somma il tempo attivo di una data civile, eventualmente per abitudine; le sessioni rimosse non contribuiscono. */
   getTimeMinutes(date: string, habitId?: string) {

@@ -19,9 +19,10 @@ export function timePeriodBounds(date: string, period: TimePeriod) {
 }
 
 /** Crea una serie che parte nella data richiesta e termina con il periodo civile, senza riporto di ore. */
-export function createTimeSeries(id: string, period: TimePeriod, date: string, targetMinutes: number): TimeSeries {
+export function createTimeSeries(id: string, period: TimePeriod, date: string, targetMinutes: number, trophiesEnabled = false): TimeSeries {
   if (!id.trim() || !['week', 'month'].includes(period) || !isIntegerInRange(targetMinutes, 1, period === 'month' ? MAX_MONTHLY_MINUTES : MAX_WEEKLY_MINUTES)) throw new Error('Obiettivo della serie non valido.');
-  return { id, period, startsOn: date, endsOn: timePeriodBounds(date, period).end, targetMinutes };
+  if (typeof trophiesEnabled !== 'boolean') throw new Error('Preferenza dei trofei non valida.');
+  return { id, period, startsOn: date, endsOn: timePeriodBounds(date, period).end, targetMinutes, ...(trophiesEnabled ? { trophiesEnabled: true } : {}) };
 }
 
 /** Calcola risultati indipendenti per serie sullo snapshot; esclude rimozioni e date future, senza salvare totali. */
@@ -68,13 +69,31 @@ export function resolveTimeSeries(archive: PlannerArchive, habitId: string, seri
   if (series.endsOn >= referenceDate && !timeSeriesResults(archive, referenceDate).find(result => result.habit.id === habitId && result.series.id === seriesId)?.reached) throw new Error('La serie non è ancora terminata.');
   if (habit.series?.at(-1)?.id !== series.id) throw new Error('Puoi proseguire soltanto dall’ultima serie.');
   if (repeat && (!nextId.trim() || habit.series.some(entry => entry.id === nextId))) throw new Error('Identità della nuova serie non valida.');
-  const next = repeat ? createTimeSeries(nextId, series.period, referenceDate, series.targetMinutes) : undefined;
+  const next = repeat ? createTimeSeries(nextId, series.period, referenceDate, series.targetMinutes, series.trophiesEnabled) : undefined;
   const closedOn = series.endsOn < referenceDate ? series.endsOn : referenceDate;
   const sessionIds = (archive.timeSessions ?? []).filter(session => session.habitId === habitId && seriesForSession(habit, session)?.id === seriesId).map(session => session.id);
   return { ...archive, weeklyTimeHabits: archive.weeklyTimeHabits?.map(entry => entry.id !== habitId ? entry : {
     ...entry, ...(!repeat ? { archivedOn: closedOn } : {}),
     series: [...entry.series!.map(value => value.id === seriesId ? { ...value, decision, closedOn, sessionIds, ...(next ? { nextSeriesId: next.id } : {}) } : value), ...(next ? [next] : [])],
   }) };
+}
+
+/** Aggiorna soltanto l'adesione ai trofei di una serie a ore, conclusa o in corso. */
+export function setTimeSeriesTrophiesEnabled(archive: PlannerArchive, habitId: string, seriesId: string, enabled: boolean): PlannerArchive {
+  if (typeof enabled !== 'boolean') throw new Error('Preferenza dei trofei non valida.');
+  const habit = archive.weeklyTimeHabits?.find(entry => entry.id === habitId);
+  if (!habit?.series?.some(series => series.id === seriesId)) throw new Error('Serie non trovata.');
+  const weeklyTimeHabits = archive.weeklyTimeHabits?.map(entry => entry.id !== habitId ? entry : { ...entry,
+    series: entry.series?.map(series => {
+      if (series.id !== seriesId) return series;
+      const next = { ...series };
+      if (enabled) next.trophiesEnabled = true;
+      else delete next.trophiesEnabled;
+      return next;
+    }),
+  });
+  const result = { ...archive, weeklyTimeHabits };
+  return result;
 }
 
 /** Converte le vecchie settimane continue in serie senza spostare sessioni o audit. Conserva solo settimane iniziali/con dati, senza creare periodi vuoti saltati. */

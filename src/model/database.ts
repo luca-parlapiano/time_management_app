@@ -5,6 +5,7 @@ import type { LoadingOptions } from "./loading.js";
 import type { PlannerArchive } from "./outcomeArchive.js";
 import type { Palette } from "./theme.js";
 import type { Habit, HabitDraft, HabitDashboard, HabitJourneyProgress, HabitTimelineEntry } from "./habit.js";
+import type { Trophy } from "./trophy.js";
 
 export interface DatabaseSnapshot {
   archive: PlannerArchive;
@@ -57,6 +58,8 @@ export interface DBContextValue {
   getTimeYearStatistics(year: number, referenceDate?: string): TimeYearStatistics;
   getTimeSeriesResults(referenceDate?: string): TimeSeriesResult[];
   resolveTimeSeries(habitId: string, seriesId: string, repeat: boolean, nextId: string): Promise<void>;
+  setTimeSeriesTrophiesEnabled(habitId: string, seriesId: string, enabled: boolean): Promise<void>;
+  getTrophies(referenceDate?: string): Trophy[];
 
   getHabitCompletionDate(id: string): string | undefined;
   getHabitProgress(id: string): HabitJourneyProgress;
@@ -80,6 +83,7 @@ export interface DBContextValue {
   recordOutcomes(items: readonly Occurrence[], outcome: ItemOutcome): Promise<{ saved: number; skipped: number; lastDate?: string }>;
   saveHabit(input: HabitDraft, loading?: LoadingOptions): Promise<void>;
   updateHabit(id: string, input: HabitDraft, loading?: LoadingOptions): Promise<void>;
+  setHabitTrophiesEnabled(id: string, enabled: boolean): Promise<void>;
   deleteHabit(id: string, loading?: LoadingOptions): Promise<void>;
   saveItem(item: CalendarItem, unlocked: boolean, target?: EditTarget, weekdays?: number[], loading?: LoadingOptions): Promise<void>;
   deleteItem(target: EditTarget, unlocked: boolean, loading?: LoadingOptions): Promise<void>;

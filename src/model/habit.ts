@@ -21,6 +21,8 @@ export interface Habit {
   icon: EventIcon;
   color: EventColor;
   stepTarget: HabitStepTarget;
+  /** Se true, il raggiungimento di tutti gli step compare nella raccolta Trofei. */
+  trophiesEnabled?: boolean;
 }
 
 export interface HabitDraft {
@@ -29,6 +31,7 @@ export interface HabitDraft {
   icon: EventIcon;
   color: EventColor;
   stepTarget: HabitStepTarget;
+  trophiesEnabled?: boolean;
   startsOn: string;
   weekdays: number[];
   start: string;

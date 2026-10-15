@@ -189,6 +189,21 @@ test('repeat preserves excess and starts an isolated series at zero, without fil
   assert.deepEqual(a.parseArchive(a.exportArchive(archive)), archive);
 });
 
+test('time trophies are opt-in, require a concluded target and remain isolated by series', () => {
+  const date = '2026-10-06';
+  let archive = seriesDomain.setTimeSeriesTrophiesEnabled(periodic(), 'hours', 'hours:first', true);
+  archive = save(archive, session('trophy-session', date, 150), 'trophy-command', date);
+  assert.deepEqual(new StatisticsRepository(archive).getTrophies(date).map(trophy => [trophy.earnedOn, trophy.concluded, trophy.achieved]), [[undefined, false, 150]], 'An open series stays visible but unearned');
+  archive = seriesDomain.resolveTimeSeries(archive, 'hours', 'hours:first', true, 'next-trophy-series', date);
+  const trophies = new StatisticsRepository(archive).getTrophies(date);
+  assert.deepEqual(trophies.map(trophy => [trophy.kind, trophy.earnedOn, trophy.concluded, trophy.achieved, trophy.target]), [['time', date, true, 150, 120], ['time', undefined, false, 0, 120]]);
+  assert.equal(archive.weeklyTimeHabits[0].series[1].trophiesEnabled, true, 'A repeated series inherits the opt-in');
+  const optedOut = seriesDomain.setTimeSeriesTrophiesEnabled(archive, 'hours', 'hours:first', false);
+  assert.deepEqual(new StatisticsRepository(optedOut).getTrophies(date).map(trophy => [trophy.id, trophy.earnedOn, trophy.concluded]), [['time:hours:next-trophy-series', undefined, false]]);
+  assert.equal(optedOut.weeklyTimeHabits[0].series[1].trophiesEnabled, true);
+  assert.deepEqual(a.parseArchive(a.exportArchive(archive)), archive);
+});
+
 test('reaching or exceeding the target can restart immediately, including multiple series on the same day', () => {
   for (const minutes of [120, 128]) {
     const date = '2026-10-06';

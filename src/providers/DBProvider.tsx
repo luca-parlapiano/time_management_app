@@ -1,5 +1,5 @@
 import { saveWeeklyTimeHabit, cancelWeeklyTimeTarget, archiveWeeklyTimeHabit, saveTimeSession } from "../domain/weeklyTime";
-import { resolveTimeSeries, validateTimePlan } from "../domain/timeSeries";
+import { resolveTimeSeries, setTimeSeriesTrophiesEnabled, validateTimePlan } from "../domain/timeSeries";
 import { today } from "../utils/dates";
 import { reconcileHabitCompletion } from "../domain/habitCompletion";
 import { StatisticsRepository } from "../repository/StatisticsRepository";
@@ -7,7 +7,7 @@ import { createContext, useCallback, useEffect, useMemo, useRef, useState } from
 import type { ReactNode } from "react";
 import { clearCalendar, deleteItem, emptyCalendar, isProgressActivity, occurrences, putItem, putWeeklyActivity, setOccurrenceOutcome } from "../domain/calendar";
 import { outcomeRecord } from "../domain/outcomeArchive";
-import { createHabit, deleteHabit, updateHabit } from "../domain/habits";
+import { createHabit, deleteHabit, setHabitTrophiesEnabled, updateHabit } from "../domain/habits";
 import { useLoading } from "../hooks/useLoading";
 import type { ItemData, ItemOutcome, Occurrence } from "../model/calendar.js";
 import type { DBContextValue, DatabaseSnapshot, DBRepository } from "../model/database.js";
@@ -117,7 +117,9 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
     getTimeMinutes: (date, habitId) => statistics.getTimeMinutes(date, habitId),
     getTimeYearStatistics: (year, referenceDate) => statistics.getTimeYearStatistics(year, referenceDate),
     getTimeSeriesResults: referenceDate => statistics.getTimeSeriesResults(referenceDate),
+    getTrophies: referenceDate => statistics.getTrophies(referenceDate),
     resolveTimeSeries: (habitId, seriesId, repeat, nextId) => mutate(archive => resolveTimeSeries(archive, habitId, seriesId, repeat, nextId, today())),
+    setTimeSeriesTrophiesEnabled: (habitId, seriesId, enabled) => mutate(archive => setTimeSeriesTrophiesEnabled(archive, habitId, seriesId, enabled), false, { scope: `time-trophies:${seriesId}` }),
     getHabitCompletionDate: id => statistics.getHabitCompletionDate(id),
     getHabitProgress: id => statistics.getHabitProgress(id),
     getHabitTimeline: (id, from, through) => statistics.getHabitTimeline(id, from, through),
@@ -144,6 +146,7 @@ export function DBProvider({ children, repository = repositoryDB }: DBProviderPr
       const result = updateHabit(archive.calendar, archive.habits ?? [], id, input);
       return { ...archive, calendar: result.calendar, habits: result.habits };
     }, false, loading ?? { scope: `habit:${id}` }),
+    setHabitTrophiesEnabled: (id, enabled) => mutate(archive => ({ ...archive, habits: setHabitTrophiesEnabled(archive.habits ?? [], id, enabled) }), false, { scope: `habit-trophies:${id}` }),
     deleteHabit: (id, loading) => mutate(archive => {
       const result = deleteHabit(archive.calendar, archive.habits ?? [], id);
       return { ...archive, calendar: result.calendar, habits: result.habits };

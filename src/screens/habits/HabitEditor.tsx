@@ -22,7 +22,7 @@ export function HabitEditor({ habit: sourceHabit, repeat = false, onClose, onSav
   const habit = repeat ? undefined : sourceHabit;
   const initial = repeat && sourceHabit ? repeatHabitDraft(archive, sourceHabit, today()) : habit ? habitDraft(state, habit) : {
     title: "", motivation: "", startsOn: today(), weekdays: [] as number[], start: "19:00", durationMinutes: 20,
-    icon: "activity" as EventIconName, color: "purple" as EventColor, stepTarget: 5 as HabitStepTarget,
+    icon: "activity" as EventIconName, color: "purple" as EventColor, stepTarget: 5 as HabitStepTarget, trophiesEnabled: false,
   };
   const [title, setTitle] = useState(initial.title);
   const [motivation, setMotivation] = useState(initial.motivation);
@@ -33,6 +33,7 @@ export function HabitEditor({ habit: sourceHabit, repeat = false, onClose, onSav
   const [icon, setIcon] = useState<EventIconName>(initial.icon);
   const [color, setColor] = useState<EventColor>(initial.color);
   const [stepTarget, setStepTarget] = useState<HabitStepTarget>(initial.stepTarget);
+  const [trophiesEnabled, setTrophiesEnabled] = useState(Boolean(initial.trophiesEnabled));
   const [error, setError] = useState("");
   const [collision, setCollision] = useState<CalendarConflictError | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -44,7 +45,7 @@ export function HabitEditor({ habit: sourceHabit, repeat = false, onClose, onSav
         try {
           const normalizedStart = normalizeTimeInput(start);
           if (!normalizedStart) throw new Error("Inserisci un orario valido, per esempio 19:30.");
-          const draft = { title, motivation, startsOn, weekdays, start: normalizedStart, durationMinutes, icon, color, stepTarget };
+          const draft = { title, motivation, startsOn, weekdays, start: normalizedStart, durationMinutes, icon, color, stepTarget, trophiesEnabled };
           if (habit) await updateHabit(habit.id, draft);
           else await saveHabit(draft);
           onSaved(firstHabitOccurrenceDate(draft));
@@ -64,6 +65,7 @@ export function HabitEditor({ habit: sourceHabit, repeat = false, onClose, onSav
         <fieldset><legend>Piccolo traguardo</legend><p className="editor-hint">Scegli da 1 a 12 eventi. Ogni esito, Fatto o Non fatto, vale uno step. La serie si conclude quando tutti gli eventi hanno un esito.</p><div className="habit-step-options">
           {stepTargets.map(value => <button key={value} type="button" aria-pressed={stepTarget === value} onClick={() => setStepTarget(value)}>{value}</button>)}
         </div></fieldset>
+        <label className="trophy-option"><input type="checkbox" checked={trophiesEnabled} onChange={event => setTrophiesEnabled(event.target.checked)} /><span><strong>Usa trofei</strong><small>Se tutti gli step saranno fatti, aggiungeremo questo traguardo alla tua raccolta.</small></span></label>
         <fieldset><legend>Giorni</legend><div className="habit-weekdays">
           {weekdayLabels.map((day, index) => <button key={day.key} type="button" aria-pressed={weekdays.includes(index)} onClick={() => { setCollision(null); setWeekdays(current => current.includes(index) ? current.filter(value => value !== index) : [...current, index].sort()); }}>{day.label}</button>)}
         </div></fieldset>
