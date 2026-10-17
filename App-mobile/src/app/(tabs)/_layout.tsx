@@ -1,5 +1,6 @@
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ColorValue } from 'react-native';
 import { useAppColors } from '../../ui/theme';
 
@@ -23,7 +24,14 @@ export default function TabLayout() {
   }}>
     <Tabs.Screen name="index" options={{ title: 'Oggi', tabBarIcon: ({ color }) => icon('today', color) }} />
     <Tabs.Screen name="habits" options={{ title: 'Abitudini', tabBarIcon: ({ color }) => icon('habits', color) }} />
+    <Tabs.Screen name="create" options={{ title: 'Crea', tabBarShowLabel: false, tabBarButton: () => <Pressable accessibilityRole="button" accessibilityLabel="Crea un percorso" onPress={() => router.push('/create-choice')} style={styles.createTab}><View style={[styles.createCircle, { backgroundColor: colors.accent }]}><Text style={[styles.createPlus, { color: colors.accentText }]}>+</Text></View></Pressable> }} />
     <Tabs.Screen name="calendar" options={{ title: 'Calendario', tabBarIcon: ({ color }) => icon('calendar', color) }} />
     <Tabs.Screen name="progress" options={{ title: 'Progressi', tabBarIcon: ({ color }) => icon('progress', color) }} />
   </Tabs>;
 }
+
+const styles = StyleSheet.create({
+  createTab: { flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: -17 },
+  createCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', elevation: 5, shadowColor: '#000000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  createPlus: { fontSize: 33, fontWeight: '400', lineHeight: 38 },
+});

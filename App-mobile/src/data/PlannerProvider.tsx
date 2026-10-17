@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import { isProgressActivity, setOccurrenceOutcome } from '../core/domain/calendar';
 import { reconcileHabitCompletion } from '../core/domain/habitCompletion';
-import { createHabit, setHabitTrophiesEnabled } from '../core/domain/habits';
+import { createHabit } from '../core/domain/habits';
 import { outcomeRecord } from '../core/domain/outcomeArchive';
 import { saveWeeklyTimeHabit, saveTimeSession } from '../core/domain/weeklyTime';
 import type { HabitDraft } from '../core/model/habit';
@@ -24,8 +24,7 @@ interface PlannerValue {
   createStepHabit: (draft: HabitDraft) => Promise<void>;
   createTimeHabit: (draft: WeeklyTimeHabitDraft) => Promise<void>;
   recordOutcome: (item: Occurrence, outcome: ItemOutcome) => Promise<void>;
-  recordTime: (habitId: string, minutes: number) => Promise<void>;
-  setTrophies: (habitId: string, enabled: boolean) => Promise<void>;
+  recordTime: (habitId: string, minutes: number, notes: string) => Promise<void>;
 }
 
 const PlannerContext = createContext<PlannerValue | null>(null);
@@ -95,10 +94,9 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         history: [...archive.history, outcomeRecord(archive.calendar, item, outcome)],
       };
     }),
-    recordTime: (habitId, minutes) => persist(archive => saveTimeSession(archive, {
-      commandId: randomUUID(), session: { id: randomUUID(), habitId, date: today(), minutes, notes: '', removed: false },
+    recordTime: (habitId, minutes, notes) => persist(archive => saveTimeSession(archive, {
+      commandId: randomUUID(), session: { id: randomUUID(), habitId, date: today(), minutes, notes: notes.trim(), removed: false },
     }, today(), new Date().toISOString())),
-    setTrophies: (habitId, enabled) => persist(archive => ({ ...archive, habits: setHabitTrophiesEnabled(archive.habits ?? [], habitId, enabled) })),
   }), [snapshot, statistics, saving, error, retry, persist]);
   return <PlannerContext.Provider value={value}>{children}</PlannerContext.Provider>;
 }

@@ -11,6 +11,7 @@ export default function RootLayout() {
     <StatusBar style="auto" />
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="create-choice" options={{ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }} />
       <Stack.Screen name="new-habit" options={{ presentation: 'modal' }} />
     </Stack>
   </PlannerProvider>;
