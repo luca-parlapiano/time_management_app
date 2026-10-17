@@ -1,4 +1,4 @@
-# Time Planner mobile
+# MindMorrow mobile
 
 Primo porting Expo (SDK 58) dell'app desktop. La UI React Native usa Expo Router,
 mentre un archivio SQLite locale conserva calendario, esiti, abitudini e storico.

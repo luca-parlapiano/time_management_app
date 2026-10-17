@@ -3,6 +3,7 @@ import { isNonNegativeSafeInteger } from "../src/utils/numbers.js";
 import { DatabaseService } from "./databaseService.js";
 import { validateArchive } from "../src/domain/outcomeArchive.js";
 import { app, BrowserWindow, ipcMain } from "electron";
+import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { LlamaPlanningRuntime } from "./llamaPlanningRuntime.js";
@@ -12,6 +13,11 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, "../..");
 const resourceRoot = app.isPackaged ? process.resourcesPath : path.join(projectRoot, "resources");
 const planningIntentRuntime = new LlamaPlanningRuntime(resourceRoot);
+
+// Mantiene il percorso dei dati esistente dopo il cambio di nome visibile dell'app.
+const userDataPath = path.join(app.getPath("appData"), "time-management-app");
+mkdirSync(userDataPath, { recursive: true });
+app.setPath("userData", userDataPath);
 
 ipcMain.handle("planner-ai:interpret", async (_event, text: unknown) => {
   if (typeof text !== "string" || !text.trim()) {
@@ -29,7 +35,7 @@ function createMainWindow() {
     height: 940,
     minWidth: 1100,
     minHeight: 760,
-    title: "Time Planner — Calendario",
+    title: "MindMorrow — Calendario",
     backgroundColor: "#f3efe6",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),

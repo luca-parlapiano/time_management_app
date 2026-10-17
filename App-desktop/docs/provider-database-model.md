@@ -130,7 +130,8 @@ Ogni operazione ha un identificatore: la prima operazione che termina non nascon
 
 ## SQLite e inizializzazione
 
-Il file `agenda.sqlite` si trova nella directory `app.getPath("userData")` di Electron.
+Il file `agenda.sqlite` si trova nella directory `app.getPath("userData")` di Electron,
+fissata alla cartella `time-management-app` anche dopo il cambio del nome visibile in MindMorrow.
 Lo schema 5 comprende `activities`, `habits`, `goals`, `outcome_records`, `metadata`,
 `weekly_time_habits`, `time_sessions` e `time_session_history`. Gli esiti hanno
 colonne per data dell’appuntamento, identità dell’occorrenza e momento della registrazione,

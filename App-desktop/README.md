@@ -1,4 +1,4 @@
-# Time Planner — Calendario locale
+# MindMorrow — Calendario locale
 
 App desktop locale basata su Electron, React, Vite e TypeScript, con SQLite in un
 worker. Si apre sulla dashboard della giornata senza richiedere un profilo o un piano.
