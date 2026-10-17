@@ -12,6 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, "../..");
 const resourceRoot = app.isPackaged ? process.resourcesPath : path.join(projectRoot, "resources");
+const appIconPath = path.join(projectRoot, app.isPackaged ? "dist" : "public", "app-icon.png");
 const planningIntentRuntime = new LlamaPlanningRuntime(resourceRoot);
 
 // Mantiene il percorso dei dati esistente dopo il cambio di nome visibile dell'app.
@@ -36,6 +37,7 @@ function createMainWindow() {
     minWidth: 1100,
     minHeight: 760,
     title: "MindMorrow — Calendario",
+    icon: appIconPath,
     backgroundColor: "#f3efe6",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -76,6 +78,7 @@ function createMainWindow() {
 
 let database: DatabaseService | undefined;
 app.whenReady().then(() => {
+  if (process.platform === "darwin") app.dock?.setIcon(appIconPath);
   database = new DatabaseService(path.join(app.getPath("userData"), "agenda.sqlite"));
   const trusted = (event: Electron.IpcMainInvokeEvent) => {
     const sender = BrowserWindow.fromWebContents(event.sender);
