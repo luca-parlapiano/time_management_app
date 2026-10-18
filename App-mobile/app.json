@@ -8,6 +8,7 @@
     "scheme": "timeplanner",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "l.parlapiano.mindmorrow",
       "supportsTablet": true
     },
     "android": {
