@@ -1,4 +1,4 @@
-import { createTimeSeries, seriesAtDate, seriesForSession, timePeriodBounds } from './timeSeries.js';
+import { createTimeSeries, seriesAtDate, seriesForSession, timePeriodBounds, timeSeriesResults } from './timeSeries.js';
 import { eventColors, eventIcons, MAX_MONTHLY_MINUTES, MAX_SESSION_MINUTES, MAX_WEEKLY_MINUTES } from '../constants.js';
 import { addDays, validDate, weekStart } from '../utils/dates.js';
 import { isFiniteNumber, isIntegerInRange } from '../utils/numbers.js';
@@ -202,6 +202,9 @@ export function saveTimeSession(archive: PlannerArchive, command: TimeSessionCom
   if (habit.series) {
     const series = seriesForSession(habit, session);
     if (!series || series.decision || session.date < series.startsOn || session.date > series.endsOn || (previous && seriesForSession(habit, previous)?.id !== series.id)) throw new Error('La registrazione deve restare nella sua serie aperta.');
+    if ((!previous || previous.removed) && !session.removed && timeSeriesResults(archive, referenceDate).some(result => result.habit.id === habit.id && result.series.id === series.id && result.reached)) {
+      throw new Error('Obiettivo raggiunto. Scegli come proseguire dal riepilogo della serie.');
+    }
   }
   if (previous && previous.habitId !== session.habitId) throw new Error('Non puoi cambiare abitudine a una sessione.');
   if (session.date > referenceDate && (!session.removed || !previous || !sameSession({ ...previous, removed: true }, session))) throw new Error('Puoi registrare soltanto tempo già svolto.');

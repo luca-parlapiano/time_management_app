@@ -209,6 +209,8 @@ test('reaching or exceeding the target can restart immediately, including multip
     const date = '2026-10-06';
     let archive = save(periodic(), session('a', date, minutes), 'first', date);
     const firstId = archive.weeklyTimeHabits[0].series[0].id;
+    assert.throws(() => save(archive, session('extra', date, 30), 'extra', date), /Scegli come proseguire/);
+    assert.equal(archive.timeSessions.length, 1);
     const history = structuredClone(archive.timeSessionHistory);
     archive = seriesDomain.resolveTimeSeries(archive, 'hours', firstId, true, 'second', date);
     a.validateArchive(archive);
@@ -293,9 +295,9 @@ test('annual time statistics include archived and repeated series without counti
   const date = '2026-10-13';
   let archive = periodic('month', '2026-10-01', 120);
   const dailyBefore = new StatisticsRepository(archive).getDailyStatistics(date);
+  archive = save(archive, session('removed', date, 30), 'extra', date);
   archive = save(archive, session('a', date, 120), 'original', date);
   archive = save(archive, session('a', date, 128, { notes: 'Correzione confermata' }), 'corrected', date);
-  archive = save(archive, session('removed', date, 30), 'extra', date);
   archive = save(archive, session('removed', date, 30, { removed: true }), 'remove', date);
   archive = seriesDomain.resolveTimeSeries(archive, 'hours', archive.weeklyTimeHabits[0].series[0].id, true, 'next', date);
   archive = save(archive, session('b', date, 120), 'second-series', date);

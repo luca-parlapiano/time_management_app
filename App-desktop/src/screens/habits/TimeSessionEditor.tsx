@@ -7,6 +7,7 @@ import { seriesForSession } from '../../domain/timeSeries';
 import { durationMinutes } from '../../domain/calendar';
 import { displayDate, today } from '../../utils/dates';
 import { formatDurationMinutes } from '../../utils/time';
+import { TimeSeriesConclusion } from './TimeSeriesConclusion';
 import type { Occurrence } from '../../model/calendar';
 import type { TimeSession } from '../../model/weeklyTime';
 
@@ -14,7 +15,7 @@ interface Props { habitId?: string; session?: TimeSession; occurrence?: Occurren
 
 /** Registra minuti reali, anche senza appuntamento; un comando stabile rende innocuo il retry dopo un errore. */
 export function TimeSessionEditor({ habitId, session, occurrence, onClose }: Props) {
-  const { weeklyTimeHabits, timeSessions, saveTimeSession, saving } = useDB();
+  const { weeklyTimeHabits, timeSessions, getTimeSeriesResults, saveTimeSession, saving } = useDB();
   const existing = session ?? (occurrence ? timeSessions.find(entry => entry.sourceId === occurrence.sourceId && entry.occurrenceDate === occurrence.occurrenceDate) : undefined);
   const [draft, setDraft] = useState<TimeSession>(() => existing ? { ...existing, removed: false } : { id: crypto.randomUUID(), habitId: habitId ?? occurrence?.weeklyHabitId ?? weeklyTimeHabits.find(habit => !habit.archivedOn)?.id ?? '', date: today(), minutes: occurrence ? durationMinutes(occurrence) : 60, notes: '', removed: false, ...(occurrence ? { sourceId: occurrence.sourceId, occurrenceDate: occurrence.occurrenceDate } : {}) });
   const [commandId, setCommandId] = useState(() => crypto.randomUUID());
@@ -22,8 +23,10 @@ export function TimeSessionEditor({ habitId, session, occurrence, onClose }: Pro
   const [manualId, setManualId] = useState('');
   const habit = weeklyTimeHabits.find(entry => entry.id === draft.habitId);
   const series = habit ? seriesForSession(habit, draft) ?? habit.series?.at(-1) : undefined;
+  const result = series && getTimeSeriesResults().find(entry => entry.habit.id === habit?.id && entry.series.id === series.id);
   const manual = occurrence && !existing ? timeSessions.filter(entry => entry.habitId === draft.habitId && !entry.sourceId && !entry.removed && (!series || (habit && seriesForSession(habit, entry)?.id === series.id))) : [];
   const change = (patch: Partial<TimeSession>) => { setDraft(current => ({ ...current, ...patch })); setCommandId(crypto.randomUUID()); setError(''); };
+  if (!existing && result && !series?.decision && (result.reached || series.endsOn < today())) return <TimeSeriesConclusion result={result} onClose={onClose} />;
   return <CalendarDialog title={existing ? 'Modifica tempo registrato' : 'Aggiungi tempo'} onClose={onClose}>
     <form className="habit-editor" onSubmit={async event => {
       event.preventDefault();

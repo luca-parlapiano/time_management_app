@@ -7,6 +7,7 @@ import { createDevRepository } from '../src/repository/DevRepository';
 import { useDB } from '../src/hooks/useDB';
 import { addDays, today, weekStart } from '../src/utils/dates';
 import { formatDurationMinutes } from '../src/utils/time';
+import { TimeSessionEditor } from '../src/screens/habits/TimeSessionEditor';
 import type { DBContextValue } from '../src/model/database';
 import '../src/styles.css';
 import '../src/themes.css';
@@ -43,6 +44,8 @@ try {
   await act(async () => { await db.resetAll(); await db.importBackup(backup); });
   check(db!.weeklyTimeHabits[0].series!.length === 2 && db!.getTimeSeriesResults()[0].reached, 'Backup ripristina serie e trofei senza duplicazioni');
   await act(async () => { await db.saveTimeSession({ commandId: 'early-target', session: { id: 'early-target', habitId: 'roundtrip', date, minutes: 128, notes: 'Obiettivo superato oggi', removed: false } }); });
+  await act(async () => { root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><Probe /><TimeSessionEditor habitId="roundtrip" onClose={() => {}} /></DBProvider></LoadingProvider></StrictMode>); });
+  check(document.querySelector('dialog')?.textContent?.includes('Vuoi continuare con una nuova serie?'), 'Aprire direttamente Aggiungi tempo dopo il traguardo chiede come proseguire');
   await act(async () => { root.render(<StrictMode><LoadingProvider><DBProvider repository={repository}><Probe /><App /></DBProvider></LoadingProvider></StrictMode>); });
   check(document.body.textContent?.includes('Vuoi continuare con una nuova serie?'), 'Obiettivo superato: la richiesta compare subito, prima della scadenza');
   await act(async () => { document.querySelector<HTMLButtonElement>('dialog button[aria-label="Chiudi"]')!.click(); });
