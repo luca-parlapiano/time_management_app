@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useDB } from '../../hooks/useDB';
 import { today } from '../../utils/dates';
-import { eventColors } from '../../constants';
+import { eventColorValue } from '../../constants';
 import { EventIcon } from '../../icons/EventIcon';
 import { StandardButton } from '../../components/ui/StandardButton';
 import { WeeklyTimeSummary } from '../habits/WeeklyTimeSummary';
@@ -19,7 +19,7 @@ export function WeeklyTimeToday({ onAddTime, onOpenHabits, onReviewSeries }: Pro
     const series = habit.series?.at(-1);
     const progress = getWeeklyTimeProgress(habit.id, date, date, series?.id);
     const canConclude = series && !series.decision && (progress.state === 'reached' || series.endsOn < date);
-    return <article className="today-path-row" key={habit.id} style={{ '--event-color': eventColors[habit.color].value } as CSSProperties}>
+    return <article className="today-path-row" key={habit.id} style={{ '--event-color': eventColorValue(habit.color) } as CSSProperties}>
       <div className="today-path-main">
       <div className="today-path-identity"><span className="today-path-icon"><EventIcon icon={habit.icon} /></span><div>
       <p className="eyebrow">{series?.period === 'month' ? 'Serie mensile' : 'Serie settimanale'}</p>

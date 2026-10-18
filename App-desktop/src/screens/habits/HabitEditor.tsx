@@ -1,6 +1,6 @@
 import { repeatHabitDraft } from "../../domain/habitCompletion";
 import { useState } from "react";
-import { eventColors, eventIcons, weekdayLabels } from "../../constants";
+import { eventColors, eventColorValue, eventIcons, isEventColor, weekdayLabels } from "../../constants";
 import { CalendarConflictError, displayDate, today } from "../../domain/calendar";
 import { firstHabitOccurrenceDate, habitDraft } from "../../domain/habits";
 import { useDB } from "../../hooks/useDB";
@@ -82,7 +82,8 @@ export function HabitEditor({ habit: sourceHabit, repeat = false, onClose, onSav
           {(Object.keys(eventIcons) as EventIconName[]).map(value => <button key={value} type="button" className="icon-option" aria-label={eventIcons[value]} aria-pressed={icon === value} onClick={() => setIcon(value)}><EventIcon icon={value} /></button>)}
         </div></fieldset>
         <fieldset><legend>Colore</legend><div className="habit-colors">
-          {(Object.keys(eventColors) as EventColor[]).map(value => <button key={value} type="button" aria-label={eventColors[value].label} aria-pressed={color === value} style={{ background: eventColors[value].value }} onClick={() => setColor(value)} />)}
+          {(Object.keys(eventColors) as (keyof typeof eventColors)[]).map(value => <button key={value} type="button" aria-label={eventColors[value].label} aria-pressed={color === value} style={{ background: eventColorValue(value) }} onClick={() => setColor(value)} />)}
+          <input className="habit-custom-color-input" type="color" aria-label="Colore personalizzato" title="Colore personalizzato" data-selected={color.startsWith('#')} value={eventColorValue(color)} onChange={event => { if (isEventColor(event.target.value)) setColor(event.target.value); }} />
         </div></fieldset>
         {occupied && <div role="alert" className="capacity-warning"><p>Il {displayDate(occupied.date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, dalle {occupied.start} alle {occupied.end}, c’è già <strong>{occupied.title}</strong> nel Calendario.</p><p>Nessun evento è stato sostituito. Scegli un altro orario o cambia i giorni, poi riprova.</p></div>}
         {error && <p role="alert" className="capacity-warning">{error}</p>}

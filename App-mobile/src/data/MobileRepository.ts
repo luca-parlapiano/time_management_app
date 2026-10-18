@@ -5,8 +5,9 @@ import { archiveForStorage, upgradeArchive, validateArchive } from '../core/doma
 import { upgradeTimeSeries } from '../core/domain/timeSeries';
 import type { DatabaseSnapshot, DatabaseWrite } from '../core/model/database';
 import type { PlannerArchive } from '../core/model/outcomeArchive';
+import type { Palette } from '../core/model/theme';
 
-type StoredRow = { archive: string; previous: string | null; revision: number };
+type StoredRow = { archive: string; previous: string | null; revision: number; palette: string };
 const initialArchive: PlannerArchive = {
   format: 'time-planner-backup', version: 3, calendar: emptyCalendar(), habits: [], history: [],
 };
@@ -15,7 +16,9 @@ let databasePromise: Promise<SQLite.SQLiteDatabase> | null = null;
 /** Apre l'archivio locale una sola volta e inizializza la riga senza sovrascrivere dati esistenti. */
 async function database(): Promise<SQLite.SQLiteDatabase> {
   databasePromise ??= SQLite.openDatabaseAsync('time-planner-mobile.sqlite').then(async db => {
-    await db.execAsync('CREATE TABLE IF NOT EXISTS planner_snapshot (id INTEGER PRIMARY KEY CHECK (id = 1), archive TEXT NOT NULL, previous TEXT, revision INTEGER NOT NULL)');
+    await db.execAsync("CREATE TABLE IF NOT EXISTS planner_snapshot (id INTEGER PRIMARY KEY CHECK (id = 1), archive TEXT NOT NULL, previous TEXT, revision INTEGER NOT NULL, palette TEXT NOT NULL DEFAULT 'natural')");
+    const columns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(planner_snapshot)');
+    if (!columns.some(column => column.name === 'palette')) await db.execAsync("ALTER TABLE planner_snapshot ADD COLUMN palette TEXT NOT NULL DEFAULT 'natural'");
     await db.runAsync('INSERT OR IGNORE INTO planner_snapshot (id, archive, previous, revision) VALUES (1, ?, NULL, 0)', JSON.stringify(initialArchive));
     return db;
   }).catch(cause => {
@@ -48,6 +51,18 @@ export class MobileRepository {
     };
   }
 
+  async readPalette(): Promise<Palette> {
+    const db = await database();
+    const row = await db.getFirstAsync<Pick<StoredRow, 'palette'>>('SELECT palette FROM planner_snapshot WHERE id = 1');
+    return row?.palette === 'studio' || row?.palette === 'night' ? row.palette : 'natural';
+  }
+
+  async savePalette(palette: Palette): Promise<void> {
+    const db = await database();
+    const result = await db.runAsync('UPDATE planner_snapshot SET palette = ? WHERE id = 1', palette);
+    if (result.changes !== 1) throw new Error('Impossibile salvare la palette.');
+  }
+
   async save(input: DatabaseWrite): Promise<DatabaseSnapshot> {
     if (!Number.isSafeInteger(input.expectedRevision) || input.expectedRevision === null || input.expectedRevision < 0) {
       throw new Error('Revisione non valida.');
@@ -59,6 +74,16 @@ export class MobileRepository {
     const result = await db.runAsync(
       'UPDATE planner_snapshot SET previous = CASE WHEN ? = 1 THEN archive ELSE previous END, archive = ?, revision = revision + 1 WHERE id = 1 AND revision = ?',
       input.replace ? 1 : 0, serialized, input.expectedRevision,
+    );
+    if (result.changes !== 1) throw new Error('Dati aggiornati altrove. Riapri l’app prima di continuare.');
+    return this.read();
+  }
+
+  async reset(expectedRevision: number): Promise<DatabaseSnapshot> {
+    const db = await database();
+    const result = await db.runAsync(
+      "UPDATE planner_snapshot SET archive = ?, previous = NULL, palette = 'natural', revision = revision + 1 WHERE id = 1 AND revision = ?",
+      JSON.stringify(initialArchive), expectedRevision,
     );
     if (result.changes !== 1) throw new Error('Dati aggiornati altrove. Riapri l’app prima di continuare.');
     return this.read();

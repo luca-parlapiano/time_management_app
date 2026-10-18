@@ -4,7 +4,7 @@ import { useDB } from '../../hooks/useDB';
 import { StandardButton } from '../../components/ui/StandardButton';
 import { EventIcon } from '../../icons/EventIcon';
 import { AppIcon } from '../../icons/AppIcon';
-import { eventColors } from '../../constants';
+import { eventColorValue } from '../../constants';
 import { displayDate, today } from '../../utils/dates';
 import { formatDurationMinutes } from '../../utils/time';
 import { HabitStatusTabs } from './HabitStatusTabs';
@@ -45,8 +45,8 @@ export function WeeklyTimeHabits({ selectedId, onSelect, onEditWeekly, onAddTime
       choose(habits.find(habit => habit.id === selectedId)?.id ?? habits[0]?.id ?? '', showArchive);
     }}>
     {!selected ? <div className="habit-empty"><h3>{archived ? 'Nessuna serie conclusa' : 'Fai spazio a ciò che vuoi imparare'}</h3><p>{archived ? 'Qui ritroverai le serie concluse, anche quando scegli di ripeterle.' : 'Scegli le ore da raggiungere in una settimana o in un mese.'}</p>{!archived && <p className="editor-hint">Usa Crea nell’header per iniziare un nuovo percorso.</p>}</div> : <div className="habits-layout">
-      <nav className="habit-list" aria-label="Abitudini a ore">{visible.map(habit => <button key={habit.id} aria-current={habit.id === selected.id ? 'true' : undefined} style={{ '--event-color': eventColors[habit.color].value } as CSSProperties} onClick={() => choose(habit.id)}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{archived ? `${habit.series?.filter(entry => entry.decision).length ?? 0} ${habit.series?.filter(entry => entry.decision).length === 1 ? 'serie conclusa' : 'serie concluse'}` : habit.series?.at(-1)?.period === 'month' ? 'Serie mensile' : 'Serie settimanale'}</small></button>)}</nav>
-      {series && <article className="habit-detail weekly-time-detail" style={{ '--event-color': eventColors[selected.color].value } as CSSProperties}>
+      <nav className="habit-list" aria-label="Abitudini a ore">{visible.map(habit => <button key={habit.id} aria-current={habit.id === selected.id ? 'true' : undefined} style={{ '--event-color': eventColorValue(habit.color) } as CSSProperties} onClick={() => choose(habit.id)}><span className="habit-list-icon"><EventIcon icon={habit.icon} /></span><strong>{habit.title}</strong><small>{archived ? `${habit.series?.filter(entry => entry.decision).length ?? 0} ${habit.series?.filter(entry => entry.decision).length === 1 ? 'serie conclusa' : 'serie concluse'}` : habit.series?.at(-1)?.period === 'month' ? 'Serie mensile' : 'Serie settimanale'}</small></button>)}</nav>
+      {series && <article className="habit-detail weekly-time-detail" style={{ '--event-color': eventColorValue(selected.color) } as CSSProperties}>
         <header><span className="habit-detail-icon"><EventIcon icon={selected.icon} /></span><div><h3>{selected.title}</h3>{selected.motivation && <p>{selected.motivation}</p>}</div>{!ended && !series.decision && <StandardButton variant="ghost" onClick={() => onEditWeekly(selected.id)}>Modifica obiettivo</StandardButton>}</header>
         <label className="time-series-selector">Serie<select value={series.id} onChange={event => setSeriesId(event.target.value)}>{[...visibleSeries].reverse().map(entry => <option key={entry.id} value={entry.id}>Serie {selected.series!.findIndex(value => value.id === entry.id) + 1} · {entry.period === 'month' ? 'Mese' : 'Settimana'} · {displayDate(entry.startsOn, { year: 'numeric' })} – {displayDate(entry.closedOn ?? entry.endsOn, { year: 'numeric' })}{entry.decision ? ' · Conclusa' : entry.endsOn < today() ? ' · Da concludere' : ' · In corso'}</option>)}</select></label>
         <WeeklyTimeSummary progress={getWeeklyTimeProgress(selected.id, series.startsOn, today(), series.id)} />

@@ -1,6 +1,6 @@
 // Generato da scripts/sync-core.mjs: modificare il sorgente in App-desktop.
-import { createTimeSeries, seriesAtDate, seriesForSession, timePeriodBounds } from './timeSeries';
-import { eventColors, eventIcons, MAX_MONTHLY_MINUTES, MAX_SESSION_MINUTES, MAX_WEEKLY_MINUTES } from '../constants';
+import { createTimeSeries, seriesAtDate, seriesForSession, timePeriodBounds, timeSeriesResults } from './timeSeries';
+import { eventIcons, isEventColor, MAX_MONTHLY_MINUTES, MAX_SESSION_MINUTES, MAX_WEEKLY_MINUTES } from '../constants';
 import { addDays, validDate, weekStart } from '../utils/dates';
 import { isFiniteNumber, isIntegerInRange } from '../utils/numbers';
 import { percentage } from '../utils/math';
@@ -40,7 +40,7 @@ export function validateWeeklyTime(archive: PlannerArchive): void {
   for (const value of values) {
     const h = object(value, ['id', 'title', 'motivation', 'icon', 'color', 'startsOn', 'archivedOn', 'targets', 'series']);
     if (!identity(h.id) || habits.has(h.id) || archive.habits?.some(entry => entry.id === h.id) || !identity(h.title) || typeof h.motivation !== 'string' ||
-      typeof h.icon !== 'string' || !Object.hasOwn(eventIcons, h.icon) || typeof h.color !== 'string' || !Object.hasOwn(eventColors, h.color) ||
+      typeof h.icon !== 'string' || !Object.hasOwn(eventIcons, h.icon) || !isEventColor(h.color) ||
       !validDate(h.startsOn) || (h.archivedOn !== undefined && (!validDate(h.archivedOn) || h.archivedOn < h.startsOn)) || !Array.isArray(h.targets) || !h.targets.length) throw new Error('Abitudine a ore non valida.');
     let previous = '';
     for (const [index, value] of h.targets.entries()) {
@@ -203,6 +203,9 @@ export function saveTimeSession(archive: PlannerArchive, command: TimeSessionCom
   if (habit.series) {
     const series = seriesForSession(habit, session);
     if (!series || series.decision || session.date < series.startsOn || session.date > series.endsOn || (previous && seriesForSession(habit, previous)?.id !== series.id)) throw new Error('La registrazione deve restare nella sua serie aperta.');
+    if ((!previous || previous.removed) && !session.removed && timeSeriesResults(archive, referenceDate).some(result => result.habit.id === habit.id && result.series.id === series.id && result.reached)) {
+      throw new Error('Obiettivo raggiunto. Scegli come proseguire dal riepilogo della serie.');
+    }
   }
   if (previous && previous.habitId !== session.habitId) throw new Error('Non puoi cambiare abitudine a una sessione.');
   if (session.date > referenceDate && (!session.removed || !previous || !sameSession({ ...previous, removed: true }, session))) throw new Error('Puoi registrare soltanto tempo già svolto.');

@@ -437,6 +437,23 @@ test('habit creation links weekly occasions atomically and preserves their ident
   for (const stepTarget of [0,13,2.5]) assert.throws(()=>habits.createHabit(c.emptyCalendar(),[],habitDraft({stepTarget}),{habitId:`bad-${stepTarget}`}),/1 a 12/);
   assert.equal(occupied.items.length,1);
 });
+test('new icon choices survive habit creation and archive validation', () => {
+  for (const icon of ['ion-paw', 'diving']) {
+    const created = habits.createHabit(c.emptyCalendar(), [], habitDraft({icon}), {habitId:`habit-${icon}`});
+    assert.equal(created.habits[0].icon, icon);
+    assert.ok(created.calendar.items.every(item => item.icon === icon));
+    assert.doesNotThrow(() => archives.validateArchive({format:'time-planner-backup',version:3,calendar:created.calendar,habits:created.habits,history:[]}));
+  }
+});
+test('a custom color survives habit creation, backup and calendar rendering', () => {
+  const created = habits.createHabit(c.emptyCalendar(), [], habitDraft({color:'#A35FA8'}), {habitId:'habit-color'});
+  const archive = {format:'time-planner-backup',version:3,calendar:created.calendar,habits:created.habits,history:[]};
+  assert.equal(created.habits[0].color, '#A35FA8');
+  assert.ok(created.calendar.items.every(entry => entry.color === '#A35FA8'));
+  assert.equal(c.eventColorValue(created.habits[0].color), '#A35FA8');
+  assert.equal(archives.parseArchive(archives.exportArchive(archive)).habits[0].color, '#A35FA8');
+  assert.throws(() => habits.createHabit(c.emptyCalendar(), [], habitDraft({color:'#12345G'}), {habitId:'bad-color'}), /Aspetto/);
+});
 test('habit first occurrence follows the selected start date and weekday', () => {
   assert.equal(habits.firstHabitOccurrenceDate(habitDraft({startsOn:'2026-10-01',weekdays:[0,2]})),'2026-10-05');
   assert.equal(habits.firstHabitOccurrenceDate(habitDraft({startsOn:'2026-10-01',weekdays:[4,0]})),'2026-10-02');

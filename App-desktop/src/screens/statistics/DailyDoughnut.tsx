@@ -1,7 +1,7 @@
 import { percentage } from "../../utils/math.js";
 import { ArcElement, Chart, DoughnutController, Tooltip } from 'chart.js';
 import { useEffect, useRef } from 'react';
-import { eventColors } from '../../domain/calendar';
+import { eventColorValue } from '../../domain/calendar';
 import type { DailyStatistics } from '../../model/statistics.js';
 
 interface DailyDoughnutProps { statistics: DailyStatistics; compact?: boolean }
@@ -23,7 +23,7 @@ export function DailyDoughnut({statistics, compact = false}: DailyDoughnutProps)
         type: 'doughnut',
         data: {
           labels: [...contributions.map(item => item.title), ...(remaining ? ['Non completate'] : [])],
-          datasets: [{data: [...contributions.map(item => item.completed), ...(remaining ? [remaining] : [])], backgroundColor: [...contributions.map(item => eventColors[item.color].value), ...(remaining ? ['rgba(137,148,167,.3)'] : [])], borderWidth: 0, spacing: compact ? 0 : 2}],
+          datasets: [{data: [...contributions.map(item => item.completed), ...(remaining ? [remaining] : [])], backgroundColor: [...contributions.map(item => eventColorValue(item.color)), ...(remaining ? ['rgba(137,148,167,.3)'] : [])], borderWidth: 0, spacing: compact ? 0 : 2}],
         },
         options: {
           responsive: true, maintainAspectRatio: false, cutout: '68%', animation: false,
@@ -38,7 +38,7 @@ export function DailyDoughnut({statistics, compact = false}: DailyDoughnutProps)
   }, [statistics, compact, total, activities, recorded, completed]);
   const summary = `${date}: ${percent(completionPercent)} completato, ${completed} su ${total} attività superate. ${activities.map(item => `${item.title}: ${percent(item.contributionPercent)} della giornata`).join(', ')}`;
   if (!recorded) return <span className={compact ? 'annual-event-dots' : 'daily-pending'}>
-    <span className="daily-pending-dots" aria-label="Attività pianificate senza esiti">{[...new Set(activities.map(item => item.color))].map(color => <i key={color} style={{backgroundColor: eventColors[color].value}} />)}</span>
+    <span className="daily-pending-dots" aria-label="Attività pianificate senza esiti">{[...new Set(activities.map(item => item.color))].map(color => <i key={color} style={{backgroundColor: eventColorValue(color)}} />)}</span>
     {!compact && <small>{total ? `${total} attività pianificate · Nessun esito registrato` : 'Nessuna attività pianificata'}</small>}
   </span>;
   return <span className={`daily-chart${compact ? ' daily-chart-compact' : ''}`}>
@@ -47,7 +47,7 @@ export function DailyDoughnut({statistics, compact = false}: DailyDoughnutProps)
       <span className="daily-doughnut-total" aria-hidden="true">{percent(completionPercent)}</span>
     </span>
     {!compact && <span className="daily-chart-legend">
-      {activities.map(item => <span key={item.key}><i style={{backgroundColor: eventColors[item.color].value}} aria-hidden="true" /><span>{item.title}</span><strong>{percent(item.contributionPercent)}</strong></span>)}
+      {activities.map(item => <span key={item.key}><i style={{backgroundColor: eventColorValue(item.color)}} aria-hidden="true" /><span>{item.title}</span><strong>{percent(item.contributionPercent)}</strong></span>)}
       <small>{completed}/{total} attività superate · {statistics.skipped} non superate · {statistics.pending} senza esito. Le percentuali indicano il contributo al totale della giornata.</small>
     </span>}
   </span>;

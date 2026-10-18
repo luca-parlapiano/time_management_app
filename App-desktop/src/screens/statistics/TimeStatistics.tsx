@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { TimeActivityStatistics, TimeStatisticsSession } from '../../model/statistics';
-import { eventColors } from '../../constants';
+import { eventColorValue } from '../../constants';
 import { EventIcon } from '../../icons/EventIcon';
 import { displayDate } from '../../utils/dates';
 import { formatDurationMinutes } from '../../utils/time';
@@ -9,7 +9,7 @@ import { StandardButton } from '../../components/ui/StandardButton';
 
 /** Mostra le registrazioni confermate ricevute dal Provider, con data, durata e nota. */
 export function RecordedTimeEntries({ sessions }: { sessions: TimeStatisticsSession[] }) {
-  return <ul className="annual-event-list recorded-time-entries">{sessions.map(session => <li key={session.id} style={{ '--event-color': eventColors[session.color].value } as CSSProperties}>
+  return <ul className="annual-event-list recorded-time-entries">{sessions.map(session => <li key={session.id} style={{ '--event-color': eventColorValue(session.color) } as CSSProperties}>
     <span className="sidebar-activity-icon"><EventIcon icon={session.icon} /></span>
     <div><strong>{session.title} · {formatDurationMinutes(session.minutes)}</strong><p><time dateTime={session.date}>{displayDate(session.date, { year: 'numeric' })}</time></p>{session.notes && <p>{session.notes}</p>}</div>
   </li>)}</ul>;
@@ -24,7 +24,7 @@ export function TimeActivityStatisticsList({ activities }: { activities: TimeAct
     <p className="annual-hint">Ore effettivamente registrate nell’anno fino a oggi, comprese le serie concluse. Le sessioni pianificate e gli inserimenti rimossi sono esclusi.</p>
     {activities.map(({ activity, minutes, sessionCount, completedSeries, days }) => {
       const expanded = expandedId === activity.id;
-      return <article key={activity.id} className="activity-statistics-card time-statistics-card" style={{ '--activity-color': eventColors[activity.color].value } as CSSProperties}>
+      return <article key={activity.id} className="activity-statistics-card time-statistics-card" style={{ '--activity-color': eventColorValue(activity.color) } as CSSProperties}>
         <div className="activity-statistics-row">
           <div className="activity-statistics-identity"><span className="activity-medallion"><EventIcon icon={activity.icon} /></span><h3>{activity.title}</h3></div>
           <div className="activity-completed"><strong>{formatDurationMinutes(minutes)}</strong><span>tempo registrato</span></div>

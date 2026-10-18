@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { eventColors, weekdayLabels } from '../../constants';
+import { eventColorValue, weekdayLabels } from '../../constants';
 import { dateNumber, displayDate, today } from '../../utils/dates';
 import type { ActivityDayStatistics, ActivityYearStatistics } from '../../model/statistics.js';
 import { CalendarDialog } from '../../components/ui/CalendarDialog';
@@ -21,7 +21,7 @@ export function ActivityHeatmap({statistics}: ActivityHeatmapProps) {
   const {activity, year} = statistics;
   const referenceDate = today();
   const selected = statistics.days.find(day => day.date === selectedDate);
-  return <section className="activity-heatmap" aria-label="Statistiche per attività" style={{'--activity-color': eventColors[activity.color].value} as CSSProperties}>
+  return <section className="activity-heatmap" aria-label="Statistiche per attività" style={{'--activity-color': eventColorValue(activity.color)} as CSSProperties}>
     <p className="annual-hint">Ogni quadrato è un giorno. Fatto = 100%, non fatto = 0%. Con più occorrenze mostriamo la media sul totale pianificato, contando quelle senza esito come zero. I giorni futuri non mostrano risultati.</p>
     <div className="activity-heatmap-legend" aria-label="Legenda">
       <span><i className="heatmap-swatch empty" />Non pianificata</span>

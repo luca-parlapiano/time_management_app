@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useDB } from '../../hooks/useDB';
-import { eventColors } from '../../constants';
+import { eventColorValue } from '../../constants';
 import { displayDate, today } from '../../utils/dates';
 import { EventIcon } from '../../icons/EventIcon';
 import { ActivityHeatmap, dayDescription } from './ActivityHeatmap';
@@ -21,7 +21,7 @@ export function ActivityStatisticsList({ year, timeActivities }: { year: number;
     {activities.map(statistics => {
       const { activity, completedSeries, completed, futureCompleted, skipped, recentDays } = statistics;
       const expanded = expandedId === activity.id;
-      return <article className="activity-statistics-card" key={activity.id} style={{ '--activity-color': eventColors[activity.color].value } as CSSProperties}>
+      return <article className="activity-statistics-card" key={activity.id} style={{ '--activity-color': eventColorValue(activity.color) } as CSSProperties}>
         <div className="activity-statistics-row">
           <div className="activity-statistics-identity"><span className="activity-medallion"><EventIcon icon={activity.icon} /></span><h3>{activity.title}</h3></div>
           <div className="activity-completed"><strong>{completedSeries ?? completed}</strong><span>{completedSeries !== null ? (completedSeries === 1 ? 'serie conclusa' : 'serie concluse') : (completed === 1 ? 'evento completato' : 'eventi completati')}</span></div>

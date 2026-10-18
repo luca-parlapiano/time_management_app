@@ -5,8 +5,8 @@
  * la persistenza e aggiorna la UI soltanto dopo la conferma del repository.
  * Date e orari rappresentano giorni civili e minuti di orologio, non istanti locali.
  */
-import { DAY, outcomeLabels, eventIcons, eventColors } from "../constants";
-export { outcomeLabels, eventIcons, eventColors, kindLabels } from "../constants";
+import { DAY, outcomeLabels, eventIcons, isEventColor } from "../constants";
+export { outcomeLabels, eventIcons, eventColors, eventColorValue, eventColorLabel, isEventColor, kindLabels } from "../constants";
 import { toMinutes as minute } from "../utils/time";
 import { addDays, dateNumber, displayDate, validDate, weekStart } from "../utils/dates";
 import { isIntegerInRange, isPositiveNumber } from "../utils/numbers";
@@ -82,7 +82,7 @@ function endMinute(item: ItemData): number { return dateNumber(item.endDate) / 6
 export function validateData(data: ItemData): void {
   if (data.coverImage !== undefined && typeof data.coverImage !== "boolean") throw new Error("Immagine non valida.");
   if (data.icon !== undefined && !Object.hasOwn(eventIcons, data.icon)) throw new Error("Icona non valida.");
-  if (data.color !== undefined && !Object.hasOwn(eventColors, data.color)) throw new Error("Colore non valido.");
+  if (data.color !== undefined && !isEventColor(data.color)) throw new Error("Colore non valido.");
   if (typeof data.title !== "string" || !data.title.trim()) throw new Error("Inserisci un titolo.");
   if (!validDate(data.date) || !validDate(data.endDate)) throw new Error("Inserisci date valide.");
   if (![data.start, data.end].every(t => typeof t === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(t))) throw new Error("Inserisci orari validi.");

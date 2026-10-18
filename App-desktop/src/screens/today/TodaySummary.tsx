@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { Occurrence } from '../../model/calendar';
 import { useDB } from '../../hooks/useDB';
-import { eventColors } from '../../constants';
+import { eventColorValue } from '../../constants';
 import { formatDurationMinutes } from '../../utils/time';
 import { displayDate, weekStart } from '../../utils/dates';
 
@@ -23,8 +23,8 @@ export function TodaySummary({ date, next, onOpenEvent }: Props) {
       <strong className="today-summary-value">{daily.total ? <>{daily.completed}<small> / {daily.total} fatte</small></> : 'Giornata libera'}</strong>
       {daily.total > 0 ? <>
         {daily.recorded > 0 ? <div className="today-completion" role="img" aria-label={`${daily.completed} attività fatte su ${daily.total}`}>
-          {daily.activities.filter(activity => activity.completed > 0).map(activity => <span key={activity.key} style={{ width: `${activity.contributionPercent}%`, background: eventColors[activity.color].value }} />)}
-        </div> : <div className="today-summary-dots" aria-label="Attività pianificate, nessun esito registrato">{daily.activities.map(activity => <span key={activity.key} title={activity.title} style={{ '--event-color': eventColors[activity.color].value } as CSSProperties} />)}</div>}
+          {daily.activities.filter(activity => activity.completed > 0).map(activity => <span key={activity.key} style={{ width: `${activity.contributionPercent}%`, background: eventColorValue(activity.color) }} />)}
+        </div> : <div className="today-summary-dots" aria-label="Attività pianificate, nessun esito registrato">{daily.activities.map(activity => <span key={activity.key} title={activity.title} style={{ '--event-color': eventColorValue(activity.color) } as CSSProperties} />)}</div>}
         <p>{daily.recorded ? `${daily.skipped} non fatte · ${daily.pending} senza esito` : 'Il primo passo ti aspetta'}</p>
       </> : <p>Nessuna attività pianificata per oggi.</p>}
     </section>

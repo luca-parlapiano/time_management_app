@@ -5,7 +5,7 @@ import { useDB } from "../../hooks/useDB";
 import { DailyDoughnut } from "./DailyDoughnut";
 import type { CSSProperties } from "react";
 import { memo, useMemo, useState } from "react";
-import { addDays, displayDate, eventAppearance, eventColors, isProgressActivity, occurrences, outcomeLabels, today } from "../../domain/calendar";
+import { addDays, displayDate, eventAppearance, eventColorValue, isProgressActivity, occurrences, outcomeLabels, today } from "../../domain/calendar";
 import { latestOutcomes, progressOutcomeHistory, statisticsOutcomeLabels } from "../../domain/outcomeArchive";
 import type { CalendarState, Occurrence } from "../../model/calendar.js";
 import type { OutcomeRecord } from "../../model/outcomeArchive.js";
@@ -116,7 +116,7 @@ function CalendarStatisticsContent({ state, history }: CalendarStatisticsProps) 
       {(byDate.get(selectedDate) ?? []).length === 0 ? (!timeByDate.has(selectedDate) && <p>Nessuna abitudine o attività monitorata per questa data.</p>) : <ul className="annual-event-list">
         {byDate.get(selectedDate)!.map(item => {
           const appearance = eventAppearance(item);
-          return <li key={item.id} style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
+          return <li key={item.id} style={{ "--event-color": eventColorValue(appearance.color) } as CSSProperties}>
             <span className="sidebar-activity-icon"><EventIcon icon={appearance.icon} /></span>
             <div><strong>{item.title}</strong><p>{item.date < selectedDate ? "Dal giorno precedente" : item.start} – {item.endDate > selectedDate ? "Continua nel giorno successivo" : item.end}</p>{item.outcome && <small>{outcomeLabels[item.outcome]}</small>}</div>
           </li>;

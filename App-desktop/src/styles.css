@@ -372,6 +372,10 @@ h1 {
 .color-option { display: grid; place-items: center; width: 44px; height: 44px; padding: 4px; border: 2px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
 .color-option span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--swatch); color: white; font-size: 20px; font-weight: 700; }
 .color-option[aria-pressed="true"] { border-color: var(--text); }
+.calendar-custom-color-input { width: 44px; height: 44px; padding: 4px; border: 2px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
+.calendar-custom-color-input[data-selected="true"] { border-color: var(--text); }
+.calendar-custom-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.calendar-custom-color-input::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .calendar-dialog { border: 1px solid rgba(var(--ink-rgb), 0.2); color: var(--text); width: min(680px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
 .calendar-dialog::backdrop { background: rgba(var(--backdrop-rgb), 0.55); backdrop-filter: blur(4px); }
 .creation-dialog .modal-header { flex-direction: row; align-items: center; gap: 12px; }
@@ -737,6 +741,10 @@ button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; }
 .habit-colors { display: flex; gap: 9px; }
 .habit-colors button { width: 34px; height: 34px; padding: 0; border: 3px solid transparent; border-radius: 50%; }
 .habit-colors button[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.habit-colors .habit-custom-color-input { width: 34px; height: 34px; padding: 0; border: 3px solid transparent; border-radius: 50%; background: transparent; cursor: pointer; }
+.habit-colors .habit-custom-color-input[data-selected="true"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.habit-custom-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.habit-custom-color-input::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .habit-editor-footer { position: sticky; bottom: -1px; z-index: 2; display: grid; gap: 10px; padding-top: 12px; background: var(--modal); border-top: 1px solid rgba(var(--ink-rgb), .12); }
 .habit-editor-footer .modal-actions { position: static; padding-top: 0; }
 .habit-editor-actions { gap: 12px; }

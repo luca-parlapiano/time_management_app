@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { eventCover } from "../../activityCovers";
-import { eventAppearance, eventColors, isProgressActivity, outcomeLabels } from "../../domain/calendar";
+import { eventAppearance, eventColorValue, isProgressActivity, outcomeLabels } from "../../domain/calendar";
 import { useLoading } from "../../hooks/useLoading";
 import type { ItemOutcome, Occurrence } from "../../model/calendar.js";
 import { EventIcon } from "../../icons/EventIcon";
@@ -26,7 +26,7 @@ export function AgendaEventCard({ item, date, layout, top, height, disabled, onO
   const cover = eventCover(item.kind, appearance.icon);
   const times = `${item.date < date ? "↳" : item.start}–${item.endDate > date ? "↗" : item.end}`;
   const stacked = layout === "agenda";
-  return <article className={`agenda-event ${stacked ? "agenda-event-stacked" : "agenda-event-timeline"}${progressActivity ? " agenda-event-progress" : ""}`} aria-label={`${item.title}, ${times}`} style={{ "--event-color": eventColors[appearance.color].value, top, height } as CSSProperties}>
+  return <article className={`agenda-event ${stacked ? "agenda-event-stacked" : "agenda-event-timeline"}${progressActivity ? " agenda-event-progress" : ""}`} aria-label={`${item.title}, ${times}`} style={{ "--event-color": eventColorValue(appearance.color), top, height } as CSSProperties}>
     <div className="agenda-surface">
       <header className="agenda-header">
         <button type="button" className="agenda-open" disabled={disabled} onClick={() => onOpen(item)} title={`${item.title} · ${item.start}–${item.end}`} aria-label={`Apri ${item.title}`} aria-haspopup="dialog">

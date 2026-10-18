@@ -1,17 +1,24 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { usePlanner } from '../data/PlannerProvider';
 import { useAppColors } from './theme';
 import type { AppColors } from './theme';
 
 /** Contenitore leggibile e scorrevole per le schede principali. */
-export function AppScreen({ children, title, eyebrow }: { children: ReactNode; title: string; eyebrow?: string }) {
+export function AppScreen({ children, title, eyebrow, showSettings = true }: { children: ReactNode; title: string; eyebrow?: string; showSettings?: boolean }) {
   const colors = useAppColors();
   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {eyebrow && <Text style={[styles.eyebrow, { color: colors.accent }]}>{eyebrow}</Text>}
-      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      <View style={styles.headerRow}>
+        <Text style={[styles.title, { color: colors.text, flex: 1 }]}>{title}</Text>
+        {showSettings && <Pressable accessibilityRole="button" accessibilityLabel="Apri impostazioni" onPress={() => router.push('/settings')} style={({ pressed }) => [styles.settingsButton, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}>
+          <SymbolView name={{ ios: 'gearshape.fill', android: 'settings', web: 'settings' }} tintColor={colors.accent} size={24} />
+        </Pressable>}
+      </View>
       {children}
     </ScrollView>
   </SafeAreaView>;
@@ -47,6 +54,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 32, gap: 14 },
   eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' },
   title: { fontSize: 31, fontWeight: '800', letterSpacing: -0.7, marginBottom: 5 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingsButton: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   surface: { borderWidth: 1, borderRadius: 20, padding: 17, gap: 10 },
   button: { minHeight: 48, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   buttonText: { fontSize: 15, fontWeight: '700' },

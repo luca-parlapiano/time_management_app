@@ -3,8 +3,8 @@ import { isPositiveNumber } from "../../utils/numbers.js";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import { eventCover } from "../../activityCovers";
-import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventIcons, kindLabels, validDate, validateData, weekStart } from "../../domain/calendar";
-import type { CalendarItem, EditTarget, EventColor, EventIcon as IconName, ItemKind, Occurrence } from "../../model/calendar.js";
+import { addDays, displayDate, durationMinutes, eventAppearance, eventColors, eventColorValue, eventIcons, isEventColor, kindLabels, validDate, validateData, weekStart } from "../../domain/calendar";
+import type { CalendarItem, EditTarget, EventIcon as IconName, ItemKind, Occurrence } from "../../model/calendar.js";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { CalendarDialog } from "../../components/ui/CalendarDialog";
 import { EventIcon } from "../../icons/EventIcon";
@@ -95,7 +95,7 @@ export function CalendarItemEditor({ date, item, occurrence, weeklyHabit, initia
           </details>}
         </div>}
         <label>Titolo<input autoFocus={!locked && !item} required value={draft.title} onChange={e => change({ title: e.target.value })} /></label>
-        <div className="event-appearance" style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
+        <div className="event-appearance" style={{ "--event-color": eventColorValue(appearance.color) } as CSSProperties}>
           {item?.recurrence && <p className="editor-hint">Icona, immagine e colore valgono per tutta la serie e per gli appuntamenti collegati, anche nei giorni diversi.</p>}
           <div className="event-cover-preview" style={draft.coverImage !== false ? { "--cover-image": `url("${cover.src}")` } as CSSProperties : undefined}>
             <span className="event-icon"><EventIcon icon={appearance.icon} /></span><strong>{draft.title.trim() || "La tua attività"}</strong>
@@ -110,9 +110,9 @@ export function CalendarItemEditor({ date, item, occurrence, weeklyHabit, initia
           {draft.coverImage !== false && <p className="editor-hint">{cover.label} · {cover.source ? `Foto di ${cover.author} / Unsplash` : cover.author}</p>}
           <fieldset className="appearance-options">
             <legend>Colore</legend>
-            <div className="color-options">{(Object.keys(eventColors) as EventColor[]).map(color => <button key={color} type="button" className="color-option" aria-label={eventColors[color].label} title={eventColors[color].label} aria-pressed={appearance.color === color} style={{ "--swatch": eventColors[color].value } as CSSProperties} onClick={() => changeAppearance({ color })}>
+            <div className="color-options">{(Object.keys(eventColors) as (keyof typeof eventColors)[]).map(color => <button key={color} type="button" className="color-option" aria-label={eventColors[color].label} title={eventColors[color].label} aria-pressed={appearance.color === color} style={{ "--swatch": eventColorValue(color) } as CSSProperties} onClick={() => changeAppearance({ color })}>
               <span aria-hidden="true">{appearance.color === color ? "✓" : ""}</span>
-            </button>)}</div>
+            </button>)}<input className="calendar-custom-color-input" type="color" aria-label="Colore personalizzato" title="Colore personalizzato" data-selected={appearance.color.startsWith('#')} value={eventColorValue(appearance.color)} onChange={event => { if (isEventColor(event.target.value)) changeAppearance({ color: event.target.value }); }} /></div>
           </fieldset>
         </div>
         <fieldset className="appearance-options" disabled={Boolean(item?.recurrence || draft.weeklyHabitId)}>

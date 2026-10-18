@@ -2,9 +2,14 @@ export type ItemKind = "fixed" | "protected" | "flexible";
 
 export type ItemOutcome = "completed" | "skipped";
 
-export type EventIcon = "activity" | "work" | "study" | "sport" | "rest" | "meal" | "people" | "heart" | "gaming";
+export type EventIcon = "activity" | "work" | "study" | "sport" | "rest" | "meal" | "people" | "heart" | "gaming" | "diving"
+  | "ion-star" | "ion-book" | "ion-cafe" | "ion-airplane" | "ion-footsteps" | "ion-moon" | "ion-brush"
+  | "ion-sparkles" | "ion-glasses" | "ion-code" | "ion-flash" | "ion-train" | "ion-map" | "ion-hammer"
+  | "ion-flag" | "ion-paw" | "ion-beaker" | "ion-bookmark" | "ion-folder" | "ion-cloud"
+  | "ion-chatbubble" | "ion-musical-note" | "ion-pencil" | "ion-shield" | "ion-key" | "ion-umbrella"
+  | "ion-storefront" | "ion-podium";
 
-export type EventColor = "blue" | "green" | "purple" | "orange" | "pink" | "teal";
+export type EventColor = "blue" | "green" | "purple" | "orange" | "pink" | "teal" | `#${string}`;
 
 export interface ItemData {
   coverImage?: boolean;

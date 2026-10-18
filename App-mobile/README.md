@@ -21,10 +21,10 @@ navigazione sono stati verificati nel browser locale.
 - Abitudini: creazione di serie a step e obiettivi a ore, registrazione del tempo,
   trofei facoltativi per le serie a step.
 - Calendario: consultazione giornaliera delle occorrenze.
-- Progressi: riepilogo giornaliero, tempo settimanale e trofei.
+- Progressi: riepilogo delle serie concluse e grafico degli ultimi sei mesi,
+  ultima serie per abitudine attiva, archivio cronologico con diario in sola lettura.
 
-La prima iterazione non include ancora gli editor completi del calendario, la
-conclusione/ripetizione delle serie a ore, né import/export dei backup.
+La prima iterazione non include ancora gli editor completi del calendario.
 
 ## Regole condivise
 

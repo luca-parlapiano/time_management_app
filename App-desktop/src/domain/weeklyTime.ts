@@ -1,5 +1,5 @@
 import { createTimeSeries, seriesAtDate, seriesForSession, timePeriodBounds, timeSeriesResults } from './timeSeries.js';
-import { eventColors, eventIcons, MAX_MONTHLY_MINUTES, MAX_SESSION_MINUTES, MAX_WEEKLY_MINUTES } from '../constants.js';
+import { eventIcons, isEventColor, MAX_MONTHLY_MINUTES, MAX_SESSION_MINUTES, MAX_WEEKLY_MINUTES } from '../constants.js';
 import { addDays, validDate, weekStart } from '../utils/dates.js';
 import { isFiniteNumber, isIntegerInRange } from '../utils/numbers.js';
 import { percentage } from '../utils/math.js';
@@ -39,7 +39,7 @@ export function validateWeeklyTime(archive: PlannerArchive): void {
   for (const value of values) {
     const h = object(value, ['id', 'title', 'motivation', 'icon', 'color', 'startsOn', 'archivedOn', 'targets', 'series']);
     if (!identity(h.id) || habits.has(h.id) || archive.habits?.some(entry => entry.id === h.id) || !identity(h.title) || typeof h.motivation !== 'string' ||
-      typeof h.icon !== 'string' || !Object.hasOwn(eventIcons, h.icon) || typeof h.color !== 'string' || !Object.hasOwn(eventColors, h.color) ||
+      typeof h.icon !== 'string' || !Object.hasOwn(eventIcons, h.icon) || !isEventColor(h.color) ||
       !validDate(h.startsOn) || (h.archivedOn !== undefined && (!validDate(h.archivedOn) || h.archivedOn < h.startsOn)) || !Array.isArray(h.targets) || !h.targets.length) throw new Error('Abitudine a ore non valida.');
     let previous = '';
     for (const [index, value] of h.targets.entries()) {

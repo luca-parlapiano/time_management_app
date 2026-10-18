@@ -1,7 +1,7 @@
 import { TodaySummary } from "./TodaySummary";
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
-import { eventAppearance, eventColors, today, todayOccurrences } from "../../domain/calendar";
+import { eventAppearance, eventColorValue, today, todayOccurrences } from "../../domain/calendar";
 import { useDB } from "../../hooks/useDB";
 import { useLocalMinute } from "../../hooks/useLocalMinute";
 import { EventIcon } from "../../icons/EventIcon";
@@ -40,7 +40,7 @@ export function TodayScreen({ active, onOpenEvent, onOpenHabits, onAddHabit, onA
         {events.length === 0 ? <div className="today-empty"><h3>Nessuna attività da seguire</h3><p>Qui compaiono le abitudini pianificate e le attività ricorrenti già monitorate. Gli appuntamenti fissi restano nel Calendario.</p></div> : <ol className="today-timeline">
           {events.map(item => {
             const appearance = eventAppearance(item);
-            return <li key={item.id} className={`today-event${item.outcome ? " has-outcome" : ""}`} style={{ "--event-color": eventColors[appearance.color].value } as CSSProperties}>
+            return <li key={item.id} className={`today-event${item.outcome ? " has-outcome" : ""}`} style={{ "--event-color": eventColorValue(appearance.color) } as CSSProperties}>
               <time>{item.start}</time><span className="today-node" aria-hidden="true" />
               <article><button type="button" className="today-event-open" onClick={() => onOpenEvent(item)}><span className="today-event-icon"><EventIcon icon={appearance.icon} /></span><span><strong>{item.title}</strong><small>{item.start}–{item.end}{item.habitId ? " · Abitudine" : item.routine ? " · Attività monitorata" : ""}</small></span></button>
                 <div className="today-outcomes" role="group" aria-label={`Esito ${item.title}`}>

@@ -1,7 +1,7 @@
 import { formatDurationMinutes } from "../../utils/time";
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
-import { addDays, displayDate, eventColors, today } from "../../domain/calendar";
+import { addDays, displayDate, eventColorValue, today } from "../../domain/calendar";
 import { nextHabitOccurrence } from "../../domain/habitTimeline";
 import { useDB } from "../../hooks/useDB";
 import { useLocalMinute } from "../../hooks/useLocalMinute";
@@ -53,7 +53,7 @@ export function AppSidebar({ expanded, onToggle, onAddHabit, onOpenHabits }: App
         ) : (
           <ul className="sidebar-habit-list">
             {activeHabits.map(({ habit, next }) => (
-                <li key={habit.id} className={`sidebar-habit${expanded ? "" : " sidebar-habit-compact"}`} style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}>
+                <li key={habit.id} className={`sidebar-habit${expanded ? "" : " sidebar-habit-compact"}`} style={{ "--event-color": eventColorValue(habit.color) } as CSSProperties}>
                   {expanded ? <>
                     <div className="sidebar-habit-identity"><span className="sidebar-habit-icon" aria-hidden="true"><EventIcon icon={habit.icon} /></span><strong className="sidebar-habit-title">{habit.title}</strong></div>
                     <span className="sidebar-habit-next">{next ? `Prossima: ${displayDate(next.date, { weekday: "short", day: "numeric", month: "short" })}${next.start ? ` · ${next.start}` : ""}` : "Nessuna prossima occasione pianificata"}</span>
@@ -64,7 +64,7 @@ export function AppSidebar({ expanded, onToggle, onAddHabit, onOpenHabits }: App
             ))}
           </ul>
         )}
-        {weeklyTimeHabits.filter(habit => !habit.archivedOn).map(habit => <button type="button" className="sidebar-time-habit" key={habit.id} onClick={() => onOpenHabits(habit.id)} aria-label={`Apri ${habit.title}`} style={{ "--event-color": eventColors[habit.color].value } as CSSProperties}><EventIcon icon={habit.icon} />{expanded && <span><strong>{habit.title}</strong><small>{formatDurationMinutes(getWeeklyTimeProgress(habit.id, referenceDate).completedMinutes)} / {formatDurationMinutes(getWeeklyTimeProgress(habit.id, referenceDate).targetMinutes || habit.targets[0].minutes)}</small></span>}</button>)}
+        {weeklyTimeHabits.filter(habit => !habit.archivedOn).map(habit => <button type="button" className="sidebar-time-habit" key={habit.id} onClick={() => onOpenHabits(habit.id)} aria-label={`Apri ${habit.title}`} style={{ "--event-color": eventColorValue(habit.color) } as CSSProperties}><EventIcon icon={habit.icon} />{expanded && <span><strong>{habit.title}</strong><small>{formatDurationMinutes(getWeeklyTimeProgress(habit.id, referenceDate).completedMinutes)} / {formatDurationMinutes(getWeeklyTimeProgress(habit.id, referenceDate).targetMinutes || habit.targets[0].minutes)}</small></span>}</button>)}
       </section>
     </aside>
   );

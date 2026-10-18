@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { HABIT_DASHBOARD_DAYS, HABIT_DASHBOARD_OCCASIONS, eventColors, habitDashboardStates } from "../../constants";
+import { HABIT_DASHBOARD_DAYS, HABIT_DASHBOARD_OCCASIONS, eventColorValue, habitDashboardStates } from "../../constants";
 import { StandardButton } from "../../components/ui/StandardButton";
 import { EventIcon } from "../../icons/EventIcon";
 import { useDB } from "../../hooks/useDB";
@@ -31,7 +31,7 @@ export function HabitProgressCard({ progress, onOpenHabits, onAddHabit, onAddTim
       <p>Scegli un’abitudine e un traguardo alla tua portata.</p>
       <StandardButton onClick={onAddHabit}>Crea un’abitudine</StandardButton>
     </div> : <div className="today-path-list">
-      {progress.rows.map(row => <article className="today-path-row" key={row.habit.id} style={{ "--event-color": eventColors[row.habit.color].value } as CSSProperties}>
+      {progress.rows.map(row => <article className="today-path-row" key={row.habit.id} style={{ "--event-color": eventColorValue(row.habit.color) } as CSSProperties}>
         <div className="today-path-main">
           <div className="today-path-identity"><span className="today-path-icon"><EventIcon icon={row.habit.icon} /></span><div><p className="eyebrow">Serie a step</p><button className="today-habit-link" onClick={() => onOpenHabits(row.habit.id)}><strong>{row.habit.title}</strong></button></div></div>
           <HabitJourney progress={row.journey} compact />

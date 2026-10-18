@@ -11,7 +11,7 @@ export { statisticsOutcomeLabels } from "../constants";
 import { isFiniteNumber } from "../utils/numbers";
 import type { CalendarState, ItemOutcome, Occurrence } from "../model/calendar";
 import type { OutcomeRecord, PlannerArchive } from "../model/outcomeArchive";
-import { eventAppearance, eventColors, eventIcons, isProgressActivity, outcomeLabels, validDate, validateCalendar } from "./calendar";
+import { eventAppearance, eventIcons, isEventColor, isProgressActivity, outcomeLabels, validDate, validateCalendar } from "./calendar";
 import { validateHabits } from "./habits";
 export type { OutcomeRecord,PlannerArchive } from "../model/outcomeArchive";
 
@@ -134,7 +134,7 @@ export function validateArchive(value: unknown): asserts value is PlannerArchive
   for (const record of archive.history) {
     if (!record || ![record.id, record.sourceId, record.activityId, record.title].every(value => typeof value === "string" && value.trim()) || ids.has(record.id) ||
       !validDate(record.occurrenceDate) || !validDate(record.eventDate) || !Object.hasOwn(outcomeLabels, record.outcome) ||
-      !Object.hasOwn(eventIcons, record.icon) || !Object.hasOwn(eventColors, record.color) ||
+      !Object.hasOwn(eventIcons, record.icon) || !isEventColor(record.color) ||
       !(record.recordedAt === null || typeof record.recordedAt === "string" && /^\d{4}-\d{2}-\d{2}T/.test(record.recordedAt) && isFiniteNumber(Date.parse(record.recordedAt)))) throw new Error("Storico degli esiti non valido.");
     ids.add(record.id);
   }

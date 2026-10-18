@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
-import { eventColors } from '../../constants';
+import { eventColorValue } from '../../constants';
 import { useDB } from '../../hooks/useDB';
 import { EventIcon } from '../../icons/EventIcon';
 import { TrophyIcon } from '../../icons/TrophyIcon';
@@ -60,7 +60,7 @@ export function TrophiesScreen({ active }: { active: boolean }) {
         </div> : <ul className="trophy-grid" aria-label={`${visible.length} ${visible.length === 1 ? 'trofeo' : 'trofei'} ${selected === 'steps' ? 'a step' : 'a tempo'}`}>
           {visible.map(trophy => {
             const earned = Boolean(trophy.earnedOn);
-            return <li key={trophy.id} className="trophy-tile" data-earned={earned} style={{ '--event-color': eventColors[trophy.color].value } as CSSProperties}>
+            return <li key={trophy.id} className="trophy-tile" data-earned={earned} style={{ '--event-color': eventColorValue(trophy.color) } as CSSProperties}>
               <div className="trophy-symbol">
                 <TrophyIcon variant={trophy.kind} />
                 <span className="trophy-symbol-activity"><EventIcon icon={trophy.icon} /></span>

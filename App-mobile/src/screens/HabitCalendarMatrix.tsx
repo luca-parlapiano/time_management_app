@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { eventColors } from '../core/constants';
+import { eventColorValue } from '../core/constants';
 import { indexHabitOutcomes } from '../core/domain/habitOutcomeIndex';
 import { seriesForSession } from '../core/domain/timeSeries';
 import type { Habit, HabitTimelineEntry } from '../core/model/habit';
@@ -93,7 +93,7 @@ function StepMatrix({ habit, month, colors }: { habit: Habit; month: string; col
   const selected = chosenDay && inMonth(chosenDay) ? chosenDay : suggested;
   const selectedEntries = byDay.get(selected) ?? [];
   const evaluatedThrough = records.filter(record => record.eventDate <= selected).length;
-  const accent = eventColors[habit.color].value;
+  const accent = eventColorValue(habit.color);
   return <>
     <Text style={[styles.description, { color: colors.muted }]}>{habit.stepTarget} step da valutare. Ogni esito fa avanzare il percorso.</Text>
     <View style={styles.legend}><Text style={[styles.legendText, { color: accent }]}>✓ Fatto</Text><Text style={[styles.legendText, { color: colors.danger }]}>× Non fatto</Text><Text style={[styles.legendText, { color: colors.muted }]}>· Senza esito</Text></View>

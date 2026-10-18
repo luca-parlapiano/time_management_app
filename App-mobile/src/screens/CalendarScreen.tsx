@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { eventColors } from '../core/constants';
+import { eventColorValue } from '../core/constants';
 import { eventAppearance, occurrences } from '../core/domain/calendar';
 import { addDays, displayDate, today } from '../core/utils/dates';
 import { formatDurationMinutes } from '../core/utils/time';
 import { usePlanner } from '../data/PlannerProvider';
 import { AppScreen, DatabaseGate, Surface } from '../ui/Primitives';
-import { EventIcon } from '../ui/EventIcon';
+import { HabitIconBadge } from '../ui/HabitIconBadge';
 import { useAppColors } from '../ui/theme';
 import { HabitCalendarMatrix } from './HabitCalendarMatrix';
 
@@ -42,8 +42,8 @@ export function CalendarScreen() {
           ? successful ? 'Completata con successo' : 'Serie conclusa · ' + completedSteps + ' fatti'
           : progress.currentStep + '/' + progress.target + ' step valutati · ' + completedSteps + ' fatti';
         return <Surface key={habit.id} colors={colors}><Pressable accessibilityRole="button" accessibilityLabel={'Apri il calendario di ' + habit.title + ', abitudine a step'} onPress={() => setSelection({ kind: 'steps', id: habit.id })} style={styles.cardButton}>
-          <View style={styles.row}><View style={[styles.icon, { backgroundColor: colors.soft }]}><EventIcon icon={habit.icon} color={eventColors[habit.color].value} /></View><View style={styles.flex}><Text style={[styles.title, { color: colors.text }]}>{habit.title}</Text><Text style={[styles.muted, { color: colors.muted }]}>A step · {summary}</Text></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></View>
-          <View style={[styles.track, { backgroundColor: colors.border }]}><View style={[styles.fill, { width: Math.min(100, progress.currentStep / progress.target * 100) + '%', backgroundColor: eventColors[habit.color].value }]} /></View>
+          <View style={styles.row}><HabitIconBadge icon={habit.icon} color={habit.color} backgroundColor={colors.soft} /><View style={styles.flex}><Text style={[styles.title, { color: colors.text }]}>{habit.title}</Text><Text style={[styles.muted, { color: colors.muted }]}>A step · {summary}</Text></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></View>
+          <View style={[styles.track, { backgroundColor: colors.border }]}><View style={[styles.fill, { width: Math.min(100, progress.currentStep / progress.target * 100) + '%', backgroundColor: eventColorValue(habit.color) }]} /></View>
         </Pressable></Surface>;
       })}
       {timeHabits.map(habit => {
@@ -52,8 +52,8 @@ export function CalendarScreen() {
         const period = progress.period === 'month' ? latest ? 'Ultimo mese' : 'Questo mese' : latest ? 'Ultima settimana' : 'Questa settimana';
         const summary = habit.archivedOn ? 'Archiviata' : progress.state === 'reached' ? '✓ Obiettivo raggiunto' : formatDurationMinutes(progress.completedMinutes) + ' / ' + formatDurationMinutes(progress.targetMinutes);
         return <Surface key={habit.id} colors={colors}><Pressable accessibilityRole="button" accessibilityLabel={'Apri il calendario di ' + habit.title + ', obiettivo a ore'} onPress={() => setSelection({ kind: 'hours', id: habit.id })} style={styles.cardButton}>
-          <View style={styles.row}><View style={[styles.icon, { backgroundColor: colors.soft }]}><EventIcon icon={habit.icon} color={eventColors[habit.color].value} /></View><View style={styles.flex}><Text style={[styles.title, { color: colors.text }]}>{habit.title}</Text><Text style={[styles.muted, { color: colors.muted }]}>{period} · {summary}</Text></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></View>
-          <View style={[styles.track, { backgroundColor: colors.border }]}><View style={[styles.fill, { width: Math.min(100, progress.percent) + '%', backgroundColor: eventColors[habit.color].value }]} /></View>
+          <View style={styles.row}><HabitIconBadge icon={habit.icon} color={habit.color} backgroundColor={colors.soft} /><View style={styles.flex}><Text style={[styles.title, { color: colors.text }]}>{habit.title}</Text><Text style={[styles.muted, { color: colors.muted }]}>{period} · {summary}</Text></View><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></View>
+          <View style={[styles.track, { backgroundColor: colors.border }]}><View style={[styles.fill, { width: Math.min(100, progress.percent) + '%', backgroundColor: eventColorValue(habit.color) }]} /></View>
         </Pressable></Surface>;
       })}
       <Pressable accessibilityRole="button" onPress={() => { setDate(today()); setSelection({ kind: 'agenda' }); }} style={[styles.agendaLink, { borderColor: colors.border, backgroundColor: colors.surface }]}><Text style={[styles.agendaText, { color: colors.text }]}>Apri l’agenda del giorno</Text><Text style={[styles.chevron, { color: colors.accent }]}>›</Text></Pressable>
@@ -70,14 +70,13 @@ export function CalendarScreen() {
     {items.length === 0 ? <Surface colors={colors}><Text style={[styles.title, { color: colors.text }]}>Nessun impegno in programma</Text><Text style={[styles.muted, { color: colors.muted }]}>Tocca + in basso per iniziare un nuovo percorso.</Text></Surface>
       : items.map(item => {
         const appearance = eventAppearance(item);
-        return <Surface key={item.id} colors={colors}><View style={styles.row}><View style={[styles.mark, { backgroundColor: eventColors[appearance.color].value }]} /><View style={styles.flex}><Text style={[styles.title, { color: colors.text }]}>{item.title}</Text><Text style={[styles.muted, { color: colors.muted }]}>{item.start}–{item.end} · {item.habitId ? 'Abitudine' : item.kind === 'fixed' ? 'Impegno fisso' : item.kind === 'protected' ? 'Tempo protetto' : 'Attività'}</Text></View></View>{item.outcome && <Text style={[styles.outcome, { color: item.outcome === 'completed' ? colors.accent : colors.muted }]}>{item.outcome === 'completed' ? '✓ Fatto' : '× Non fatto'}</Text>}</Surface>;
+        return <Surface key={item.id} colors={colors}><View style={styles.row}><HabitIconBadge icon={appearance.icon} color={appearance.color} backgroundColor={colors.soft} /><View style={styles.flex}><Text style={[styles.title, { color: colors.text }]}>{item.title}</Text><Text style={[styles.muted, { color: colors.muted }]}>{item.start}–{item.end} · {item.habitId ? 'Abitudine' : item.kind === 'fixed' ? 'Impegno fisso' : item.kind === 'protected' ? 'Tempo protetto' : 'Attività'}</Text></View></View>{item.outcome && <Text style={[styles.outcome, { color: item.outcome === 'completed' ? colors.accent : colors.muted }]}>{item.outcome === 'completed' ? '✓ Fatto' : '× Non fatto'}</Text>}</Surface>;
       })}
   </AppScreen>;
 }
 
 const styles = StyleSheet.create({
   intro: { fontSize: 15, lineHeight: 21, marginBottom: 4 },
-  icon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   chevron: { fontSize: 28, fontWeight: '600' },
   cardButton: { gap: 13, minHeight: 64 },
   track: { height: 7, borderRadius: 7, overflow: 'hidden' },
@@ -92,7 +91,6 @@ const styles = StyleSheet.create({
   arrow: { width: 47, height: 47, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   arrowText: { fontSize: 29 },
   row: { flexDirection: 'row', gap: 11, alignItems: 'center' },
-  mark: { width: 8, height: 40, borderRadius: 5 },
   flex: { flex: 1 },
   title: { fontSize: 16, fontWeight: '700' },
   muted: { fontSize: 13, lineHeight: 19 },

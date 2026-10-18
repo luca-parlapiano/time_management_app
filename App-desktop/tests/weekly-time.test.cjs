@@ -15,6 +15,12 @@ const save = (archive, session, commandId = `command-${archive.timeSessionHistor
 const progress = (archive, date = '2026-10-12') => w.weeklyTimeProgress(archive, 'hours', date, '2026-10-18');
 const plan = (archive, date = '2026-10-18', recurrence) => ({ ...archive, calendar: c.putItem(archive.calendar, { id: 'planned', title: draft.title, weeklyHabitId: 'hours', date, endDate: date, start: '10:00', end: '12:00', kind: 'flexible', notes: '', exceptions: {}, ...(recurrence ? { recurrence: {} } : {}) }, { actor: 'user', unlocked: false }) });
 
+test('custom color on an hours habit survives backup and validates strictly', () => {
+  const archive = w.saveWeeklyTimeHabit(empty(), 'hours', {...draft, color:'#31A8D0'}, '2026-10-05');
+  assert.equal(a.parseArchive(a.exportArchive(archive)).weeklyTimeHabits[0].color, '#31A8D0');
+  assert.throws(() => w.saveWeeklyTimeHabit(empty(), 'invalid', {...draft, color:'#31A8DZ'}, '2026-10-05'), /Abitudine a ore non valida/);
+});
+
 test('weekly hours count actual sessions only, preserve excess and leave legacy statistics unchanged', () => {
   let archive = setup();
   const before = new StatisticsRepository(archive).getDailyStatistics('2026-10-12');

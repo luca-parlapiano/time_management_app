@@ -2,7 +2,7 @@ import type { EventIcon, ItemKind } from "./model/calendar.js";
 
 export interface ActivityCover { src: string; label: string; author: string; source: string }
 
-export const activityCovers: Record<EventIcon, ActivityCover> = {
+export const activityCovers: Partial<Record<EventIcon, ActivityCover>> = {
   activity: { src: new URL("./assets/activity-covers/activity.jpg", import.meta.url).href, label: "Sentiero nel bosco", author: "Annie Spratt", source: "https://unsplash.com/photos/KpYvNH3IPVw" },
   work: { src: new URL("./assets/activity-covers/work.jpg", import.meta.url).href, label: "Scrivania e computer", author: "LOGAN WEAVER", source: "https://unsplash.com/photos/xjyHDnA93Pk" },
   study: { src: new URL("./assets/activity-covers/study.jpg", import.meta.url).href, label: "Quaderno e libri", author: "Finde Zukunft", source: "https://unsplash.com/photos/TPB-0YtXHlY" },
@@ -15,7 +15,7 @@ export const activityCovers: Record<EventIcon, ActivityCover> = {
 };
 
 /** Copertine dedicate ai blocchi fissi, distinte dalle immagini motivazionali. */
-export const fixedEventCovers: Record<EventIcon, ActivityCover> = {
+export const fixedEventCovers: Partial<Record<EventIcon, ActivityCover>> = {
   activity: { src: new URL("./assets/fixed-event-covers/activity.jpg", import.meta.url).href, label: "Agenda e orologio", author: "Immagine generata per l’app", source: "" },
   work: { src: new URL("./assets/fixed-event-covers/work.jpg", import.meta.url).href, label: "Sala riunioni", author: "Immagine generata per l’app", source: "" },
   study: { src: new URL("./assets/fixed-event-covers/study.jpg", import.meta.url).href, label: "Biblioteca e studio", author: "Immagine generata per l’app", source: "" },
@@ -29,5 +29,5 @@ export const fixedEventCovers: Record<EventIcon, ActivityCover> = {
 
 /** Restituisce la copertina coerente con il tipo e l'icona dell'evento. */
 export function eventCover(kind: ItemKind, icon: EventIcon): ActivityCover {
-  return kind === "fixed" ? fixedEventCovers[icon] : activityCovers[icon];
+  return kind === "fixed" ? fixedEventCovers[icon] ?? fixedEventCovers.activity! : activityCovers[icon] ?? activityCovers.activity!;
 }

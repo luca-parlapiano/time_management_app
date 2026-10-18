@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CalendarDialog } from '../../components/ui/CalendarDialog';
 import { StandardButton } from '../../components/ui/StandardButton';
-import { eventColors, eventIcons, MAX_MONTHLY_MINUTES, MAX_WEEKLY_MINUTES } from '../../constants';
+import { eventColors, eventColorValue, eventIcons, isEventColor, MAX_MONTHLY_MINUTES, MAX_WEEKLY_MINUTES } from '../../constants';
 import { useDB } from '../../hooks/useDB';
 import { EventIcon } from '../../icons/EventIcon';
 import { today } from '../../utils/dates';
@@ -45,7 +45,7 @@ export function WeeklyTimeHabitEditor({ habit, onClose, onSaved }: Props) {
       <label className="trophy-option"><input type="checkbox" checked={Boolean(draft.trophiesEnabled)} onChange={event => change({ trophiesEnabled: event.target.checked })} /><span><strong>Usa trofei</strong><small>Se raggiungerai le ore scelte, aggiungeremo questo traguardo alla tua raccolta.</small></span></label>
       <p className="editor-hint">{current ? 'Le modifiche riguardano solo questa serie. Il periodo resta quello scelto alla partenza.' : 'Si parte da oggi. Alla fine del periodo scegli tu se ripetere la serie.'}</p>
       <fieldset><legend>Icona</legend><div className="compact-icon-options icon-options">{(Object.keys(eventIcons) as (keyof typeof eventIcons)[]).map(icon => <button type="button" className="icon-option" key={icon} aria-label={eventIcons[icon]} aria-pressed={draft.icon === icon} onClick={() => change({ icon })}><EventIcon icon={icon} /></button>)}</div></fieldset>
-      <fieldset><legend>Colore</legend><div className="habit-colors">{(Object.keys(eventColors) as (keyof typeof eventColors)[]).map(color => <button type="button" key={color} aria-label={eventColors[color].label} aria-pressed={draft.color === color} style={{ background: eventColors[color].value }} onClick={() => change({ color })} />)}</div></fieldset>
+      <fieldset><legend>Colore</legend><div className="habit-colors">{(Object.keys(eventColors) as (keyof typeof eventColors)[]).map(color => <button type="button" key={color} aria-label={eventColors[color].label} aria-pressed={draft.color === color} style={{ background: eventColorValue(color) }} onClick={() => change({ color })} />)}<input className="habit-custom-color-input" type="color" aria-label="Colore personalizzato" title="Colore personalizzato" data-selected={draft.color.startsWith('#')} value={eventColorValue(draft.color)} onChange={event => { if (isEventColor(event.target.value)) change({ color: event.target.value }); }} /></div></fieldset>
       {error && <p role="alert" className="capacity-warning">{error}</p>}
       <div className="modal-actions"><StandardButton type="button" variant="secondary" onClick={onClose}>Annulla</StandardButton><StandardButton type="submit" disabled={saving}>{habit ? 'Salva obiettivo' : 'Crea abitudine a ore'}</StandardButton></div>
     </form>

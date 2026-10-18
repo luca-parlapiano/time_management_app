@@ -1,4 +1,4 @@
-import { eventColors, eventIcons } from "../constants.js";
+import { eventIcons, isEventColor } from "../constants.js";
 import type { CalendarItem, CalendarState } from "../model/calendar.js";
 import type { Habit, HabitDraft, HabitStepTarget } from "../model/habit.js";
 import { addDays, dateNumber, durationMinutes, isOccurrenceDate, putWeeklyActivity, validDate, validateCalendar, weekStart } from "./calendar.js";
@@ -42,7 +42,7 @@ export function habitPlanEnd(firstDates: string[], stepTarget: HabitStepTarget):
 export function validateHabitDraft(input: HabitDraft): void {
   if (!input || typeof input.title !== "string" || !input.title.trim()) throw new Error("Inserisci il nome dell’abitudine.");
   if (typeof input.motivation !== "string") throw new Error("Motivazione non valida.");
-  if (!Object.hasOwn(eventIcons, input.icon) || !Object.hasOwn(eventColors, input.color)) throw new Error("Aspetto dell’abitudine non valido.");
+  if (!Object.hasOwn(eventIcons, input.icon) || !isEventColor(input.color)) throw new Error("Aspetto dell’abitudine non valido.");
   if (!isHabitStepTarget(input.stepTarget)) throw new Error("Scegli un traguardo da 1 a 12 step.");
   if (input.trophiesEnabled !== undefined && typeof input.trophiesEnabled !== "boolean") throw new Error("Preferenza dei trofei non valida.");
   if (!validDate(input.startsOn)) throw new Error("Data iniziale non valida.");
@@ -158,7 +158,7 @@ export function validateHabits(habits: unknown, calendar: CalendarState): assert
     if (!habit || typeof habit !== "object" || typeof habit.id !== "string" || !habit.id || habitIds.has(habit.id) ||
       typeof habit.title !== "string" || !habit.title.trim() || typeof habit.motivation !== "string" || !isHabitStepTarget(habit.stepTarget) ||
       (habit.trophiesEnabled !== undefined && typeof habit.trophiesEnabled !== "boolean") ||
-      !Object.hasOwn(eventIcons, habit.icon) || !Object.hasOwn(eventColors, habit.color)) throw new Error("Abitudine non valida.");
+      !Object.hasOwn(eventIcons, habit.icon) || !isEventColor(habit.color)) throw new Error("Abitudine non valida.");
     habitIds.add(habit.id);
     const sources = calendar.items.filter(item => item.habitId === habit.id);
     if (!sources.length || sources.some(item => !item.recurrence || item.activityId !== habit.id)) throw new Error("Pianificazione dell’abitudine non valida.");
