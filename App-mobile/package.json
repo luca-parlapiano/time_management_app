@@ -42,6 +42,7 @@
     "web": "expo start --web",
     "sync:core": "node scripts/sync-core.mjs",
     "check:core": "node scripts/sync-core.mjs --check",
+    "bench:series": "node scripts/benchmark-series.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src scripts --max-warnings 0"
   },

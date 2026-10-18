@@ -28,9 +28,18 @@ export function createTimeSeries(id: string, period: TimePeriod, date: string, t
 /** Calcola risultati indipendenti per serie sullo snapshot; esclude rimozioni e date future, senza salvare totali. */
 export function timeSeriesResults(archive: PlannerArchive, referenceDate: string): TimeSeriesResult[] {
   if (!validDate(referenceDate)) throw new Error('Data non valida.');
-  return (archive.weeklyTimeHabits ?? []).flatMap(habit => (habit.series ?? []).map(series => {
-    const completedMinutes = (archive.timeSessions ?? []).filter(session => session.habitId === habit.id && !session.removed && seriesForSession(habit, session)?.id === series.id && session.date <= referenceDate)
-      .reduce((total, session) => total + session.minutes, 0);
+  const habits = archive.weeklyTimeHabits ?? [];
+  const habitsById = new Map(habits.map(habit => [habit.id, habit]));
+  // La chiave è l'oggetto serie restituito da seriesForSession: ogni sessione viene attribuita una sola volta.
+  const minutesBySeries = new Map<TimeSeries, number>();
+  for (const session of archive.timeSessions ?? []) {
+    if (session.removed || session.date > referenceDate) continue;
+    const habit = habitsById.get(session.habitId);
+    const series = habit && seriesForSession(habit, session);
+    if (series) minutesBySeries.set(series, (minutesBySeries.get(series) ?? 0) + session.minutes);
+  }
+  return habits.flatMap(habit => (habit.series ?? []).map(series => {
+    const completedMinutes = minutesBySeries.get(series) ?? 0;
     return { habit, series, completedMinutes, reached: completedMinutes >= series.targetMinutes };
   }));
 }
@@ -71,6 +80,7 @@ export function resolveTimeSeries(archive: PlannerArchive, habitId: string, seri
   if (repeat && (!nextId.trim() || habit.series.some(entry => entry.id === nextId))) throw new Error('Identità della nuova serie non valida.');
   const next = repeat ? createTimeSeries(nextId, series.period, referenceDate, series.targetMinutes, series.trophiesEnabled) : undefined;
   const closedOn = series.endsOn < referenceDate ? series.endsOn : referenceDate;
+  // Gli ID fissano l'appartenenza delle sessioni alla serie chiusa, anche se una nuova serie parte oggi.
   const sessionIds = (archive.timeSessions ?? []).filter(session => session.habitId === habitId && seriesForSession(habit, session)?.id === seriesId).map(session => session.id);
   return { ...archive, weeklyTimeHabits: archive.weeklyTimeHabits?.map(entry => entry.id !== habitId ? entry : {
     ...entry, ...(!repeat ? { archivedOn: closedOn } : {}),
