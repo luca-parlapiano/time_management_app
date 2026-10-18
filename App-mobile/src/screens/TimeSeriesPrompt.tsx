@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { displayDate, today } from '../core/utils/dates';
 import { formatDurationMinutes } from '../core/utils/time';
@@ -13,7 +13,9 @@ export function TimeSeriesPrompt() {
   const [deferred, setDeferred] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const reference = today();
-  const pending = statistics?.getTimeSeriesResults(reference).filter(entry => !entry.series.decision && (entry.reached || entry.series.endsOn < reference)) ?? [];
+  // Il prompt è globale: apertura e chiusura della modale non devono ricalcolare tutte le serie.
+  const pending = useMemo(() => statistics?.getTimeSeriesResults(reference)
+    .filter(entry => !entry.series.decision && (entry.reached || entry.series.endsOn < reference)) ?? [], [statistics, reference]);
   const keyOf = (habitId: string, seriesId: string) => `${habitId}:${seriesId}`;
   const requested = requestedTimeSeries && pending.find(entry => entry.habit.id === requestedTimeSeries.habitId && entry.series.id === requestedTimeSeries.seriesId);
   const result = requested || pending.find(entry => !deferred.includes(keyOf(entry.habit.id, entry.series.id)));

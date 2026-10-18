@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { eventColorValue } from '../core/constants';
 import { indexHabitOutcomes } from '../core/domain/habitOutcomeIndex';
@@ -75,6 +75,7 @@ export function HabitCalendarMatrix({ kind, id, onBack }: { kind: 'steps' | 'hou
 function StepMatrix({ habit, month, colors }: { habit: Habit; month: string; colors: AppColors }) {
   const { snapshot, statistics } = usePlanner();
   const [chosenDay, setChosenDay] = useState<string | null>(null);
+  const outcomes = useMemo(() => snapshot ? indexHabitOutcomes(snapshot.archive.history) : null, [snapshot]);
   if (!snapshot || !statistics) return null;
   const from = month + '-01', through = monthEnd(month);
   const weeks = calendarWeeks(from, through);
@@ -82,7 +83,7 @@ function StepMatrix({ habit, month, colors }: { habit: Habit; month: string; col
   const entries = statistics.getHabitTimeline(habit.id, gridFrom, gridThrough);
   const byDay = new Map<string, HabitTimelineEntry[]>();
   for (const entry of entries) byDay.set(entry.date, [...(byDay.get(entry.date) ?? []), entry]);
-  const records = [...(indexHabitOutcomes(snapshot.archive.history).byActivity.get(habit.id)?.records ?? [])]
+  const records = [...(outcomes?.byActivity.get(habit.id)?.records ?? [])]
     .sort((a, b) => a.eventDate.localeCompare(b.eventDate) || a.occurrenceDate.localeCompare(b.occurrenceDate) || a.sourceId.localeCompare(b.sourceId))
     .slice(0, habit.stepTarget);
   const closedOn = statistics.getHabitCompletionDate(habit.id);

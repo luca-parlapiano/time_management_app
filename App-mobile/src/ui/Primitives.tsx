@@ -7,20 +7,39 @@ import { usePlanner } from '../data/PlannerProvider';
 import { useAppColors } from './theme';
 import type { AppColors } from './theme';
 
-/** Contenitore leggibile e scorrevole per le schede principali. */
-export function AppScreen({ children, title, eyebrow, showSettings = true }: { children: ReactNode; title: string; eyebrow?: string; showSettings?: boolean }) {
+interface AppScreenProps {
+  children: ReactNode;
+  title: string;
+  eyebrow?: string;
+  showSettings?: boolean;
+  scrollable?: boolean;
+}
+
+/** Contenitore delle schede principali; lascia scorrere il contenuto o ospita una lista virtualizzata. */
+export function AppScreen({ children, title, eyebrow, showSettings = true, scrollable = true }: AppScreenProps) {
   const colors = useAppColors();
+  const content = <>
+    {eyebrow && <Text style={[styles.eyebrow, { color: colors.accent }]}>{eyebrow}</Text>}
+    <View style={styles.headerRow}>
+      <Text style={[styles.title, { color: colors.text, flex: 1 }]}>{title}</Text>
+      {showSettings && <Pressable accessibilityRole="button" accessibilityLabel="Apri impostazioni"
+        onPress={() => router.push('/settings')}
+        style={({ pressed }) => [styles.settingsButton, {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          opacity: pressed ? 0.7 : 1,
+        }]}>
+        <SymbolView name={{ ios: 'gearshape.fill', android: 'settings', web: 'settings' }}
+          tintColor={colors.accent} size={24} />
+      </Pressable>}
+    </View>
+    {children}
+  </>;
   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      {eyebrow && <Text style={[styles.eyebrow, { color: colors.accent }]}>{eyebrow}</Text>}
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, { color: colors.text, flex: 1 }]}>{title}</Text>
-        {showSettings && <Pressable accessibilityRole="button" accessibilityLabel="Apri impostazioni" onPress={() => router.push('/settings')} style={({ pressed }) => [styles.settingsButton, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.7 : 1 }]}>
-          <SymbolView name={{ ios: 'gearshape.fill', android: 'settings', web: 'settings' }} tintColor={colors.accent} size={24} />
-        </Pressable>}
-      </View>
-      {children}
-    </ScrollView>
+    {/* La lista figlia deve essere l'unico contenitore scorrevole per mantenere attiva la virtualizzazione. */}
+    {scrollable
+      ? <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">{content}</ScrollView>
+      : <View style={[styles.content, styles.fixedContent]}>{content}</View>}
   </SafeAreaView>;
 }
 
@@ -52,6 +71,7 @@ export function DatabaseGate({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 32, gap: 14 },
+  fixedContent: { flex: 1 },
   eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.1, textTransform: 'uppercase' },
   title: { fontSize: 31, fontWeight: '800', letterSpacing: -0.7, marginBottom: 5 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

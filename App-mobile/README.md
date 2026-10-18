@@ -33,11 +33,27 @@ adatta gli import `.js` per Metro e usa `expo-crypto` per gli ID dello storico.
 Modificare le regole nel desktop e rieseguire la sincronizzazione, così entrambe le
 app mantengono gli stessi calcoli. `npm run check:core` segnala copie non allineate.
 
+Le schermate `src/screens/HabitsScreen.tsx` e `ProgressScreen.tsx` coordinano viste
+separate nelle rispettive cartelle `habits/` e `progress/`; `settings/` contiene le
+sezioni delle impostazioni. Le liste principali di abitudini e serie, oltre al
+diario nell'archivio Progressi, montano solo le righe visibili. Le cronologie aperte
+nella scheda Abitudini restano complete. Il prompt delle serie e i progressi derivati
+si aggiornano sullo snapshot confermato.
+
+## Prestazioni
+
+`npm run bench:series` misura il calcolo delle serie su dati sintetici (480 serie,
+1920 sessioni) e controlla i totali. Non misura rendering, SQLite o prestazioni del
+dispositivo. Per valutare la fluidità sul simulatore, confrontare gli stessi flussi
+con la modalità di sviluppo e con `npx expo start --no-dev --minify`, riaprendo
+l'app dopo il cambio di modalità. Usare un archivio di prova separato.
+
 ## Verifiche
 
 ```bash
 npm run check:core
 npm run lint
 npm run typecheck
+npm run bench:series
 npx expo-doctor
 ```
