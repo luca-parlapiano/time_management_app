@@ -1,0 +1,62 @@
+MINDMORROW — TESTI PER GLI STORE (italiano)
+Versione di riferimento dell'app: 0.1.0
+
+GOOGLE PLAY
+
+Nome dell'app (massimo 30 caratteri)
+MindMorrow
+
+Descrizione breve (massimo 80 caratteri)
+Organizza le abitudini, registra il tempo e segui i tuoi progressi
+
+Descrizione completa (massimo 4000 caratteri)
+MindMorrow ti aiuta a seguire i tuoi obiettivi quotidiani, un passo alla volta.
+
+Crea abitudini a step scegliendo un traguardo, i giorni della settimana e l'orario. Nella schermata Oggi puoi vedere le attività previste e segnare ciò che hai fatto o non hai fatto.
+
+Per gli obiettivi misurati nel tempo, imposta un numero di ore settimanali o mensili e registra i minuti svolti. La cronologia mostra le sessioni e l'avanzamento del percorso.
+
+Il calendario raccoglie le occorrenze delle abitudini e l'agenda del giorno. La sezione Progressi riepiloga le serie concluse e conserva un archivio consultabile.
+
+I dati sono salvati nell'archivio locale dell'app. Dalle impostazioni puoi esportare e importare manualmente un backup.
+
+Categoria proposta
+Produttività
+
+Testi alternativi suggeriti per le immagini (massimo 140 caratteri ciascuno)
+01-oggi.png: Giornata con attività Lettura segnata come fatta e avanzamento del percorso.
+02-abitudini-step.png: Abitudine Lettura con uno step completato e cronologia delle occorrenze.
+03-obiettivi-ore.png: Obiettivo Studio creativo con 25 minuti registrati e cronologia del tempo.
+04-calendario.png: Calendario con i percorsi Lettura e Studio creativo e i rispettivi avanzamenti.
+feature-graphic-1024x500.png: Percorso luminoso viola e blu con quattro tappe su sfondo indaco.
+
+APP STORE
+
+Nome dell'app
+MindMorrow
+
+Sottotitolo (massimo 30 caratteri)
+Abitudini e tempo, con calma
+
+Testo promozionale facoltativo (massimo 170 caratteri)
+Segui i tuoi percorsi a step o a ore, registra ciò che fai e ritrova il tuo avanzamento in un unico posto.
+
+Descrizione
+MindMorrow ti aiuta a seguire i tuoi obiettivi quotidiani, un passo alla volta.
+
+Organizza le abitudini a step: scegli un traguardo, i giorni ricorrenti e l'orario, poi registra ogni attività come fatta o non fatta. Per gli obiettivi a ore, imposta un traguardo settimanale o mensile e aggiungi il tempo che hai dedicato.
+
+Consulta il calendario delle abitudini, controlla l'agenda del giorno e rivedi le tue serie nella sezione Progressi. Puoi esportare o importare manualmente un backup dei dati salvati nell'archivio locale dell'app.
+
+Parole chiave (massimo 100 caratteri)
+abitudini,obiettivi,tempo,calendario,progressi,diario,produttività
+
+Novità della versione 0.1.0
+Prima versione mobile di MindMorrow: abitudini a step e a ore, agenda quotidiana, calendario, progressi e backup manuale.
+
+DATI DA COMPLETARE PRIMA DELL'INVIO
+
+Email di supporto: [DA INSERIRE]
+URL del supporto (App Store): [DA INSERIRE]
+URL dell'informativa privacy: [DA INSERIRE]
+Questionari privacy e sicurezza dati: compilare sulla base della build definitiva e dei servizi realmente attivi.
