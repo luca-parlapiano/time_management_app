@@ -21,6 +21,10 @@ Google Play richiede almeno due screenshot e raccomanda quattro screenshot 1080 
 
 Gli screenshot App Store **non sono ancora presenti**: vanno catturati da una build iOS reale o da un simulatore iOS, senza riadattare gli screenshot Android. Le dimensioni attualmente richieste sono almeno uno screenshot iPhone con Dynamic Island, display medio (per esempio 1179 × 2556 o 1206 × 2622). `app.json` dichiara `ios.supportsTablet: true`, quindi serve anche almeno uno screenshot per iPad 13 pollici (2064 × 2752 o 2048 × 2732). [Specifiche ufficiali App Store Connect](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
 
+## Informativa privacy
+
+`github-pages/index.html` è il file autonomo da caricare nella radice di un repository pubblico dedicato. Contiene solo HTML e CSS, senza immagini o librerie esterne. Vedi [le istruzioni di pubblicazione](PUBBLICAZIONE-PRIVACY.md).
+
 ## Da completare prima dell'invio
 
 - Verificare nome del titolare e contatto nell'[informativa privacy](../../docs/privacy/index.html), seguire [le istruzioni GitHub Pages](PUBBLICAZIONE-PRIVACY.md), poi inserire l'URL pubblico verificato e gli altri contatti indicati come `[DA INSERIRE]` in `testi-store-it.txt`.

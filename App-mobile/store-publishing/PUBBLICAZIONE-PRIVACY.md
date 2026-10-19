@@ -1,6 +1,6 @@
 # Pubblicare l'informativa privacy di MindMorrow
 
-La pagina HTML pronta per GitHub Pages è [`../../docs/privacy/index.html`](../../docs/privacy/index.html). Descrive la versione mobile 0.1.0 verificata nel codice; è **una bozza da verificare** prima di renderla pubblica. Non copre automaticamente l'app desktop, le future librerie o eventuali servizi aggiunti alla build finale.
+Il file [`github-pages/index.html`](github-pages/index.html) è pronto da caricare nella radice di un repository pubblico GitHub Pages. È una copia identica di [`../../docs/privacy/index.html`](../../docs/privacy/index.html). Descrive la versione mobile 0.1.0 verificata nel codice; è **una bozza da verificare** prima di renderla pubblica. Non copre automaticamente l'app desktop, le future librerie o eventuali servizi aggiunti alla build finale.
 
 ## Prima di pubblicare
 
@@ -8,17 +8,17 @@ La pagina HTML pronta per GitHub Pages è [`../../docs/privacy/index.html`](../.
 2. Controlla la **build definitiva**, i permessi e gli SDK effettivamente inclusi. Aggiorna il testo se introduci analytics, pubblicità, crash reporting, account o sincronizzazione.
 3. Verifica che il testo sia coerente con le risposte a Google Play Data Safety e Apple App Privacy. Il salvataggio locale sul dispositivo e i backup condivisi volontariamente vanno descritti secondo le definizioni dei rispettivi moduli.
 
-## Ottenere il link con GitHub Pages
+## Ottenere un link gratuito con GitHub Pages
 
-Il repository configurato localmente è `luca-parlapiano/time_management_app`; il ramo principale è `main`. La pagina è in `docs/privacy/index.html` perché GitHub Pages può pubblicare la cartella `/docs` di un ramo.
+Con GitHub Free, Pages funziona nei repository **pubblici**. Se `luca-parlapiano/time_management_app` è privato e GitHub propone un upgrade, lascialo privato: pubblica **solo l'informativa** in un nuovo repository pubblico separato.
 
-1. Dopo aver confermato nome e contatto, esegui commit e push dei file `docs/` sul ramo `main` (oppure pubblicali dal sito GitHub).
-2. Apri il repository su GitHub → **Settings** → **Pages**.
-3. In **Build and deployment**, scegli **Deploy from a branch**, poi `main` e `/docs`; premi **Save**.
-4. Dopo che GitHub ha completato la pubblicazione, apri e verifica questo indirizzo previsto: `https://luca-parlapiano.github.io/time_management_app/privacy/`.
+1. Su GitHub crea un repository pubblico, per esempio `mindmorrow-privacy`.
+2. Apri il nuovo repository, scegli **Add file → Upload files** e carica **solo** `App-mobile/store-publishing/github-pages/index.html` nella radice del nuovo repository. Conferma il commit su GitHub. Prima del caricamento verifica nome e email nella pagina.
+3. Nel nuovo repository apri **Settings → Pages**. In **Build and deployment** scegli **Deploy from a branch**, poi `main` e `/(root)`; premi **Save**.
+4. Quando GitHub ha completato la pubblicazione, apri e verifica l'indirizzo previsto: `https://luca-parlapiano.github.io/mindmorrow-privacy/` (il percorso cambia se scegli un altro nome per il repository).
 5. Inserisci **l'URL verificato** nel campo privacy di Google Play Console e App Store Connect e sostituisci `[DA INSERIRE]` in `testi-store-it.txt`.
-6. Aggiungi un accesso all'informativa anche dalle impostazioni dell'app prima dell'invio agli store.
+6. Aggiungi un accesso all'informativa anche dalle impostazioni dell'app prima dell'invio agli store. Quando aggiorni l'informativa, aggiorna anche la copia `github-pages/index.html` e il file nel repository pubblico.
 
-La pagina deve essere pubblica e accessibile senza login. GitHub Pages pubblica il contenuto online anche quando il repository è privato, se il piano dell'account consente Pages. L'URL indicato sopra è previsto dalla struttura del repository, ma esiste solo dopo l'attivazione e la pubblicazione riuscita.
+Se in futuro rendi pubblico il repository dell'app, puoi invece pubblicare la cartella `docs/` di `main` e usare `https://luca-parlapiano.github.io/time_management_app/privacy/`. Non rendere pubblico il repository dell'app solo per evitare il costo di Pages: il repository separato espone unicamente il documento che vuoi pubblicare.
 
 Fonti: [GitHub Pages: scelta della sorgente](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site), [Google Play: informativa privacy](https://support.google.com/googleplay/android-developer/answer/10144311), [Apple: App Privacy](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/).
